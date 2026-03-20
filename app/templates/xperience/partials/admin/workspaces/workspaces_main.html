@@ -1,0 +1,18 @@
+<!-- main content -->
+<main class="main">
+    <div class="main-container">
+        <section class="workspace-selector" aria-label="Seleção de workspace">
+            <header class="workspace-selector-header">
+                <h1>Selecione um Workspace</h1>
+                <p>Escolha o workspace que deseja acessar.</p>
+            </header>
+
+            {% include "xperience/partials/admin/workspaces/elements/list_workspaces.html" %}
+
+            <button type="button" class="workspace-create-btn">
+                <i class="fas fa-plus" aria-hidden="true"></i>
+                Criar workspace
+            </button>
+        </section>
+    </div>
+</main>

@@ -1,0 +1,7 @@
+<div class="header-user-avatar" aria-label="Avatar do usuário">
+    {% if user_avatar_url %}
+        <img src="{{ user_avatar_url }}" alt="Avatar do usuário">
+    {% else %}
+        <i class="fas fa-user" aria-hidden="true"></i>
+    {% endif %}
+</div>

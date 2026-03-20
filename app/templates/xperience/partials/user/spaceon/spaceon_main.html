@@ -1,0 +1,414 @@
+<!-- main content -->
+<main class="main">
+    <section class="main-container">
+        <div class="spaceon-grid-small">
+            <article class="spaceon-card q1-card">
+                <header class="q1-card-header">
+                    <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                    <h2>Preparar apontamento</h2>
+                </header>
+
+                <form class="q1-form" action="#" method="post">
+                    <div class="q1-row q1-row-two">
+                        <div class="q1-field">
+                            <label for="descricao"></label>
+                            <textarea id="descricao" rows="4" placeholder="Descrição *"></textarea>
+                        </div>
+
+                        <div class="q1-field">
+                            <label for="tipo-apontamento"></label>
+                            <select id="tipo-apontamento">
+                                <option value="" placeholder="Tipo de Apontamento *">Tipo de Apontamento *</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="q1-row q1-row-four">
+                        <div class="q1-field">
+                            <label for="formato">Formato</label>
+                            <select id="formato">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+
+                        <div class="q1-field">
+                            <label for="subtipo">Subtipo</label>
+                            <select id="subtipo">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+
+                        <div class="q1-field">
+                            <label for="tag">Tag</label>
+                            <select id="tag">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+
+                        <div class="q1-field q1-hours">
+                            <label for="horas-gastas">Horas Gastas *</label>
+                            <div class="q1-hours-control">
+                                <input id="horas-gastas" type="number" value="0" min="0" step="1">
+                                <button type="button" aria-label="Aumentar horas">+</button>
+                                <button type="button" aria-label="Diminuir horas">-</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="q1-row q1-row-three">
+                        <div class="q1-field">
+                            <label for="hora-inicio">Hora Início</label>
+                            <input id="hora-inicio" type="time">
+                        </div>
+
+                        <div class="q1-field">
+                            <label for="hora-fim">Hora Fim</label>
+                            <input id="hora-fim" type="time">
+                        </div>
+
+                        <label class="q1-checkbox" for="hora-extra">
+                            <input id="hora-extra" type="checkbox">
+                            Hora Extra
+                        </label>
+                    </div>
+
+                    <div class="q1-actions">
+                        <button type="submit" class="q1-btn q1-btn-primary">
+                            <i class="fas fa-lock" aria-hidden="true"></i>
+                            Preparar Apontamento
+                        </button>
+                        <button type="button" class="q1-btn q1-btn-secondary">
+                            <i class="fas fa-tag" aria-hidden="true"></i>
+                            Memorizar
+                        </button>
+                    </div>
+                </form>
+            </article>
+        </div>
+
+        <div class="spaceon-grid">
+            <article class="spaceon-card placeholder-card">
+                <h3>Apotamentos Memorizados</h3>
+                <p>Não há apontamentos memorizados no momento.</p>
+            </article>
+        </div>
+
+        <div class="spaceon-grid">
+            <article class="spaceon-card q3-calendar-card">
+                <header class="q3-calendar-header">
+                    <div class="q3-calendar-title">
+                        <i class="fas fa-calendar" aria-hidden="true"></i>
+                        <h3>Calendário</h3>
+                    </div>
+                    <div class="q3-calendar-controls">
+                        <span>Março 2026</span>
+                        <button type="button" aria-label="Mês anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                        <button type="button" aria-label="Próximo mês"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                        <button type="button" aria-label="Atualizar"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+                    </div>
+                </header>
+
+                <div class="q3-calendar-wrapper">
+                    <table class="q3-calendar-table" aria-label="Calendário mensal">
+                        <thead>
+                            <tr>
+                                <th>Dom</th>
+                                <th>Seg</th>
+                                <th>Ter</th>
+                                <th>Qua</th>
+                                <th>Qui</th>
+                                <th>Sex</th>
+                                <th>Sáb</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="calendar-day"><span class="day-number">1</span></td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">2</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>3</span></span>
+                                        <span class="day-note">5h 30</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-blue"></span>
+                                            <span class="project-dot project-dot-red"></span>
+                                    </div>
+                                    <span class="day-value">R$ 135,90</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">3</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
+                                        <span class="day-note">5h 20</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-blue"></span>
+                                            <span class="project-dot project-dot-green"></span>
+                                    </div>
+                                    <span class="day-value">R$ 127,85</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">4</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>4</span></span>
+                                        <span class="day-note">7h 15</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-purple"></span>
+                                            <span class="project-dot project-dot-green"></span>
+                                    </div>
+                                    <span class="day-value">R$ 182,40</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">5</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>3</span></span>
+                                        <span class="day-note">7h 10</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-blue"></span>
+                                            <span class="project-dot project-dot-orange"></span>
+                                    </div>
+                                    <span class="day-value">R$ 178,25</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">6</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
+                                        <span class="day-note">5h 20</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-red"></span>
+                                            <span class="project-dot project-dot-green"></span>
+                                    </div>
+                                    <span class="day-value">R$ 130,10</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day"><span class="day-number">7</span></td>
+                            </tr>
+                            <tr>
+                                <td class="calendar-day"><span class="day-number">8</span></td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">9</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
+                                        <span class="day-note">5h 40</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-purple"></span>
+                                            <span class="project-dot project-dot-blue"></span>
+                                    </div>
+                                    <span class="day-value">R$ 143,70</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">10</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>1</span></span>
+                                        <span class="day-note">2h 00</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-orange"></span>
+                                    </div>
+                                    <span class="day-value">R$ 51,14</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day has-note">
+                                    <div class="day-content">
+                                        <span class="day-number">11</span>
+                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
+                                        <span class="day-note">2h 55</span>
+                                    </div>
+                                    <div class="day-projects" aria-label="Projetos do dia">
+                                            <span class="project-dot project-dot-green"></span>
+                                            <span class="project-dot project-dot-red"></span>
+                                    </div>
+                                    <span class="day-value">R$ 74,15</span>
+                                    <span class="day-load-line"></span>
+                                </td>
+                                <td class="calendar-day"><span class="day-number">12</span></td>
+                                <td class="calendar-day"><span class="day-number">13</span></td>
+                                <td class="calendar-day selected-day"><span class="day-number">14</span></td>
+                            </tr>
+                            <tr>
+                                <td class="calendar-day"><span class="day-number">15</span></td>
+                                <td class="calendar-day"><span class="day-number">16</span></td>
+                                <td class="calendar-day"><span class="day-number">17</span></td>
+                                <td class="calendar-day"><span class="day-number">18</span></td>
+                                <td class="calendar-day"><span class="day-number">19</span></td>
+                                <td class="calendar-day"><span class="day-number">20</span></td>
+                                <td class="calendar-day"><span class="day-number">21</span></td>
+                            </tr>
+                            <tr>
+                                <td class="calendar-day"><span class="day-number">22</span></td>
+                                <td class="calendar-day"><span class="day-number">23</span></td>
+                                <td class="calendar-day"><span class="day-number">24</span></td>
+                                <td class="calendar-day"><span class="day-number">25</span></td>
+                                <td class="calendar-day"><span class="day-number">26</span></td>
+                                <td class="calendar-day"><span class="day-number">27</span></td>
+                                <td class="calendar-day"><span class="day-number">28</span></td>
+                            </tr>
+                            <tr>
+                                <td class="calendar-day"><span class="day-number">29</span></td>
+                                <td class="calendar-day"><span class="day-number">30</span></td>
+                                <td class="calendar-day"><span class="day-number">31</span></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                            </tr>
+                            <tr>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                                <td class="calendar-day muted-day"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+
+        <div class="spaceon-grid">
+            <article class="spaceon-card q4-history-card">
+                <header class="q4-history-header">
+                    <div class="q4-history-title">
+                        <i class="fas fa-list-ul" aria-hidden="true"></i>
+                        <h3>Histórico de Apontamentos</h3>
+                    </div>
+                    <button type="button" aria-label="Expandir ou recolher histórico">
+                        <i class="fas fa-chevron-up" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <div class="q4-history-content">
+                    <section class="q4-panel q4-filters-panel" aria-label="Filtros do histórico">
+                        <header class="q4-panel-header">
+                            <i class="fas fa-filter" aria-hidden="true"></i>
+                            <h4>Filtros do Histórico</h4>
+                        </header>
+
+                        <form class="q4-filters-form" action="#" method="get">
+                            <div class="q4-filters-grid">
+                                <div class="q4-filter-field">
+                                    <label for="filtro-ano">Ano</label>
+                                    <select id="filtro-ano"><option>Todos</option></select>
+                                </div>
+                                <div class="q4-filter-field">
+                                    <label for="filtro-mes">Mês</label>
+                                    <select id="filtro-mes"><option>Todos</option></select>
+                                </div>
+                                <div class="q4-filter-field">
+                                    <label for="filtro-dia">Dia</label>
+                                    <select id="filtro-dia"><option>Todos</option></select>
+                                </div>
+                                <div class="q4-filter-field">
+                                    <label for="filtro-tipo">Tipo</label>
+                                    <select id="filtro-tipo"><option>Todos</option></select>
+                                </div>
+                                <div class="q4-filter-field">
+                                    <label for="filtro-formato">Formato</label>
+                                    <select id="filtro-formato"><option>Todos</option></select>
+                                </div>
+                                <div class="q4-filter-field">
+                                    <label for="filtro-subtipo">Subtipo</label>
+                                    <select id="filtro-subtipo"><option>Todos</option></select>
+                                </div>
+                                <div class="q4-filter-field">
+                                    <label for="filtro-tag">Tag</label>
+                                    <select id="filtro-tag"><option>Todos</option></select>
+                                </div>
+                                <div class="q4-filter-field">
+                                    <label for="filtro-extra">Hora Extra</label>
+                                    <select id="filtro-extra"><option>Todos</option></select>
+                                </div>
+                            </div>
+
+                            <div class="q4-filter-actions">
+                                <button type="submit" class="q4-btn q4-btn-primary">
+                                    <i class="fas fa-search" aria-hidden="true"></i>
+                                    Aplicar Filtros
+                                </button>
+                                <button type="button" class="q4-btn q4-btn-neutral">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                    Limpar Filtros
+                                </button>
+                                <button type="button" class="q4-btn q4-btn-outline">
+                                    <i class="fas fa-file-export" aria-hidden="true"></i>
+                                    Exportar Excel
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="q4-panel q4-table-panel" aria-label="Tabela de histórico">
+                        <div class="q4-table-wrapper">
+                            <table class="q4-history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Descrição</th>
+                                        <th>Tipo</th>
+                                        <th>Formato</th>
+                                        <th>Subtipo</th>
+                                        <th>Tag</th>
+                                        <th>Hora Início</th>
+                                        <th>Hora Fim</th>
+                                        <th>Horas</th>
+                                        <th>Hora Extra</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>11/03/2026</td>
+                                        <td>PBI xxxx - PGTO TI Requisição Compra: Correções Lint, Libs e configurações</td>
+                                        <td>Desenvolvimento</td>
+                                        <td>Code e No-Code</td>
+                                        <td>Proj PgtoForTI</td>
+                                        <td>Sem PBI 999</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>1.0h</td>
+                                        <td><span class="q4-pill">Não</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>09/03/2026</td>
+                                        <td>PBI xxxx - GenCOA - erro de tratativa de status final/packing list</td>
+                                        <td>Suporte</td>
+                                        <td>Code e No-Code</td>
+                                        <td>Proj GenCoa</td>
+                                        <td>Sem PBI 999</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>4.0h</td>
+                                        <td><span class="q4-pill">Não</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>09/03/2026</td>
+                                        <td>PBI xxxx - GenCOA - Correção email BA1 para caso de falha e também no envio correto</td>
+                                        <td>Suporte</td>
+                                        <td>Code e No-Code</td>
+                                        <td>Proj GenCoa</td>
+                                        <td>Sem PBI 999</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>1.0h</td>
+                                        <td><span class="q4-pill">Não</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </article>
+        </div>
+    </section>
+</main>

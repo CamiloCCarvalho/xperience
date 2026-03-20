@@ -1,0 +1,46 @@
+<!-- main content -->
+<main class="main">
+    <div class="main-container">
+        <section class="auth-card" aria-label="Login e cadastro">
+            <div class="auth-panel auth-panel-login">
+                <h1>Login</h1>
+                <div class="auth-form">
+                    <label for="login-identity">Email ou usuário</label>
+                    <input id="login-identity" type="text" placeholder="Digite seu email ou usuário">
+
+                    <label for="login-password">Senha</label>
+                    <input id="login-password" type="password" placeholder="********">
+                    
+                    <!-- button login 
+                    <button type="submit" class="btn-primary">Entrar</button>
+                    -->
+                    <button class="btn-primary">
+                        <a href="/user_admin/workspaces">Entrar</a>
+                    </button>
+                </div>
+                <a class="auth-link" href="#">Esqueceu sua senha?</a>
+            </div>
+
+            <div class="auth-panel auth-panel-signup">
+                <h2>Sign Up</h2>
+                <form class="auth-form" action="#" method="post">
+                    <label for="signup-user">Usuário</label>
+                    <input id="signup-user" type="text" placeholder="Crie seu usuário">
+
+                    <label for="signup-email">Email</label>
+                    <input id="signup-email" type="email" placeholder="seuemail@dominio.com">
+
+                    <label for="signup-password">Senha</label>
+                    <input id="signup-password" type="password" placeholder="Crie uma senha">
+
+                    <button type="submit" class="btn-primary">Criar conta</button>
+                </form>
+                <p class="auth-disclaimer">
+                    Ao se cadastrar, você concorda com nossos
+                    <a href="#">Termos</a> e
+                    <a href="#">Política de privacidade</a>.
+                </p>
+            </div>
+        </section>
+    </div>
+</main>

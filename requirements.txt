@@ -1,0 +1,6 @@
+Django==6.0.3
+Faker
+
+# Ferramentas de tipagem (usadas no pyproject.toml)
+django-stubs
+mypy

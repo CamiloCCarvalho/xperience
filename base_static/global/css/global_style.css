@@ -1,0 +1,144 @@
+/* reset css */
+* {
+    padding: 0;
+    margin: 0;
+    vertical-align: baseline;
+    list-style: none;
+    border: 0;
+    box-sizing: border-box;
+}
+
+/* global styles */
+/**
+ * Paleta de cores - CSS Variables para tema claro e escuro
+ * Verde base: #27ae60 (verde claro), #219150 (verde escuro)
+ */
+
+/* Variáveis globais padrão: tema claro */
+:root {
+    /* Primárias */
+    --green-light: #27ae60;     /* Verde mais claro */
+    --green-dark:  #219150;     /* Verde mais escuro */
+
+    /* Backgrounds */
+    --color-bg-primary: #ebebeb;       /* Fundo principal claro */
+    --color-bg-secondary: #f8f8f7;     /* Fundo secundário leve */
+
+    /* Títulos e textos */
+    --color-title: #1c1c1c;            /* Títulos com bom contraste */
+    --color-text: #323232;             /* Texto comum */
+    --color-text-muted: #5a5a5a;       /* Texto mais claro/descritivo */
+
+    /* Outros */
+    --color-border: #e0e0e0;           /* Bordas suaves claras */
+
+    /* Background polka-dot - variáveis de controle */
+    --dots-bg: #ebebeb;
+    --dots-color: #b0b4ae;
+    --dots-color-soft: rgba(176, 180, 174, 0.35);  /* Camada sutil para profundidade */
+    --dots-size: 6px;
+    --dots-size-soft: 14px;                         /* Bolinhas maiores e suaves no fundo */
+    --dots-gap-x: 36px;
+    --dots-gap-y: 36px;
+    --dots-gap-soft: 72px;                         /* Espaçamento maior da camada suave */
+
+    /* Variável que aplica o efeito completo - use em qualquer elemento */
+    --color-bg-dots:
+      radial-gradient(circle, var(--dots-color-soft) 0%, transparent var(--dots-size-soft))
+        0 0 / var(--dots-gap-soft) var(--dots-gap-soft),
+      radial-gradient(circle, var(--dots-color) 0%, var(--dots-color) var(--dots-size), transparent calc(var(--dots-size) + 1px))
+        0 0 / var(--dots-gap-x) var(--dots-gap-y),
+      var(--color-bg-primary);
+
+}
+
+/* Tema claro */
+[data-theme="light"] {
+    /* Primárias */
+    --green-light: #27ae60;     /* Verde mais claro */
+    --green-dark:  #219150;     /* Verde mais escuro */
+
+    /* Backgrounds */
+    --color-bg-primary: #ebebeb;       /* Fundo principal claro */
+    --color-bg-secondary: #f8f8f7;     /* Fundo secundário leve */
+
+    /* Títulos e textos */
+    --color-title: #1c1c1c;            /* Títulos com bom contraste */
+    --color-text: #323232;             /* Texto comum */
+    --color-text-muted: #5a5a5a;       /* Texto mais claro/descritivo */
+
+    /* Outros */
+    --color-border: #e0e0e0;           /* Bordas suaves claras */
+
+    /* Background polka-dot - variáveis de controle */
+    --dots-bg: #ebebeb;
+    --dots-color: #b0b4ae;
+    --dots-color-soft: rgba(176, 180, 174, 0.35);  /* Camada sutil para profundidade */
+    --dots-size: 6px;
+    --dots-size-soft: 14px;                         /* Bolinhas maiores e suaves no fundo */
+    --dots-gap-x: 36px;
+    --dots-gap-y: 36px;
+    --dots-gap-soft: 72px;                         /* Espaçamento maior da camada suave */
+
+    /* Variável que aplica o efeito completo - use em qualquer elemento */
+    --color-bg-dots:
+      radial-gradient(circle, var(--dots-color-soft) 0%, transparent var(--dots-size-soft))
+        0 0 / var(--dots-gap-soft) var(--dots-gap-soft),
+      radial-gradient(circle, var(--dots-color) 0%, var(--dots-color) var(--dots-size), transparent calc(var(--dots-size) + 1px))
+        0 0 / var(--dots-gap-x) var(--dots-gap-y),
+      var(--color-bg-primary);
+
+}
+
+/* Tema escuro */
+[data-theme="dark"] {
+    --green-light: #27ae60;
+    --green-dark:  #219150;
+
+    --color-bg-primary: #242729;        /* Fundo principal escuro */
+    --color-bg-secondary: #303336;      /* Fundo secundário cinza escuro */
+
+    --color-title: #f7f7f7;             /* Títulos claros */
+    --color-text: #e0e0e0;              /* Texto comum claro */
+    --color-text-muted: #b6b6b6;        /* Texto menos contrastante */
+
+    --color-border: #36393b;            /* Bordas em cinza escuro */
+
+    /* Polka-dot dark */
+    --dots-bg: #242729;
+    --dots-color: #36393b;
+    --dots-color-soft: rgba(54, 57, 59, 0.4);
+    --dots-size: 6px;
+    --dots-size-soft: 14px;
+    --dots-gap-x: 36px;
+    --dots-gap-y: 36px;
+    --dots-gap-soft: 72px;
+}
+
+/* Exemplo de uso: */
+
+body {
+    width: 100vw;
+    /* Polka-dot: radial-gradient desenha cada bolinha, background-size define o espaçamento */
+    color: var(--color-text);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--color-title);
+}
+
+/* links */
+a {
+    text-decoration: none;
+    color: var(--color-title);
+}
+/*containers e grid*/
+.container {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    /*border: 1px solid red;*/
+}

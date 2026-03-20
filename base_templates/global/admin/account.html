@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static %}
+
+<head>
+    {% include "xperience/partials/head.html" %}
+    <title>{% block title %}{% endblock title %} | Xperience</title>
+    <!-- user spaceonaccount styles -->
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_account.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/button_logout.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=1">
+</head>
+
+
+
+<!-- body -->
+<body data-theme="dark" class="home-page spaceon-page spaceon-account-page">
+
+    <!-- container -->
+    <div class="container">
+        {% block admin_account_content %}
+        {% endblock admin_account_content %}
+    </div>
+
+    <!-- scripts -->
+    <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
+</body>
+</html>    

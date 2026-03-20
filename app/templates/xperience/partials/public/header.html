@@ -1,0 +1,34 @@
+{% load static %}
+<!-- public header -->
+<header class="header">
+    <div class="header-container">
+        <nav class="header-content">
+            <div class="header-menu-left">
+                <!-- logo -->
+                <a href="/">
+                <span class="header-content-xperience">Xperience</span>
+                </a>
+                <!-- menu -->
+                <ul class="header-content-menu">
+                    <li><a href="/plataform">Plataforma</a></li>
+                        <li><a href="/solutions">Soluções</a></li>
+                        <li><a href="/resources">Recursos</a></li>
+                    </ul>
+                </div>
+            <!-- menu right -->
+            <div class="header-menu-right">
+                <!-- button theme -->
+                <!-- {% include "xperience/partials/button_theme.html" %} -->
+                <button
+                type="button"
+                class="theme-toggle-btn"
+                id="theme-toggle-btn"
+                aria-label="Alternar tema"
+                title="Alternar tema">
+                <i class="fas fa-toggle-off icon-theme" id="theme-toggle-icon" aria-hidden="true"></i>
+                </button>
+            </div>
+        </nav>
+    </div>
+    <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
+</header>

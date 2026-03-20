@@ -1,0 +1,6 @@
+<!-- lista de workspaces -->
+<ul class="workspace-grid" style="list-style: none;">
+    {% for workspace in workspaces %}
+        {% include "xperience/partials/user/workspaces/elements/card_workspace.html" with workspace=workspace %}
+    {% endfor %}
+</ul>
