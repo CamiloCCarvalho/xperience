@@ -52,3 +52,12 @@ def admin_account(request):
             "user_avatar_url": user_avatar_url
         }
     )
+
+def admin_workspaces_create(request):
+    return render(
+        request,
+        page_admin + "workspaces_create.html",
+        context={
+            "user_avatar_url": user_avatar_url
+        }
+    )

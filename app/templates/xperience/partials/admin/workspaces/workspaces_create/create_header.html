@@ -1,0 +1,22 @@
+{% load static %}
+<header class="header">
+    <div class="header-container">
+        <nav class="header-content">
+            <div class="header-menu-left">
+                <!-- logo -->
+                <a href="/">
+                <span class="header-content-xperience">Xperience</span>
+                </a>
+            </div>
+            <!-- menu right -->
+            <div class="header-menu-right">
+                <!-- button theme -->
+                {% include "xperience/partials/button_theme.html" %}
+                <!-- button logout -->
+                {% include "xperience/partials/button_logout.html" %}
+                <!-- circulo com avatar do usuario -->
+                {% include "xperience/partials/user/user_avatar.html" %}
+            </div>
+        </nav>
+    </div>
+</header>

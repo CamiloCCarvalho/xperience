@@ -22,6 +22,7 @@ urlpatterns = [
 
     # admin routes
     path("user_admin/workspaces/", admin.admin_workspaces),
+    path("user_admin/workspaces/create/", admin.admin_workspaces_create),
     path("user_admin/spaceon/home/", admin.admin_home),
     path("user_admin/spaceon/dashboard/", admin.admin_dashboard),
     path("user_admin/spaceon/config/", admin.admin_config),
