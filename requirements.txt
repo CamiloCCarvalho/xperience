@@ -1,6 +1,7 @@
-Django==6.0.3
-Faker
+django==6.0.3
+faker==40.11.0
 
 # Ferramentas de tipagem (usadas no pyproject.toml)
-django-stubs
-mypy
+django-stubs==6.0.1
+mypy==1.19.1
+pre-commit==4.5.1
