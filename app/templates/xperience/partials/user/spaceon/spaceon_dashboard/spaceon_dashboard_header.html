@@ -9,11 +9,12 @@
                 </a>
                 <!-- menu -->
                 <ul class="header-content-menu">
-                    <li><a href="/user/workspaces">Workspaces</a></li>
-                    <li><a href="/user/spaceon/dashboard" style="color: var(--green-light); font-weight: bold;">Dashboard</a></li>
-                    <li><a href="/user/spaceon/home">Apontamentos</a></li>
-                    <li><a href="/user/spaceon/config">Configurações</a></li>
-                    <li><a href="/user/spaceon/account">Conta</a></li>
+                    <li><a href="{% url 'user-workspaces' %}">Workspaces</a></li>
+                    <li><a href="{% url 'user-dashboard' %}" 
+                        style="color: var(--green-light); font-weight: bold;">Dashboard</a></li>
+                    <li><a href="{% url 'user-home' %}">Apontamentos</a></li>
+                    <li><a href="{% url 'user-config' %}">Configurações</a></li>
+                    <li><a href="{% url 'user-account' %}">Conta</a></li>
                     </ul>
                 </div>
             <!-- menu right -->

@@ -5,16 +5,15 @@
         <nav class="header-content">
             <div class="header-menu-left">
                 <!-- logo -->
-                <a href="/">
+                <a href="{% url 'public-home' %}">
                 <span class="header-content-xperience">Xperience</span>
                 </a>
                 <!-- menu -->
                 <ul class="header-content-menu">
-                    <li><a href="/plataform">Plataforma</a></li>
-                        <li><a href="/solutions">Soluções</a></li>
-                        <li><a href="/resources">Recursos</a></li>
-                    </ul>
-                </div>
+                    <li><a href="{% url 'public-plataform' %}">Plataforma</a></li>
+                    <li><a href="{% url 'public-solutions' %}">Soluções</a></li>
+                    <li><a href="{% url 'public-resources' %}">Recursos</a></li>
+                </ul>
             <!-- menu right -->
             <div class="header-menu-right">
                 <!-- button theme -->

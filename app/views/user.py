@@ -1,8 +1,8 @@
 from django.shortcuts import render
-from utils.xperience import workspaces
+from utils.faker import fake_workspaces, fake_user
 
 page_user = "xperience/pages/user/"
-user_avatar_url = workspaces.make_user_avatar()['user_avatar_url']
+user_avatar_url = fake_workspaces.make_user_avatar()['user_avatar_url']
 
 # user routes
 def user_workspaces(request):
@@ -11,7 +11,7 @@ def user_workspaces(request):
         page_user + "workspaces.html",
         context={
             "workspaces": [
-                workspaces.make_workspace() for _ in range(10)
+                fake_workspaces.make_workspace() for _ in range(10)
             ],
             "user_avatar_url": user_avatar_url
         }

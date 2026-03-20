@@ -1,7 +1,7 @@
 "app/views.py"
 
 # public views
-from app.views import public
+from app.views import *
 
 # user views
 from app.views.user import *

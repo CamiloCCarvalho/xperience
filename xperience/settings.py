@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-3bq)qn-3t_6kswc7c6s1h%x!ry56skdjt4c4@=ku)_$+pr)$cj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: list[str] = []
 
 
 # Application definition
@@ -132,3 +132,5 @@ STATIC_ROOT = BASE_DIR / "static"
 #    "django.contrib.staticfiles.finders.FileSystemFinder",
 #    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 #]
+
+AUTH_USER_MODEL = "app.User"

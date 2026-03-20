@@ -9,7 +9,7 @@
 
             {% include "xperience/partials/admin/workspaces/elements/list_workspaces.html" %}
             <!-- button create workspace -->
-            <a href="/user_admin/workspaces/create/">
+            <a href="{% url 'admin-workspaces-create' user_data.id %}">
             <button type="button" class="workspace-create-btn">
                 <i class="fas fa-plus" aria-hidden="true"></i>
                 Criar workspace

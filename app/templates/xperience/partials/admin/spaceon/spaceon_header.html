@@ -4,16 +4,16 @@
         <nav class="header-content">
             <div class="header-menu-left">
                 <!-- logo -->
-                <a href="/">
+                <a href="{% url 'public-home' %}">
                 <span class="header-content-xperience">Xperience</span>
                 </a>
                 <!-- menu -->
                 <ul class="header-content-menu">
-                    <li><a href="/user_admin/workspaces">Workspaces</a></li>
-                    <li><a href="/user_admin/spaceon/dashboard">Dashboard</a></li>
-                    <li><a href="/user_admin/spaceon/home" style="color: var(--green-light); font-weight: bold;">Apontamentos</a></li>
-                    <li><a href="/user_admin/spaceon/config">Configurações</a></li>
-                    <li><a href="/user_admin/spaceon/account">Conta</a></li>
+                    <li><a href="{% url 'admin-workspaces' user_data.id %}">Workspaces</a></li>
+                    <li><a href="{% url 'admin-dashboard' user_data.id %}">Dashboard</a></li>
+                    <li><a href="{% url 'admin-home' user_data.id %}" style="color: var(--green-light); font-weight: bold;">Apontamentos</a></li>
+                    <li><a href="{% url 'admin-config' user_data.id %}">Configurações</a></li>
+                    <li><a href="{% url 'admin-account' user_data.id %}">Conta</a></li>
                     </ul>
                 </div>
             <!-- menu right -->
