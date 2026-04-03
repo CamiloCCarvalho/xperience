@@ -1,13 +1,26 @@
 <!-- main content -->
 <main class="main">
     <div class="main-container">
-        <section class="workspace-selector" aria-label="Seleção de workspace">
-            <h1>Criar Workspace</h1>
-            <form action="#" method="post">
-                <label for="workspace-name">Nome do Workspace</label>
-                <input id="workspace-name" type="text" placeholder="Digite o nome do workspace">
-                <button type="submit" class="btn-primary">Criar Workspace</button>
+        <section class="workspace-selector" aria-label="Criar workspace">
+            <p class="workspace-area-hint workspace-area-hint--admin">Gestão · novo workspace</p>
+            <h1>Criar workspace</h1>
+            <form method="post" action="{% url 'admin-workspaces-create' %}">
+                {% csrf_token %}
+                <label for="id_workspace_name">{{ form.workspace_name.label }}</label>
+                {{ form.workspace_name }}
+                {% if form.workspace_name.errors %}<p class="error">{{ form.workspace_name.errors|striptags }}</p>{% endif %}
+
+                <label for="id_workspace_description">{{ form.workspace_description.label }}</label>
+                {{ form.workspace_description }}
+                {% if form.workspace_description.errors %}<p class="error">{{ form.workspace_description.errors|striptags }}</p>{% endif %}
+
+                {% if form.non_field_errors %}
+                <p class="error">{{ form.non_field_errors|striptags }}</p>
+                {% endif %}
+
+                <button type="submit" class="btn-primary">Criar workspace</button>
             </form>
+            <p style="margin-top: 1rem;"><a href="{% url 'admin-workspaces' %}">Voltar aos workspaces</a></p>
         </section>
     </div>
 </main>

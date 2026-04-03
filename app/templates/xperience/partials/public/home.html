@@ -2,41 +2,74 @@
 <main class="main">
     <div class="main-container">
         <section class="auth-card" aria-label="Login e cadastro">
-            <div class="auth-panel auth-panel-login">
+            <div class="auth-panel auth-panel-login auth-panel--access">
+                <p class="auth-panel-tag auth-panel-tag--access">Acesso</p>
                 <h1>Login</h1>
-                <div class="auth-form">
-                    <label for="login-identity">Email ou usuário</label>
-                    <input id="login-identity" type="text" placeholder="Digite seu email ou usuário">
+                <p class="auth-panel-lead">Use o email e a senha da sua conta. <strong>Gestores</strong> vão para a área de gestão; <strong>membros</strong> passam pela escolha de workspace quando tiverem mais de um vínculo (ex.: duas empresas).</p>
+                <form class="auth-form" method="post" action="{% url 'public-home' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="form" value="login">
+                    <label for="{{ login_form.email.id_for_label }}">{{ login_form.email.label }}</label>
+                    {{ login_form.email }}
+                    {% if login_form.email.errors %}
+                    <p class="error">{{ login_form.email.errors|striptags }}</p>
+                    {% endif %}
 
-                    <label for="login-password">Senha</label>
-                    <input id="login-password" type="password" placeholder="********">
-                    
-                    <!-- button login 
+                    <label for="{{ login_form.password.id_for_label }}">{{ login_form.password.label }}</label>
+                    {{ login_form.password }}
+                    {% if login_form.password.errors %}
+                    <p class="error">{{ login_form.password.errors|striptags }}</p>
+                    {% endif %}
+
+                    {% if login_form.non_field_errors %}
+                    <p class="error">{{ login_form.non_field_errors|striptags }}</p>
+                    {% endif %}
+
                     <button type="submit" class="btn-primary">Entrar</button>
-                    -->
-                    <button class="btn-primary">
-                        <a href="{% url 'admin-workspaces' user_data.id %}">Entrar</a>
-                    </button>
-                </div>
+                </form>
                 <a class="auth-link" href="#">Esqueceu sua senha?</a>
             </div>
 
-            <div class="auth-panel auth-panel-signup">
-                <h2>Sign Up</h2>
-                <form class="auth-form" action="#" method="post">
-                    <label for="signup-user">Usuário</label>
-                    <input id="signup-user" type="text" placeholder="Crie seu usuário">
+            <div class="auth-panel auth-panel-signup auth-panel--register-admin">
+                <p class="auth-panel-tag auth-panel-tag--register">Novo administrador</p>
+                <h2>Cadastro de administrador</h2>
+                <p class="auth-disclaimer">Cria uma conta com perfil de <strong>administrador da plataforma</strong> (não é o painel Django). Depois use o login ao lado para entrar.</p>
+                <form class="auth-form" method="post" action="{% url 'public-home' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="form" value="register">
+                    <label for="{{ register_form.username.id_for_label }}">{{ register_form.username.label }}</label>
+                    {{ register_form.username }}
+                    {% if register_form.username.errors %}
+                    <p class="error">{{ register_form.username.errors|striptags }}</p>
+                    {% endif %}
 
-                    <label for="signup-email">Email</label>
-                    <input id="signup-email" type="email" placeholder="seuemail@dominio.com">
+                    <label for="{{ register_form.email.id_for_label }}">{{ register_form.email.label }}</label>
+                    {{ register_form.email }}
+                    {% if register_form.email.errors %}
+                    <p class="error">{{ register_form.email.errors|striptags }}</p>
+                    {% endif %}
 
-                    <label for="signup-password">Senha</label>
-                    <input id="signup-password" type="password" placeholder="Crie uma senha">
+                    <label for="{{ register_form.password.id_for_label }}">{{ register_form.password.label }}</label>
+                    {{ register_form.password }}
+                    {% if register_form.password.errors %}
+                    <p class="error">{{ register_form.password.errors|striptags }}</p>
+                    {% endif %}
 
-                    <button type="submit" class="btn-primary">Criar conta</button>
+                    <label for="{{ register_form.password_confirm.id_for_label }}">{{ register_form.password_confirm.label }}</label>
+                    {{ register_form.password_confirm }}
+                    {% if register_form.password_confirm.errors %}
+                    <p class="error">{{ register_form.password_confirm.errors|striptags }}</p>
+                    {% endif %}
+
+                    {% if register_form.non_field_errors %}
+                    <p class="error">{{ register_form.non_field_errors|striptags }}</p>
+                    {% endif %}
+
+                    <button type="submit" class="btn-primary">Registrar administrador</button>
                 </form>
                 <p class="auth-disclaimer">
-                    Ao se cadastrar, você concorda com nossos
+                    <a href="{% url 'public-register' %}">Abrir cadastro em página própria</a>
+                    · Ao se cadastrar, você concorda com nossos
                     <a href="#">Termos</a> e
                     <a href="#">Política de privacidade</a>.
                 </p>

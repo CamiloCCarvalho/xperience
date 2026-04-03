@@ -1,0 +1,39 @@
+<!-- main content -->
+<main class="main">
+    <div class="main-container">
+        <section class="workspace-selector" aria-label="Adicionar membro">
+            <p class="workspace-area-hint workspace-area-hint--admin">Gestão · convidar membro (role baixa na plataforma)</p>
+            <h1>Adicionar membro ao workspace</h1>
+            <p>Vincula um <strong>usuário da plataforma (membro)</strong> a um dos seus workspaces. Papéis de admin dentro do workspace são configuráveis no modelo de membership.</p>
+            <form method="post" action="{% url 'admin-members-add' %}">
+                {% csrf_token %}
+                <label for="id_workspace">{{ form.workspace.label }}</label>
+                {{ form.workspace }}
+                {% if form.workspace.errors %}<p class="error">{{ form.workspace.errors|striptags }}</p>{% endif %}
+
+                <label for="id_first_name">{{ form.first_name.label }}</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}<p class="error">{{ form.first_name.errors|striptags }}</p>{% endif %}
+
+                <label for="id_email">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}<p class="error">{{ form.email.errors|striptags }}</p>{% endif %}
+
+                <label for="id_password">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}<p class="error">{{ form.password.errors|striptags }}</p>{% endif %}
+
+                <label for="id_password_confirm">{{ form.password_confirm.label }}</label>
+                {{ form.password_confirm }}
+                {% if form.password_confirm.errors %}<p class="error">{{ form.password_confirm.errors|striptags }}</p>{% endif %}
+
+                {% if form.non_field_errors %}
+                <p class="error">{{ form.non_field_errors|striptags }}</p>
+                {% endif %}
+
+                <button type="submit" class="btn-primary">Salvar</button>
+            </form>
+            <p style="margin-top: 1rem;"><a href="{% url 'admin-workspaces' %}">Voltar aos workspaces</a></p>
+        </section>
+    </div>
+</main>

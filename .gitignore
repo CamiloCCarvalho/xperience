@@ -8,6 +8,7 @@ app/images
 __pycache__
 db.sqlite3
 media
+.dev
 
 # Backup files #
 *.bak

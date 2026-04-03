@@ -1,0 +1,7 @@
+{% if active_member_workspace %}
+<div class="header-context-workspace" title="Workspace ativo nesta sessão">
+    <span class="header-context-workspace-label">Workspace</span>
+    <span class="header-context-workspace-name">{{ active_member_workspace.workspace_name }}</span>
+    <a href="{% url 'user-workspaces' %}" class="header-context-workspace-change">Trocar</a>
+</div>
+{% endif %}

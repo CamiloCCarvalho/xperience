@@ -3,28 +3,17 @@
     <div class="header-container">
         <nav class="header-content">
             <div class="header-menu-left">
-                <!-- logo -->
-                <a href="{% url 'public-home' %}">
-                <span class="header-content-xperience">Xperience</span>
-                </a>
+                {% include "xperience/partials/admin/admin_brand.html" %}
                 <!-- menu -->
                 <ul class="header-content-menu">
-                    <li><a href="{% url 'admin-workspaces' user_data.id %}">Workspaces</a></li>
-                    <li><a href="{% url 'admin-dashboard' user_data.id %}">Dashboard</a></li>
-                    <li><a href="{% url 'admin-home' user_data.id %}">Apontamentos</a></li>
-                    <li><a href="{% url 'admin-config' user_data.id %}">Configurações</a></li>
-                    <li><a href="{% url 'admin-account' user_data.id %}" style="color: var(--green-light); font-weight: bold;">Conta</a></li>
+                    <li><a href="{% url 'admin-workspaces' %}" title="Escolher ou trocar workspace em gestão">Workspaces</a></li>
+                    <li><a href="{% url 'admin-dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'admin-home' %}">Gerenciar</a></li>
+                    <li><a href="{% url 'admin-config' %}">Configurações</a></li>
+                    <li><a href="{% url 'admin-account' %}" style="color: var(--green-light); font-weight: bold;">Conta</a></li>
                     </ul>
                 </div>
-            <!-- menu right -->
-            <div class="header-menu-right">
-                <!-- button theme -->
-                {% include "xperience/partials/button_theme.html" %}
-                <!-- button logout -->
-                {% include "xperience/partials/button_logout.html" %}
-                <!-- circulo com avatar do usuario -->
-                {% include "xperience/partials/user/user_avatar.html" %}
-            </div>
+            {% include "xperience/partials/admin/header_menu_right_default.html" %}
         </nav>
     </div>
 </header>

@@ -1,0 +1,7 @@
+{% if active_admin_workspace %}
+<div class="header-context-workspace header-context-workspace--gestao" title="Workspace em foco na gestão">
+    <span class="header-context-workspace-label">Em gestão</span>
+    <span class="header-context-workspace-name">{{ active_admin_workspace.workspace_name }}</span>
+    <a href="{% url 'admin-workspaces' %}" class="header-context-workspace-change">Trocar</a>
+</div>
+{% endif %}

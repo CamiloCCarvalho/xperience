@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # my apps here
-    "app",
+    "app.apps.AppConfig",
 ]
 
 MIDDLEWARE = [
@@ -126,6 +126,9 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / "static"
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # future use
 #STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 #STATICFILES_FINDERS = [
@@ -134,3 +137,7 @@ STATIC_ROOT = BASE_DIR / "static"
 #]
 
 AUTH_USER_MODEL = "app.User"
+
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
