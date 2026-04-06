@@ -1,0 +1,252 @@
+.spaceon-config-page .spaceon-grid {
+    margin-top: 6px;
+}
+
+.spaceon-config-page .config-card {
+    width: 96%;
+    overflow: hidden;
+}
+
+.spaceon-config-page .config-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%) !important;
+    color: #fff;
+}
+
+.spaceon-config-page .config-card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.spaceon-config-page .config-card-title h2 {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.spaceon-config-page .config-visibility-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+}
+
+.spaceon-config-page .config-form {
+    padding: 12px 14px 14px;
+}
+
+.spaceon-config-page .config-grid {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.spaceon-config-page .config-grid-two {
+    grid-template-columns: 1fr 1fr;
+}
+
+.spaceon-config-page .config-grid-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.spaceon-config-page .config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.spaceon-config-page .config-field label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.spaceon-config-page .config-field input,
+.spaceon-config-page .config-field select {
+    width: 100%;
+    height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 7px 10px;
+    font-size: 15px;
+}
+
+.spaceon-config-page .field-with-icon {
+    position: relative;
+}
+
+.spaceon-config-page .field-with-icon input {
+    padding-right: 34px;
+}
+
+.spaceon-config-page .field-with-icon i {
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    pointer-events: none;
+}
+
+.spaceon-config-page .input-group {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+}
+
+.spaceon-config-page .input-group span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 84%, transparent);
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.spaceon-config-page .input-group span:first-child {
+    border-right: 0;
+    border-radius: 7px 0 0 7px;
+}
+
+.spaceon-config-page .input-group span:last-child {
+    border-left: 0;
+    border-radius: 0 7px 7px 0;
+}
+
+.spaceon-config-page .input-group input {
+    border-radius: 0;
+}
+
+.spaceon-config-page .config-field small {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.spaceon-config-page .calculated-box {
+    margin-top: 4px;
+    border: 1px solid color-mix(in srgb, var(--green-light) 35%, var(--color-border));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--green-light) 10%, var(--color-bg-secondary));
+    padding: 10px 12px;
+}
+
+.spaceon-config-page .calculated-box h3 {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    color: var(--color-title);
+    margin-bottom: 8px;
+}
+
+.spaceon-config-page .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.spaceon-config-page .calc-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.spaceon-config-page .calc-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.spaceon-config-page .calc-badge {
+    display: inline-block;
+    width: fit-content;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.spaceon-config-page .badge-purple { background: #8b1ee8; }
+.spaceon-config-page .badge-yellow { background: #e8b20f; }
+.spaceon-config-page .badge-cyan { background: #18b7d5; }
+.spaceon-config-page .badge-red { background: #cb2f49; }
+.spaceon-config-page .badge-green { background: #1f8d4f; }
+.spaceon-config-page .badge-gray { background: #6d7280; }
+
+.spaceon-config-page .calc-formula {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
+.spaceon-config-page .config-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.spaceon-config-page .config-btn-save {
+    height: 42px;
+    border-radius: 8px;
+    border: 0;
+    padding: 0 16px;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%) !important;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+[data-theme="dark"] .spaceon-config-page .config-field input,
+[data-theme="dark"] .spaceon-config-page .config-field select {
+    background: #2b2f35;
+}
+
+[data-theme="dark"] .spaceon-config-page .input-group span {
+    background: #232a33;
+}
+
+[data-theme="dark"] .spaceon-config-page .calculated-box {
+    background: color-mix(in srgb, var(--green-light) 10%, #2a313b);
+}
+
+@media (max-width: 1200px) {
+    .spaceon-config-page .config-grid-four {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .spaceon-config-page .calc-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 860px) {
+    .spaceon-config-page .config-grid-two,
+    .spaceon-config-page .config-grid-four,
+    .spaceon-config-page .calc-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .spaceon-config-page .config-btn-save {
+        width: 100%;
+        justify-content: center;
+        font-size: 18px;
+    }
+}

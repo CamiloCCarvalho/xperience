@@ -1,0 +1,744 @@
+.spaceon-page .main {
+    min-height: calc(100vh - 72px);
+    justify-content: flex-start;
+    padding: 20px 0 28px;
+}
+
+.spaceon-page .main-container {
+    width: min(1380px, 96%);
+    justify-content: flex-start;
+    gap: 14px;
+}
+
+.spaceon-grid-small,
+.spaceon-grid {
+    width: 100%;
+    display: flex;
+    margin-bottom: 14px !important;
+    justify-content: center;
+}
+
+.spaceon-grid-small {
+    min-height: unset;
+}
+
+.spaceon-grid {
+    min-height: 120px;
+}
+
+.spaceon-card {
+    width: 96%;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg-secondary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.q1-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 10px 10px 0 0;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 55%, var(--green-dark) 100%);
+}
+
+.q1-card-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.q1-form {
+    padding: 14px 14px 12px;
+}
+
+.q1-row {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.q1-row-two {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.q1-row-two .q1-field {
+    grid-column: span 2;
+}
+
+.q1-row-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.q1-row-three {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: end;
+}
+
+.q1-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.q1-field label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.q1-field input,
+.q1-field select,
+.q1-field textarea {
+    width: 100%;
+    height: 40px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 8px 10px;
+    font-size: 14px;
+    outline: none;
+}
+
+.q1-field textarea {
+    min-height: 74px;
+    resize: vertical;
+}
+
+.q1-field input:focus,
+.q1-field select:focus,
+.q1-field textarea:focus {
+    border-color: var(--green-light);
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
+}
+
+.q1-hours-control {
+    display: grid;
+    grid-template-columns: 1fr 32px 32px;
+}
+
+.q1-hours-control input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.q1-hours-control button {
+    border: 1px solid var(--color-border);
+    border-left: 0;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.q1-hours-control button:last-child {
+    border-top-right-radius: 7px;
+    border-bottom-right-radius: 7px;
+}
+
+.q1-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.q1-checkbox input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--green-light);
+}
+
+.q1-actions {
+    margin-top: 6px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.q1-actions .q1-btn {
+    grid-column: span 2;
+}
+
+.q1-btn {
+    width: 100%;
+    height: 40px;
+    border-radius: 7px;
+    border: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+}
+
+.q1-btn-primary {
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+}
+
+.q1-btn-secondary {
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+}
+
+.placeholder-card {
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--color-text-muted);
+    border-style: dashed;
+}
+
+.placeholder-card h3 {
+    color: var(--color-title);
+    font-size: 20px;
+}
+
+/* Q3 - Calendario */
+.q3-calendar-card {
+    overflow: hidden;
+}
+
+.q3-calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+}
+
+.q3-calendar-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.q3-calendar-title h3 {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.q3-calendar-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.q3-calendar-controls span {
+    font-size: 16px;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.q3-calendar-controls button {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+}
+
+.q3-calendar-wrapper {
+    padding: 10px 10px 12px;
+}
+
+.q3-calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+}
+
+.q3-calendar-table th,
+.q3-calendar-table td {
+    border: 1px solid var(--color-border);
+}
+
+.q3-calendar-table th {
+    height: 34px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-title);
+    background: color-mix(in srgb, var(--color-bg-primary) 70%, transparent);
+}
+
+.q3-calendar-table td {
+    position: relative;
+    height: 72px;
+    vertical-align: top;
+    padding: 8px 8px 6px;
+    background: var(--color-bg-secondary);
+}
+
+.q3-calendar-table .day-number {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--color-title);
+}
+
+.q3-calendar-table .day-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    min-height: 58px;
+}
+
+.q3-calendar-table .day-number {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.q3-calendar-table .day-projects {
+    position: absolute;
+    left: 8px;
+    bottom: 12px;
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 5px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 78%, transparent);
+}
+
+.q3-calendar-table .project-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.q3-calendar-table .project-dot-blue { background: #3b82f6; }
+.q3-calendar-table .project-dot-red { background: #ef4444; }
+.q3-calendar-table .project-dot-green { background: #22c55e; }
+.q3-calendar-table .project-dot-purple { background: #a855f7; }
+.q3-calendar-table .project-dot-orange { background: #f59e0b; }
+
+.q3-calendar-table .day-entries {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    color: var(--color-text-muted);
+    line-height: 1;
+}
+
+.q3-calendar-table .day-entries i {
+    font-size: 9px;
+}
+
+.q3-calendar-table .day-value {
+    position: absolute;
+    right: 8px;
+    bottom: 12px;
+    font-size: 10px;
+    color: var(--color-text-muted);
+    line-height: 1;
+}
+
+.q3-calendar-table .day-load-line {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 2px;
+    height: 2px;
+    background: color-mix(in srgb, var(--green-light) 78%, transparent);
+    border-radius: 999px;
+}
+
+.q3-calendar-table .day-note {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -30%);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green-light);
+    padding-top: 0;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.q3-calendar-table .selected-day {
+    background: linear-gradient(135deg, rgba(37, 86, 216, 0.35), rgba(86, 34, 168, 0.35));
+    box-shadow: inset 0 0 0 1px #7b3ac4;
+}
+
+.q3-calendar-table .muted-day {
+    background: color-mix(in srgb, var(--color-bg-primary) 75%, transparent);
+}
+
+/* Q4 - Historico */
+.q4-history-card {
+    overflow: hidden;
+}
+
+.q4-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+}
+
+.q4-history-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.q4-history-title h3 {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.q4-history-header button {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+}
+
+.q4-history-content {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.q4-panel {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    overflow: hidden;
+}
+
+.q4-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+}
+
+.q4-panel-header h4 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.q4-filters-form {
+    padding: 12px;
+}
+
+.q4-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.q4-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.q4-filter-field label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.q4-filter-field select {
+    width: 100%;
+    height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 7px 10px;
+    font-size: 14px;
+}
+
+.q4-filter-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.q4-btn {
+    height: 36px;
+    border-radius: 7px;
+    border: 0;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.q4-btn-primary {
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    color: #fff;
+}
+
+.q4-btn-neutral {
+    background: #5d6775;
+    color: #fff;
+}
+
+.q4-btn-outline {
+    background: transparent;
+    color: var(--green-dark);
+    border: 1px solid var(--green-dark);
+}
+
+.q4-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.q4-history-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+}
+
+.q4-history-table th {
+    height: 40px;
+    padding: 8px 6px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.q4-history-table th:last-child {
+    border-right: 0;
+}
+
+.q4-history-table td {
+    padding: 8px 6px;
+    font-size: 13px;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+}
+
+.q4-history-table tbody tr:nth-child(even) td {
+    background: color-mix(in srgb, var(--color-bg-primary) 65%, transparent);
+}
+
+.q4-pill {
+    display: inline-block;
+    min-width: 44px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--green-dark);
+}
+
+[data-theme="dark"] .spaceon-card {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .q1-field input,
+[data-theme="dark"] .q1-field select,
+[data-theme="dark"] .q1-field textarea,
+[data-theme="dark"] .q1-hours-control button {
+    background: #2b2f35;
+}
+
+[data-theme="dark"] .q3-calendar-table {
+    background: #232a33;
+}
+
+[data-theme="dark"] .q3-calendar-table td {
+    background: #2a313b;
+}
+
+[data-theme="dark"] .q3-calendar-table th {
+    background: #353c45;
+}
+
+[data-theme="dark"] .q3-calendar-table .day-projects {
+    background: #232a33;
+}
+
+[data-theme="dark"] .q3-calendar-table .day-load-line {
+    background: color-mix(in srgb, var(--green-light) 85%, transparent);
+}
+
+[data-theme="dark"] .q3-calendar-table .muted-day {
+    background: #313842;
+}
+
+[data-theme="dark"] .q4-panel {
+    background: #2a313b;
+}
+
+[data-theme="dark"] .q4-filter-field select {
+    background: #232a33;
+}
+
+[data-theme="dark"] .q4-btn-neutral {
+    background: #4a5566;
+}
+
+[data-theme="dark"] .q4-btn-outline {
+    color: var(--green-light);
+    border-color: var(--green-light);
+}
+
+[data-theme="dark"] .q4-history-table tbody tr:nth-child(even) td {
+    background: #232a33;
+}
+
+
+@media (max-width: 1200px) {
+    .q1-row-two,
+    .q1-row-four {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .q1-row-two .q1-field {
+        grid-column: span 1;
+    }
+
+    .q1-row-three {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .q1-checkbox {
+        grid-column: span 2;
+    }
+
+    .q1-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .q1-actions .q1-btn {
+        grid-column: span 1;
+    }
+
+    .q3-calendar-controls span {
+        font-size: 14px;
+    }
+
+    .q3-calendar-table td {
+        height: 64px;
+    }
+
+    .q4-filters-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .q1-row-two,
+    .q1-row-three,
+    .q1-row-four {
+        grid-template-columns: 1fr;
+    }
+
+    .q1-checkbox {
+        grid-column: span 1;
+    }
+
+    .q1-checkbox {
+        margin-bottom: 0;
+    }
+
+    .q1-actions {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    .q1-actions .q1-btn {
+        grid-column: span 1;
+    }
+
+    .q1-btn {
+        font-size: 16px;
+    }
+
+    .q3-calendar-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .q3-calendar-controls {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .q3-calendar-wrapper {
+        overflow-x: auto;
+    }
+
+    .q3-calendar-table {
+        min-width: 760px;
+    }
+
+    .q4-filters-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .q4-filter-actions {
+        justify-content: stretch;
+    }
+
+    .q4-btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .q4-filters-grid {
+        grid-template-columns: 1fr;
+    }
+}
