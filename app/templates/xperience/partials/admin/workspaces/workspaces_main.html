@@ -4,16 +4,17 @@
         <section class="workspace-selector" aria-label="Seleção de workspace">
             <header class="workspace-selector-header">
                 <p class="workspace-area-hint workspace-area-hint--admin">Área de gestão · seus workspaces (como proprietário)</p>
-                <h1>Selecione um workspace</h1>
+                
                 {% if workspace_count == 0 %}
                 <p class="workspace-selector-lead">Crie um workspace para começar a gestão e convidar membros.</p>
                 {% elif workspace_count > 1 %}
+                <h1>Selecione um workspace</h1>
                 <p class="workspace-selector-lead">Você tem <strong>{{ workspace_count }} workspaces</strong>. Escolha qual deseja administrar agora; o nome ficará visível no topo enquanto você navega (Apontamentos, Dashboard, etc.).</p>
                 {% else %}
                 <p class="workspace-selector-lead">Abra o workspace abaixo para entrar na área de gestão.</p>
                 {% endif %}
                 {% if active_admin_workspace and workspace_count > 1 %}
-                <p class="workspace-current-pill">Workspace atual na sessão: <strong>{{ active_admin_workspace.workspace_name }}</strong> — escolha outro abaixo para trocar.</p>
+                <p class="workspace-current-pill" style="display: none;">Workspace atual na sessão: <strong>{{ active_admin_workspace.workspace_name }}</strong> — escolha outro abaixo para trocar.</p>
                 {% endif %}
             </header>
 

@@ -1,150 +1,178 @@
 {# Configuração de apontamento: templates, expedientes + departamentos, usuários #}
 
-<section class="admin-config-section" aria-labelledby="hdr-templates">
-    <h2 id="hdr-templates">1) Templates de apontamento</h2>
-    <p class="admin-config-muted">Controla quais campos poderão aparecer nos lançamentos (uso futuro no formulário).</p>
-    {% if time_templates %}
-    <ul class="admin-config-list">
-        {% for t in time_templates %}
-        <li>
-            <strong>{{ t.name }}</strong>
-            — cliente: {{ t.use_client|yesno:"sim,não" }},
-            projeto: {{ t.use_project|yesno:"sim,não" }},
-            tarefa: {{ t.use_task|yesno:"sim,não" }},
-            tipo: {{ t.use_type|yesno:"sim,não" }},
-            descrição: {{ t.use_description|yesno:"sim,não" }}
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p class="admin-config-muted">Nenhum template ainda.</p>
-    {% endif %}
-    <form method="post" class="admin-config-form">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="create_template">
-        <h3>Novo template</h3>
-        {% for field in template_form %}
-        <div class="admin-config-field">
-            {% if field.name == "name" %}
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% else %}
-            <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
-            {% endif %}
-            {{ field.errors }}
+<div class="admin-tt-stack">
+
+<article class="spaceon-card admin-tt-card" aria-labelledby="hdr-templates">
+    <header class="admin-tt-header">
+        <div class="admin-tt-title">
+            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+            <h2 id="hdr-templates">Templates de apontamento</h2>
         </div>
-        {% endfor %}
-        <button type="submit" class="btn-primary">Criar template</button>
-    </form>
-</section>
-
-<section class="admin-config-section" aria-labelledby="hdr-dept-block">
-    <h2 id="hdr-dept-block">2) Expedientes e departamentos</h2>
-
-    <h3>Expedientes (regras de trabalho)</h3>
-    {% if work_schedules %}
-    <ul class="admin-config-list">
-        {% for s in work_schedules %}
-        <li>
-            <strong>{{ s.name }}</strong> — {{ s.expected_hours_per_day }}h/dia;
-            dias: {{ s.working_days|join:", " }}; fixos: {{ s.has_fixed_days|yesno:"sim,não" }}
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p class="admin-config-muted">Nenhum expediente cadastrado.</p>
-    {% endif %}
-    <form method="post" class="admin-config-form">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="create_schedule">
-        <h4>Novo expediente</h4>
-        {% for field in schedule_form %}
-        <div class="admin-config-field">
-            {% if field.name == "working_days_pick" %}
-            <span class="admin-config-label">{{ field.label }}</span>
-            <div class="admin-config-checkboxes">{{ field }}</div>
-            {% elif field.name == "has_fixed_days" %}
-            <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
-            {% else %}
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% endif %}
-            {{ field.errors }}
-        </div>
-        {% endfor %}
-        <button type="submit" class="btn-primary">Salvar expediente</button>
-    </form>
-
-    <h3 style="margin-top: 2rem;">Departamentos</h3>
-    <p class="admin-config-muted">Cada departamento usa um expediente e um template (opcionais até você preencher).</p>
-    {% if departments %}
-    <table class="admin-config-table">
-        <thead>
-            <tr><th>Nome</th><th>Expediente</th><th>Template</th></tr>
-        </thead>
-        <tbody>
-            {% for d in departments %}
-            <tr>
-                <td>{{ d.name }}</td>
-                <td>{{ d.schedule.name|default:"—" }}</td>
-                <td>{{ d.template.name|default:"—" }}</td>
-            </tr>
+    </header>
+    <div class="admin-tt-body">
+        <p class="admin-config-muted">Controla quais campos poderão aparecer nos lançamentos (uso futuro no formulário).</p>
+        {% if time_templates %}
+        <ul class="admin-config-list">
+            {% for t in time_templates %}
+            <li>
+                <strong>{{ t.name }}</strong>
+                — cliente: {{ t.use_client|yesno:"sim,não" }},
+                projeto: {{ t.use_project|yesno:"sim,não" }},
+                tarefa: {{ t.use_task|yesno:"sim,não" }},
+                tipo: {{ t.use_type|yesno:"sim,não" }},
+                descrição: {{ t.use_description|yesno:"sim,não" }}
+            </li>
             {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="admin-config-muted">Nenhum departamento.</p>
-    {% endif %}
-    <form method="post" class="admin-config-form">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="create_department">
-        <h4>Novo departamento</h4>
-        {% for field in department_form %}
-        <div class="admin-config-field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {{ field.errors }}
-        </div>
-        {% endfor %}
-        <button type="submit" class="btn-primary">Criar departamento</button>
-    </form>
-</section>
-
-<section class="admin-config-section" aria-labelledby="hdr-users">
-    <h2 id="hdr-users">3) Membros e departamento</h2>
-    <p class="admin-config-muted">Usuários vinculados a este workspace (via convite). Um departamento por usuário neste workspace.</p>
-    {% if member_rows %}
-    <table class="admin-config-table">
-        <thead>
-            <tr><th>Usuário</th><th>Departamento atual</th><th>Atribuir</th></tr>
-        </thead>
-        <tbody>
-            {% for row in member_rows %}
-            <tr>
-                <td>{{ row.user.email }}{% if row.user.first_name %} ({{ row.user.first_name }}){% endif %}</td>
-                <td>{% if row.department %}{{ row.department.name }}{% else %}—{% endif %}</td>
-                <td>
-                    <form method="post" class="admin-config-inline-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="assign_user_department">
-                        <input type="hidden" name="user_id" value="{{ row.user.pk }}">
-                        <select name="department_id" class="auth-input" required>
-                            <option value="">Selecione…</option>
-                            {% for d in departments %}
-                            <option value="{{ d.pk }}" {% if row.department and row.department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn-primary">Salvar</button>
-                    </form>
-                </td>
-            </tr>
+        </ul>
+        {% else %}
+        <p class="admin-config-muted">Nenhum template ainda.</p>
+        {% endif %}
+        <form method="post" class="admin-config-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_template">
+            <h4>Novo template</h4>
+            {% for field in template_form %}
+            <div class="admin-config-field">
+                {% if field.name == "name" %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% else %}
+                <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
+                {% endif %}
+                {{ field.errors }}
+            </div>
             {% endfor %}
-        </tbody>
-    </table>
-    {% if not departments %}
-    <p class="admin-config-muted">Crie ao menos um departamento acima para poder atribuir membros.</p>
-    {% endif %}
-    {% else %}
-    <p class="admin-config-muted">Nenhum membro neste workspace. Use “Adicionar membro” na lista de workspaces.</p>
-    {% endif %}
-</section>
+            <button type="submit" class="btn-primary">Criar template</button>
+        </form>
+    </div>
+</article>
+
+<article class="spaceon-card admin-tt-card" aria-labelledby="hdr-dept-block">
+    <header class="admin-tt-header">
+        <div class="admin-tt-title">
+            <i class="fas fa-business-time" aria-hidden="true"></i>
+            <h2 id="hdr-dept-block">Expedientes e departamentos</h2>
+        </div>
+    </header>
+    <div class="admin-tt-body">
+        <div class="admin-tt-subsection">
+            <h3 class="admin-tt-subtitle">Expedientes (regras de trabalho)</h3>
+            {% if work_schedules %}
+            <ul class="admin-config-list">
+                {% for s in work_schedules %}
+                <li>
+                    <strong>{{ s.name }}</strong> — {{ s.expected_hours_per_day }}h/dia;
+                    dias: {{ s.working_days|join:", " }}; fixos: {{ s.has_fixed_days|yesno:"sim,não" }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="admin-config-muted">Nenhum expediente cadastrado.</p>
+            {% endif %}
+            <form method="post" class="admin-config-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_schedule">
+                <h4>Novo expediente</h4>
+                {% for field in schedule_form %}
+                <div class="admin-config-field">
+                    {% if field.name == "working_days_pick" %}
+                    <span class="admin-config-label">{{ field.label }}</span>
+                    <div class="admin-config-checkboxes">{{ field }}</div>
+                    {% elif field.name == "has_fixed_days" %}
+                    <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
+                    {% else %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% endif %}
+                    {{ field.errors }}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn-primary">Salvar expediente</button>
+            </form>
+        </div>
+
+        <div class="admin-tt-subsection">
+            <h3 class="admin-tt-subtitle">Departamentos</h3>
+            <p class="admin-config-muted">Cada departamento usa um expediente e um template (opcionais até você preencher).</p>
+            {% if departments %}
+            <table class="admin-config-table">
+                <thead>
+                    <tr><th>Nome</th><th>Expediente</th><th>Template</th></tr>
+                </thead>
+                <tbody>
+                    {% for d in departments %}
+                    <tr>
+                        <td>{{ d.name }}</td>
+                        <td>{{ d.schedule.name|default:"—" }}</td>
+                        <td>{{ d.template.name|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="admin-config-muted">Nenhum departamento.</p>
+            {% endif %}
+            <form method="post" class="admin-config-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_department">
+                <h4>Novo departamento</h4>
+                {% for field in department_form %}
+                <div class="admin-config-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn-primary">Criar departamento</button>
+            </form>
+        </div>
+    </div>
+</article>
+
+<article class="spaceon-card admin-tt-card" aria-labelledby="hdr-users">
+    <header class="admin-tt-header">
+        <div class="admin-tt-title">
+            <i class="fas fa-users-cog" aria-hidden="true"></i>
+            <h2 id="hdr-users">Membros e departamento</h2>
+        </div>
+    </header>
+    <div class="admin-tt-body">
+        <p class="admin-config-muted">Usuários vinculados a este workspace (via convite). Um departamento por usuário neste workspace.</p>
+        {% if member_rows %}
+        <table class="admin-config-table">
+            <thead>
+                <tr><th>Usuário</th><th>Departamento atual</th><th>Atribuir</th></tr>
+            </thead>
+            <tbody>
+                {% for row in member_rows %}
+                <tr>
+                    <td>{{ row.user.email }}{% if row.user.first_name %} ({{ row.user.first_name }}){% endif %}</td>
+                    <td>{% if row.department %}{{ row.department.name }}{% else %}—{% endif %}</td>
+                    <td>
+                        <form method="post" class="admin-config-inline-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="assign_user_department">
+                            <input type="hidden" name="user_id" value="{{ row.user.pk }}">
+                            <select name="department_id" class="auth-input" required>
+                                <option value="">Selecione…</option>
+                                {% for d in departments %}
+                                <option value="{{ d.pk }}" {% if row.department and row.department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn-primary">Salvar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if not departments %}
+        <p class="admin-config-muted">Crie ao menos um departamento acima para poder atribuir membros.</p>
+        {% endif %}
+        {% else %}
+        <p class="admin-config-muted">Nenhum membro neste workspace. Use “Adicionar membro” na lista de workspaces.</p>
+        {% endif %}
+    </div>
+</article>
+
+</div>

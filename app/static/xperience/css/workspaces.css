@@ -24,20 +24,37 @@
 .workspaces-page .workspace-selector-header {
     text-align: center;
     margin-bottom: 24px;
+    max-width: min(40rem, 100%);
+    margin-left: auto;
+    margin-right: auto;
+    padding-inline: 1rem;
+    box-sizing: border-box;
 }
 
 .workspaces-page .workspace-selector-header h1 {
     color: #eef4ff;
-    font-size: 62px;
+    font-size: clamp(1.45rem, 3.2vw, 1.95rem);
     font-weight: 700;
-    line-height: 1.05;
-    margin-bottom: 16px;
+    line-height: 1.22;
+    margin-bottom: 0.65rem;
 }
 
-.workspaces-page .workspace-selector-header p {
-    color: rgba(208, 218, 236, 0.55);
-    font-size: 36px;
-    line-height: 1.1;
+.workspaces-page .workspace-selector-header .workspace-area-hint {
+    font-size: 0.68rem;
+}
+
+.workspaces-page .workspace-selector-header .workspace-selector-lead,
+.workspaces-page .workspace-selector-header .workspace-current-pill {
+    font-size: clamp(0.82rem, 1.9vw, 0.95rem);
+    line-height: 1.55;
+    max-width: 34rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.workspaces-page .workspace-selector-header p.workspace-selector-lead,
+.workspaces-page .workspace-selector-header p.workspace-current-pill {
+    color: rgba(208, 218, 236, 0.78);
 }
 
 .workspaces-page .workspace-grid {
@@ -178,8 +195,9 @@
     color: #1f2937;
 }
 
-.workspaces-page:not([data-theme="dark"]) .workspace-selector-header p {
-    color: rgba(55, 65, 81, 0.66);
+.workspaces-page:not([data-theme="dark"]) .workspace-selector-header p.workspace-selector-lead,
+.workspaces-page:not([data-theme="dark"]) .workspace-selector-header p.workspace-current-pill {
+    color: rgba(55, 65, 81, 0.78);
 }
 
 .workspaces-page:not([data-theme="dark"]) .workspace-card {
@@ -202,14 +220,6 @@
 }
 
 @media (max-width: 990px) {
-    .workspaces-page .workspace-selector-header h1 {
-        font-size: 46px;
-    }
-
-    .workspaces-page .workspace-selector-header p {
-        font-size: 24px;
-    }
-
     .workspaces-page .workspace-grid {
         flex-wrap: wrap;
     }
@@ -242,14 +252,6 @@
 @media (max-width: 620px) {
     .workspaces-page .main {
         padding: 22px 0 34px;
-    }
-
-    .workspaces-page .workspace-selector-header h1 {
-        font-size: 34px;
-    }
-
-    .workspaces-page .workspace-selector-header p {
-        font-size: 18px;
     }
 
     .workspaces-page .workspace-card {

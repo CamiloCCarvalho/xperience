@@ -260,11 +260,12 @@ a {
 
 .workspace-selector-lead,
 .workspace-current-pill {
-    font-size: 0.9rem;
+    font-size: 0.7rem;
     color: var(--color-text-muted);
     line-height: 1.5;
     max-width: 36rem;
     margin-bottom: 0.75rem;
+    align-items: center;
 }
 
 .workspace-current-pill {
@@ -337,7 +338,7 @@ a {
 }
 
 .header-context-workspace-change {
-    color: var(--green-light);
+    color: var(--green-dark) !important;
     font-weight: 600;
     margin-left: 0.15rem;
 }

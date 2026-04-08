@@ -11,12 +11,14 @@
     <link rel="stylesheet" href="{% static 'xperience/css/button_logout.css' %}?v=1">
     <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=1">
     <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/workspace_create.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/members_add.css' %}?v=1">
 </head>
 
 
 
 <!-- body -->
-<body data-theme="dark" class="home-page spaceon-page spaceon-account-page">
+<body data-theme="dark" class="home-page spaceon-page spaceon-account-page {% block admin_shell_body_class %}admin-workspace-create-page{% endblock %}">
 
     <!-- container -->
     <div class="container">

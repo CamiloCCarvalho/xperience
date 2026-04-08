@@ -53,10 +53,10 @@ def admin_workspaces(request):
         chosen = Workspace.objects.filter(pk=ws_id, owner=user).first()
         if chosen is not None:
             set_admin_workspace(request, chosen.pk)
-            messages.success(
-                request,
-                f"Workspace ativo na gestão: «{chosen.workspace_name}».",
-            )
+            #messages.success(
+            #    request,
+            #    f"Workspace ativo na gestão: «{chosen.workspace_name}».",
+            #)
             return redirect("admin-home")
         messages.error(request, "Workspace inválido ou não pertence à sua conta.")
 
@@ -105,19 +105,19 @@ def admin_home(request):
             template_form = TimeEntryTemplateForm(request.POST, workspace=ws)
             if template_form.is_valid():
                 template_form.save()
-                messages.success(request, "Template criado.")
+                #messages.success(request, "Template criado.")
                 return redirect("admin-home")
         elif action == "create_schedule":
             schedule_form = WorkScheduleForm(request.POST, workspace=ws)
             if schedule_form.is_valid():
                 schedule_form.save()
-                messages.success(request, "Expediente criado.")
+                #messages.success(request, "Expediente criado.")
                 return redirect("admin-home")
         elif action == "create_department":
             department_form = DepartmentForm(request.POST, workspace=ws)
             if department_form.is_valid():
                 department_form.save()
-                messages.success(request, "Departamento criado.")
+                #messages.success(request, "Departamento criado.")
                 return redirect("admin-home")
         elif action == "assign_user_department":
             try:
@@ -138,7 +138,7 @@ def admin_home(request):
                         workspace=ws,
                         defaults={"department": dept},
                     )
-                    messages.success(request, "Departamento do membro atualizado.")
+                    #messages.success(request, "Departamento do membro atualizado.")
                 else:
                     messages.error(
                         request,
@@ -203,7 +203,7 @@ def admin_workspaces_create(request):
             ws = form.save(commit=False)
             ws.owner = request.user
             ws.save()
-            messages.success(request, "Workspace criado com sucesso.")
+            #messages.success(request, "Workspace criado com sucesso.")
             return redirect("admin-workspaces")
     else:
         form = WorkspaceCreateForm()
@@ -225,7 +225,7 @@ def admin_members_add(request):
         form = MemberAddForm(request.POST, owner=owner)
         if form.is_valid():
             form.save()
-            messages.success(request, "Membro vinculado ao workspace com sucesso.")
+            #messages.success(request, "Membro vinculado ao workspace com sucesso.")
             return redirect("admin-members-add")
     else:
         form = MemberAddForm(owner=owner)
