@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-3bq)qn-3t_6kswc7c6s1h%x!ry56skdjt4c4@=ku)_$+pr)$cj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: list[str] = []
 
 
 # Application definition
@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # my apps here
-    "app",
+    "app.apps.AppConfig",
 ]
 
 MIDDLEWARE = [
@@ -126,9 +126,18 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / "static"
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # future use
 #STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 #STATICFILES_FINDERS = [
 #    "django.contrib.staticfiles.finders.FileSystemFinder",
 #    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 #]
+
+AUTH_USER_MODEL = "app.User"
+
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"

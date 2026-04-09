@@ -1,4 +1,4 @@
-data_page = {
+data_page_home = {
     "site_name": "Xperience",
     "site_description": "Uma nova experiencia em apontamentos e projetos",
     "site_keywords": "Xperience, Apontamentos, Projetos, Time Tracking",

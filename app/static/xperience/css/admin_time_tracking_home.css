@@ -1,0 +1,214 @@
+/* Admin — configuração de apontamentos (parcial em .main.admin-spaceon-home) */
+
+.admin-spaceon-home .admin-tt-stack {
+    width: 100%;
+    max-width: min(760px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.admin-spaceon-home .admin-tt-card {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+    margin-bottom: 0;
+}
+
+.admin-spaceon-home .admin-tt-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    border-radius: 11px 11px 0 0;
+}
+
+.admin-spaceon-home .admin-tt-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-spaceon-home .admin-tt-title i {
+    font-size: 18px;
+    opacity: 0.95;
+}
+
+.admin-spaceon-home .admin-tt-title h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+}
+
+.admin-spaceon-home .admin-tt-body {
+    padding: 16px 18px 18px;
+}
+
+.admin-spaceon-home .admin-tt-body > .admin-config-muted:first-of-type {
+    margin-top: 0;
+}
+
+.admin-spaceon-home .admin-tt-subsection + .admin-tt-subsection {
+    margin-top: 1.35rem;
+    padding-top: 1.35rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.admin-spaceon-home .admin-tt-subtitle {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-title);
+}
+
+.admin-spaceon-home .admin-tt-body h4 {
+    margin: 0.85rem 0 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.admin-spaceon-home .admin-config-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.admin-spaceon-home .admin-config-list {
+    margin: 0 0 1rem 1.1rem;
+}
+
+.admin-spaceon-home .admin-config-form {
+    margin-top: 1rem;
+}
+
+.admin-spaceon-home .admin-config-field {
+    margin-bottom: 0.85rem;
+}
+
+.admin-spaceon-home .admin-config-field label:not(.admin-config-cb-label) {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.admin-spaceon-home .admin-config-field input[type="text"],
+.admin-spaceon-home .admin-config-field input[type="number"],
+.admin-spaceon-home .admin-config-field input[type="email"],
+.admin-spaceon-home .admin-config-field select,
+.admin-spaceon-home .admin-config-field textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 9px 11px;
+    font-size: 14px;
+    font-family: inherit;
+    min-height: 40px;
+}
+
+.admin-spaceon-home .admin-config-field textarea {
+    min-height: 4.5rem;
+    resize: vertical;
+}
+
+.admin-spaceon-home .admin-config-field input:focus-visible,
+.admin-spaceon-home .admin-config-field select:focus-visible,
+.admin-spaceon-home .admin-config-field textarea:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: 1px;
+}
+
+.admin-spaceon-home .admin-config-form .btn-primary,
+.admin-spaceon-home .admin-config-inline-form .btn-primary {
+    border: 0;
+    border-radius: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.admin-spaceon-home .admin-config-form .btn-primary:hover,
+.admin-spaceon-home .admin-config-inline-form .btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+.admin-spaceon-home .admin-config-table {
+    font-size: 0.875rem;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.admin-spaceon-home .admin-config-table th,
+.admin-spaceon-home .admin-config-table td {
+    padding: 0.5rem 0.65rem;
+}
+
+.admin-spaceon-home .admin-config-inline-form select.auth-input,
+.admin-spaceon-home .admin-config-inline-form select {
+    min-width: 11rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 8px 10px;
+    font-size: 14px;
+    min-height: 40px;
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-card {
+    background: #2a313b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-config-field input[type="text"],
+[data-theme="dark"] .admin-spaceon-home .admin-config-field input[type="number"],
+[data-theme="dark"] .admin-spaceon-home .admin-config-field input[type="email"],
+[data-theme="dark"] .admin-spaceon-home .admin-config-field select,
+[data-theme="dark"] .admin-spaceon-home .admin-config-field textarea,
+[data-theme="dark"] .admin-spaceon-home .admin-config-inline-form select {
+    background: #232a33;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 620px) {
+    .admin-spaceon-home .admin-tt-body {
+        padding: 14px 14px 16px;
+    }
+
+    .admin-spaceon-home .admin-config-inline-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-spaceon-home .admin-config-inline-form .btn-primary {
+        width: 100%;
+    }
+}

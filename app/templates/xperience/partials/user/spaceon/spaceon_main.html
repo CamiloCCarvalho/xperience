@@ -5,72 +5,86 @@
             <article class="spaceon-card q1-card">
                 <header class="q1-card-header">
                     <i class="fas fa-calendar-check" aria-hidden="true"></i>
-                    <h2>Preparar apontamento</h2>
+                    <h2>Pré-apontamento</h2>
                 </header>
 
-                <form class="q1-form" action="#" method="post">
-                    <div class="q1-row q1-row-two">
-                        <div class="q1-field">
-                            <label for="descricao"></label>
-                            <textarea id="descricao" rows="4" placeholder="Descrição *"></textarea>
-                        </div>
+                <p class="q1-pre-entry-hint" id="q1-pre-entry-hint">
+                    Preencha os campos conforme o template do gestor. A <strong>data</strong> será definida ao selecionar um dia no calendário (em breve).
+                </p>
 
-                        <div class="q1-field">
-                            <label for="tipo-apontamento"></label>
-                            <select id="tipo-apontamento">
-                                <option value="" placeholder="Tipo de Apontamento *">Tipo de Apontamento *</option>
-                            </select>
-                        </div>
-                    </div>
+                {% if entry_form.configured and entry_form.template_name %}
+                <p class="q1-template-meta">
+                    {{ entry_form.department_name }} · {{ entry_form.template_name }}
+                </p>
+                {% endif %}
 
-                    <div class="q1-row q1-row-four">
-                        <div class="q1-field">
-                            <label for="formato">Formato</label>
-                            <select id="formato">
-                                <option value="">Selecione...</option>
-                            </select>
-                        </div>
+                {% if not entry_form.configured %}
+                <p class="q1-notice" role="status">
+                    {% if entry_form.department_name %}
+                        O departamento «{{ entry_form.department_name }}» ainda não possui um template de apontamento. Peça ao gestor para vincular um template ao departamento.
+                    {% else %}
+                        Você ainda não está vinculado a um departamento neste workspace. Peça ao gestor para atribuir seu departamento e o template de apontamento.
+                    {% endif %}
+                </p>
+                {% endif %}
 
-                        <div class="q1-field">
-                            <label for="subtipo">Subtipo</label>
-                            <select id="subtipo">
-                                <option value="">Selecione...</option>
-                            </select>
-                        </div>
+                <form class="q1-form" action="#" method="post" aria-describedby="q1-pre-entry-hint">
+                    {% csrf_token %}
 
-                        <div class="q1-field">
-                            <label for="tag">Tag</label>
-                            <select id="tag">
-                                <option value="">Selecione...</option>
-                            </select>
-                        </div>
-
+                    <div class="q1-row">
                         <div class="q1-field q1-hours">
-                            <label for="horas-gastas">Horas Gastas *</label>
+                            <label for="horas-gastas">Horas *</label>
                             <div class="q1-hours-control">
-                                <input id="horas-gastas" type="number" value="0" min="0" step="1">
+                                <input id="horas-gastas" name="hours" type="number" value="0" min="0" step="0.25" required>
                                 <button type="button" aria-label="Aumentar horas">+</button>
                                 <button type="button" aria-label="Diminuir horas">-</button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="q1-row q1-row-three">
+                    {% if entry_form.use_client or entry_form.use_project or entry_form.use_task %}
+                    <div class="q1-row q1-row-four">
+                        {% if entry_form.use_client %}
                         <div class="q1-field">
-                            <label for="hora-inicio">Hora Início</label>
-                            <input id="hora-inicio" type="time">
+                            <label for="entry-client">Cliente</label>
+                            <input id="entry-client" name="client" type="text" maxlength="255" autocomplete="organization">
                         </div>
-
+                        {% endif %}
+                        {% if entry_form.use_project %}
                         <div class="q1-field">
-                            <label for="hora-fim">Hora Fim</label>
-                            <input id="hora-fim" type="time">
+                            <label for="entry-project">Projeto</label>
+                            <input id="entry-project" name="project" type="text" maxlength="255">
                         </div>
-
-                        <label class="q1-checkbox" for="hora-extra">
-                            <input id="hora-extra" type="checkbox">
-                            Hora Extra
-                        </label>
+                        {% endif %}
+                        {% if entry_form.use_task %}
+                        <div class="q1-field">
+                            <label for="entry-task">Tarefa</label>
+                            <input id="entry-task" name="task" type="text" maxlength="255">
+                        </div>
+                        {% endif %}
                     </div>
+                    {% endif %}
+
+                    {% if entry_form.use_description or entry_form.use_type %}
+                    <div class="q1-row q1-row-two">
+                        {% if entry_form.use_description %}
+                        <div class="q1-field">
+                            <label for="entry-description">Descrição</label>
+                            <textarea id="entry-description" name="description" rows="4" placeholder="Descrição"></textarea>
+                        </div>
+                        {% endif %}
+                        {% if entry_form.use_type %}
+                        <div class="q1-field">
+                            <label for="entry-type">Tipo de apontamento</label>
+                            <select id="entry-type" name="entry_type">
+                                <option value="">Selecione...</option>
+                                <option value="internal">Interno</option>
+                                <option value="external">Externo</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
 
                     <div class="q1-actions">
                         <button type="submit" class="q1-btn q1-btn-primary">
@@ -101,7 +115,7 @@
                         <h3>Calendário</h3>
                     </div>
                     <div class="q3-calendar-controls">
-                        <span>Março 2026</span>
+                        <span>{{ calendar_heading }}</span>
                         <button type="button" aria-label="Mês anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
                         <button type="button" aria-label="Próximo mês"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
                         <button type="button" aria-label="Atualizar"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
@@ -122,155 +136,22 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% for week in calendar_days %}
                             <tr>
-                                <td class="calendar-day"><span class="day-number">1</span></td>
-                                <td class="calendar-day has-note">
+                                {% for day in week %}
+                                    {% if day %}
+                                <td class="calendar-day">
+                                    <span class="day-number">{{ day }}</span>
                                     <div class="day-content">
-                                        <span class="day-number">2</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>3</span></span>
-                                        <span class="day-note">5h 30</span>
+                                        <!-- entradas dinâmicas futuras (TimeEntry) -->
                                     </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-blue"></span>
-                                            <span class="project-dot project-dot-red"></span>
-                                    </div>
-                                    <span class="day-value">R$ 135,90</span>
-                                    <span class="day-load-line"></span>
                                 </td>
-                                <td class="calendar-day has-note">
-                                    <div class="day-content">
-                                        <span class="day-number">3</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
-                                        <span class="day-note">5h 20</span>
-                                    </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-blue"></span>
-                                            <span class="project-dot project-dot-green"></span>
-                                    </div>
-                                    <span class="day-value">R$ 127,85</span>
-                                    <span class="day-load-line"></span>
-                                </td>
-                                <td class="calendar-day has-note">
-                                    <div class="day-content">
-                                        <span class="day-number">4</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>4</span></span>
-                                        <span class="day-note">7h 15</span>
-                                    </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-purple"></span>
-                                            <span class="project-dot project-dot-green"></span>
-                                    </div>
-                                    <span class="day-value">R$ 182,40</span>
-                                    <span class="day-load-line"></span>
-                                </td>
-                                <td class="calendar-day has-note">
-                                    <div class="day-content">
-                                        <span class="day-number">5</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>3</span></span>
-                                        <span class="day-note">7h 10</span>
-                                    </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-blue"></span>
-                                            <span class="project-dot project-dot-orange"></span>
-                                    </div>
-                                    <span class="day-value">R$ 178,25</span>
-                                    <span class="day-load-line"></span>
-                                </td>
-                                <td class="calendar-day has-note">
-                                    <div class="day-content">
-                                        <span class="day-number">6</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
-                                        <span class="day-note">5h 20</span>
-                                    </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-red"></span>
-                                            <span class="project-dot project-dot-green"></span>
-                                    </div>
-                                    <span class="day-value">R$ 130,10</span>
-                                    <span class="day-load-line"></span>
-                                </td>
-                                <td class="calendar-day"><span class="day-number">7</span></td>
+                                    {% else %}
+                                <td class="calendar-day muted-day"></td>
+                                    {% endif %}
+                                {% endfor %}
                             </tr>
-                            <tr>
-                                <td class="calendar-day"><span class="day-number">8</span></td>
-                                <td class="calendar-day has-note">
-                                    <div class="day-content">
-                                        <span class="day-number">9</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
-                                        <span class="day-note">5h 40</span>
-                                    </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-purple"></span>
-                                            <span class="project-dot project-dot-blue"></span>
-                                    </div>
-                                    <span class="day-value">R$ 143,70</span>
-                                    <span class="day-load-line"></span>
-                                </td>
-                                <td class="calendar-day has-note">
-                                    <div class="day-content">
-                                        <span class="day-number">10</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>1</span></span>
-                                        <span class="day-note">2h 00</span>
-                                    </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-orange"></span>
-                                    </div>
-                                    <span class="day-value">R$ 51,14</span>
-                                    <span class="day-load-line"></span>
-                                </td>
-                                <td class="calendar-day has-note">
-                                    <div class="day-content">
-                                        <span class="day-number">11</span>
-                                        <span class="day-entries"><i class="fas fa-pencil-alt" aria-hidden="true"></i><span>2</span></span>
-                                        <span class="day-note">2h 55</span>
-                                    </div>
-                                    <div class="day-projects" aria-label="Projetos do dia">
-                                            <span class="project-dot project-dot-green"></span>
-                                            <span class="project-dot project-dot-red"></span>
-                                    </div>
-                                    <span class="day-value">R$ 74,15</span>
-                                    <span class="day-load-line"></span>
-                                </td>
-                                <td class="calendar-day"><span class="day-number">12</span></td>
-                                <td class="calendar-day"><span class="day-number">13</span></td>
-                                <td class="calendar-day selected-day"><span class="day-number">14</span></td>
-                            </tr>
-                            <tr>
-                                <td class="calendar-day"><span class="day-number">15</span></td>
-                                <td class="calendar-day"><span class="day-number">16</span></td>
-                                <td class="calendar-day"><span class="day-number">17</span></td>
-                                <td class="calendar-day"><span class="day-number">18</span></td>
-                                <td class="calendar-day"><span class="day-number">19</span></td>
-                                <td class="calendar-day"><span class="day-number">20</span></td>
-                                <td class="calendar-day"><span class="day-number">21</span></td>
-                            </tr>
-                            <tr>
-                                <td class="calendar-day"><span class="day-number">22</span></td>
-                                <td class="calendar-day"><span class="day-number">23</span></td>
-                                <td class="calendar-day"><span class="day-number">24</span></td>
-                                <td class="calendar-day"><span class="day-number">25</span></td>
-                                <td class="calendar-day"><span class="day-number">26</span></td>
-                                <td class="calendar-day"><span class="day-number">27</span></td>
-                                <td class="calendar-day"><span class="day-number">28</span></td>
-                            </tr>
-                            <tr>
-                                <td class="calendar-day"><span class="day-number">29</span></td>
-                                <td class="calendar-day"><span class="day-number">30</span></td>
-                                <td class="calendar-day"><span class="day-number">31</span></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                            </tr>
-                            <tr>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                                <td class="calendar-day muted-day"></td>
-                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

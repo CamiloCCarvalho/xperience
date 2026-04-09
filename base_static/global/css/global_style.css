@@ -142,3 +142,320 @@ a {
     align-items: center;
     /*border: 1px solid red;*/
 }
+
+/* Formulários de autenticação (Django widgets com classe .auth-input) */
+.auth-form .auth-input,
+.auth-form input.auth-input {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0.25rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+    font: inherit;
+}
+
+.auth-form .error {
+    color: #c0392b;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Marca no header: área pública / gestão / membro */
+.header-brand {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    margin-right: 0.5rem;
+}
+
+.app-role-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    background: var(--color-bg-secondary);
+    vertical-align: middle;
+}
+
+.app-role-badge--admin {
+    color: var(--green-dark);
+    border-color: var(--green-light);
+    background: color-mix(in srgb, var(--green-light) 12%, var(--color-bg-secondary));
+}
+
+.app-role-badge--member {
+    color: var(--color-text);
+    border-color: #6c8ebf;
+    background: color-mix(in srgb, #6c8ebf 14%, var(--color-bg-secondary));
+}
+
+.app-role-badge--public {
+    border-color: var(--color-text-muted);
+    opacity: 0.95;
+}
+
+/* Home: separar visualmente login x cadastro admin */
+.auth-panel--access {
+    border-left: 4px solid var(--green-light);
+    padding-left: 1rem;
+}
+
+.auth-panel--register-admin {
+    border-left: 4px solid #2980b9;
+    padding-left: 1rem;
+}
+
+.auth-panel-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.35rem;
+    color: var(--color-text-muted);
+}
+
+.auth-panel-tag--access {
+    color: var(--green-dark);
+}
+
+.auth-panel-tag--register {
+    color: #2980b9;
+}
+
+.auth-panel-lead {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.45;
+}
+
+/* Lista de workspaces */
+.workspace-area-hint {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.workspace-area-hint--admin {
+    color: var(--green-light);
+}
+
+.workspace-area-hint--member {
+    color: #7eb8da;
+}
+
+.workspace-selector-lead,
+.workspace-current-pill {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    max-width: 36rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+}
+
+.workspace-current-pill {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+}
+
+/* Cartão de workspace: submit como botão invisível */
+.workspace-select-form {
+    margin: 0;
+    padding: 0;
+}
+
+.workspace-card-btn {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    border-radius: inherit;
+}
+
+.workspace-card-btn:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: 2px;
+}
+
+.workspace-owner-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.5rem;
+}
+
+/* Chip workspace ativo (membro) */
+.header-context-workspace {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.5rem;
+    margin-right: 0.5rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    font-size: 0.75rem;
+    max-width: 14rem;
+}
+
+.header-context-workspace-label {
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+.header-context-workspace-name {
+    color: var(--color-title);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 9rem;
+}
+
+.header-context-workspace-change {
+    color: var(--green-dark) !important;
+    font-weight: 600;
+    margin-left: 0.15rem;
+}
+
+/* Chip de workspace na área de gestão (diferente do membro) */
+.header-context-workspace--gestao {
+    border-color: color-mix(in srgb, var(--green-light) 45%, var(--color-border));
+    background: color-mix(in srgb, var(--green-light) 10%, var(--color-bg-secondary));
+}
+
+.header-context-workspace--gestao .header-context-workspace-label {
+    color: var(--green-light);
+}
+
+/* Admin — Apontamentos (home /user_admin/spaceon/home/) */
+.admin-spaceon-home .admin-config-intro {
+    width: 100%;
+    max-width: 48rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-config-section {
+    width: 100%;
+    max-width: 48rem;
+    margin-bottom: 2rem;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+}
+
+.admin-config-section h2 {
+    margin-bottom: 0.5rem;
+    font-size: 1.15rem;
+}
+
+.admin-config-section h3,
+.admin-config-section h4 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1rem;
+}
+
+.admin-config-muted {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    margin-bottom: 0.75rem;
+}
+
+.admin-config-list {
+    margin: 0 0 1rem 1rem;
+    list-style: disc;
+    color: var(--color-text);
+}
+
+.admin-config-form {
+    margin-top: 1rem;
+}
+
+.admin-config-field {
+    margin-bottom: 0.75rem;
+}
+
+.admin-config-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+.admin-config-cb-label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    flex-direction: row;
+    color: var(--color-text) !important;
+}
+
+.admin-config-cb {
+    display: inline-flex;
+}
+
+.admin-config-checkboxes ul {
+    list-style: none;
+    margin: 0.25rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+}
+
+.admin-config-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.admin-config-table th,
+.admin-config-table td {
+    border: 1px solid var(--color-border);
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+}
+
+.admin-config-table th {
+    background: var(--color-bg-primary);
+    color: var(--color-title);
+}
+
+.admin-config-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-config-inline-form select {
+    min-width: 10rem;
+}

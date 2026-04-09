@@ -5,3 +5,4 @@ faker==40.11.0
 django-stubs==6.0.1
 mypy==1.19.1
 pre-commit==4.5.1
+pillow==12.1.1

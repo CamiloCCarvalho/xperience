@@ -1,0 +1,44 @@
+.header-menu-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.workspace-logout-btn {
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 50% !important;
+    /* border: 1px solid #cf3f4f; */
+    /* background: #cf3f4f; */
+    color: #cf3f4f;
+    font-size: 14px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    line-height: 1;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.workspace-logout-btn:hover {
+    /* background: #e54e5f; */
+    /* border-color: #e54e5f; */
+    /* color: #ffffff; */
+    .icon-logout{
+        color: #e54e5f;
+    }
+}
+.icon-logout{
+    color: #cf3f4f;
+}
+
+[data-theme="light"] .workspace-logout-btn,
+body:not([data-theme="dark"]) .workspace-logout-btn {
+    /* border-color: #c93343; */
+    /* background: #c93343; */
+    /* color: #ffffff; */
+    .icon-logout{
+        color: #c93343;
+    }
+}

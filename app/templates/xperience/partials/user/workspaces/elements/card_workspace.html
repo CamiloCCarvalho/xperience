@@ -1,14 +1,18 @@
-<li>
-    <a href="/user/spaceon/home">
-        <article class="workspace-card">
-            <!-- avatar -->
-            <div class="workspace-card-avatar" aria-hidden="true">
-                <img src="{{ workspace.workspace_avatar.url }}" alt="Avatar do workspace" />
-            </div>
-            <!-- name -->
-            <h2 class="workspace-name">{{ workspace.workspace_name }}</h2>
-            <!-- description -->
-            <p class="workspace-description">{{ workspace.workspace_description }}</p>
-        </article>
-    </a>
+<li class="workspace-card-item">
+    <form method="post" action="{% url 'user-workspaces' %}" class="workspace-select-form">
+        {% csrf_token %}
+        <input type="hidden" name="workspace_id" value="{{ workspace.pk }}">
+        <button type="submit" class="workspace-card-btn" aria-label="Acessar o workspace {{ workspace.workspace_name }}">
+            <article class="workspace-card">
+                <div class="workspace-card-avatar" aria-hidden="true">
+                    <img src="{{ workspace.display_avatar_url }}" alt="" />
+                </div>
+                <h2 class="workspace-name">{{ workspace.workspace_name }}</h2>
+                {% if workspace.workspace_description %}
+                <p class="workspace-description">{{ workspace.workspace_description }}</p>
+                {% endif %}
+                <p class="workspace-owner-hint">Gestor da conta: {{ workspace.owner_display }}</p>
+            </article>
+        </button>
+    </form>
 </li>

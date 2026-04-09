@@ -3,28 +3,17 @@
     <div class="header-container">
         <nav class="header-content">
             <div class="header-menu-left">
-                <!-- logo -->
-                <a href="/">
-                <span class="header-content-xperience">Xperience</span>
-                </a>
+                {% include "xperience/partials/user/member_brand.html" %}
                 <!-- menu -->
                 <ul class="header-content-menu">
-                    <li><a href="/user/workspaces">Workspaces</a></li>
-                    <li><a href="/user/spaceon/dashboard">Dashboard</a></li>
-                    <li><a href="/user/spaceon/home">Apontamentos</a></li>
-                    <li><a href="/user/spaceon/config">Configurações</a></li>
-                    <li><a href="/user/spaceon/account" style="color: var(--green-light); font-weight: bold;">Conta</a></li>
+                    <li><a href="{% url 'user-workspaces' %}" title="Escolher ou trocar de workspace">Workspaces</a></li>
+                    <li><a href="{% url 'user-dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'user-home' %}">Apontamentos</a></li>
+                    <li><a href="{% url 'user-config' %}">Configurações</a></li>
+                    <li><a href="{% url 'user-account' %}" style="color: var(--green-light); font-weight: bold;">Conta</a></li>
                     </ul>
                 </div>
-            <!-- menu right -->
-            <div class="header-menu-right">
-                <!-- button theme -->
-                {% include "xperience/partials/button_theme.html" %}
-                <!-- button logout -->
-                {% include "xperience/partials/button_logout.html" %}
-                <!-- circulo com avatar do usuario -->
-                {% include "xperience/partials/user/user_avatar.html" %}
-            </div>
+            {% include "xperience/partials/user/header_menu_right_default.html" %}
         </nav>
     </div>
 </header>
