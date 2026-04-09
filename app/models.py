@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from typing import ClassVar
 from django.contrib.auth.models import BaseUserManager
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -235,6 +236,190 @@ class UserDepartment(models.Model):
         return f"{self.user.email} → {self.department.name}"
 
 
+class Client(models.Model):
+    """Cliente do workspace (multi-tenant)."""
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="clients",
+    )
+    name = models.CharField(max_length=255)
+    document = models.CharField(max_length=64, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=64, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_clients",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name", "pk"]
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
+
+    def __str__(self):
+        return f"{self.name} ({self.workspace})"
+
+
+class Project(models.Model):
+    """Projeto vinculado a um cliente do mesmo workspace."""
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="projects",
+    )
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name="projects",
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_projects",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name", "pk"]
+        verbose_name = "Projeto"
+        verbose_name_plural = "Projetos"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.client_id and self.workspace_id and self.client.workspace_id != self.workspace_id:
+            raise ValidationError(
+                {"client": "O cliente deve pertencer ao mesmo workspace do projeto."}
+            )
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.client})"
+
+
+class Task(models.Model):
+    """Tarefa opcional dentro de um projeto."""
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="tasks",
+    )
+    name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name", "pk"]
+        verbose_name = "Tarefa"
+        verbose_name_plural = "Tarefas"
+
+    def __str__(self):
+        return f"{self.name} ({self.project})"
+
+
+class UserClient(models.Model):
+    """Define quais usuários podem usar qual cliente em um workspace."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="client_access_links",
+    )
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name="user_access_links",
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="user_client_links",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "client", "workspace"),
+                name="app_userclient_user_client_workspace_uniq",
+            ),
+        ]
+        verbose_name = "Acesso usuário → cliente"
+        verbose_name_plural = "Acessos usuário → cliente"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.client_id and self.workspace_id and self.client.workspace_id != self.workspace_id:
+            raise ValidationError(
+                {"client": "O cliente deve pertencer ao workspace informado."}
+            )
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.email} → {self.client.name}"
+
+
+class UserProject(models.Model):
+    """Define quais usuários podem usar qual projeto em um workspace."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="project_access_links",
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="user_access_links",
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="user_project_links",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "project", "workspace"),
+                name="app_userproject_user_project_workspace_uniq",
+            ),
+        ]
+        verbose_name = "Acesso usuário → projeto"
+        verbose_name_plural = "Acessos usuário → projeto"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.project_id and self.workspace_id and self.project.workspace_id != self.workspace_id:
+            raise ValidationError(
+                {"project": "O projeto deve pertencer ao workspace informado."}
+            )
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.email} → {self.project.name}"
+
+
 class TimeEntry(models.Model):
     class EntryType(models.TextChoices):
         INTERNAL = "internal", "Interno"
@@ -253,9 +438,27 @@ class TimeEntry(models.Model):
     )
     date = models.DateField()
     hours = models.DecimalField(max_digits=6, decimal_places=2)
-    client = models.CharField(max_length=255, blank=True)
-    project = models.CharField(max_length=255, blank=True)
-    task = models.CharField(max_length=255, blank=True)
+    client = models.ForeignKey(
+        Client,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="time_entries",
+    )
+    project = models.ForeignKey(
+        Project,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="time_entries",
+    )
+    task = models.ForeignKey(
+        Task,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="time_entries",
+    )
     entry_type = models.CharField(
         max_length=20,
         choices=EntryType.choices,
@@ -269,6 +472,54 @@ class TimeEntry(models.Model):
         ordering = ["-date", "-pk"]
         verbose_name = "Apontamento"
         verbose_name_plural = "Apontamentos"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+
+        if self.client_id and self.workspace_id and self.client.workspace_id != self.workspace_id:
+            errors["client"] = "O cliente não pertence a este workspace."
+
+        if self.project_id and self.workspace_id and self.project.workspace_id != self.workspace_id:
+            errors["project"] = "O projeto não pertence a este workspace."
+
+        if self.client_id and self.project_id and self.project.client_id != self.client_id:
+            errors["project"] = "O projeto não pertence ao cliente selecionado."
+
+        if self.task_id:
+            if not self.project_id:
+                errors["task"] = "Defina o projeto para associar uma tarefa."
+            elif self.task.project_id != self.project_id:
+                errors["task"] = "A tarefa não pertence ao projeto selecionado."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def _assert_user_access(self) -> None:
+        """Garante que o usuário do apontamento tem vínculos UserClient / UserProject."""
+        ws_id = self.workspace_id
+        if self.client_id:
+            has_client = UserClient.objects.filter(
+                user_id=self.user_id,
+                client_id=self.client_id,
+                workspace_id=ws_id,
+            ).exists()
+            if not has_client:
+                raise PermissionDenied("Usuário sem permissão para este cliente neste workspace.")
+        if self.project_id:
+            has_project = UserProject.objects.filter(
+                user_id=self.user_id,
+                project_id=self.project_id,
+                workspace_id=ws_id,
+            ).exists()
+            if not has_project:
+                raise PermissionDenied("Usuário sem permissão para este projeto neste workspace.")
+
+    def save(self, *args, skip_access_check: bool = False, **kwargs) -> None:
+        self.full_clean()
+        if not skip_access_check:
+            self._assert_user_access()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.email} {self.date} {self.hours}h"

@@ -4,18 +4,26 @@ from django.shortcuts import redirect, render
 from app.avatar import user_avatar_url, workspace_avatar_url
 from app.decorators import admin_active_workspace_required, platform_admin_required
 from app.forms import (
+    ClientCreateForm,
     DepartmentForm,
     MemberAddForm,
+    ProjectCreateForm,
+    TaskCreateForm,
     TimeEntryTemplateForm,
     WorkScheduleForm,
     WorkspaceCreateForm,
 )
 from app.models import (
+    Client,
     Department,
     Membership,
+    Project,
+    Task,
     TimeEntryTemplate,
     User,
+    UserClient,
     UserDepartment,
+    UserProject,
     WorkSchedule,
     Workspace,
 )
@@ -175,14 +183,185 @@ def admin_dashboard(request):
     )
 
 
+def _user_in_workspace_admin_context(user: User, ws: Workspace) -> bool:
+    if ws.owner_id == user.pk:
+        return True
+    return Membership.objects.filter(user=user, workspace=ws).exists()
+
+
+def _admin_config_member_rows(ws: Workspace):
+    uds = {
+        ud.user_id: ud
+        for ud in UserDepartment.objects.filter(workspace=ws).select_related("department")
+    }
+    seen: set[int] = set()
+    users_ordered: list[User] = []
+    for m in (
+        Membership.objects.filter(workspace=ws)
+        .select_related("user")
+        .order_by("user__email")
+    ):
+        u = m.user
+        if u.pk in seen:
+            continue
+        seen.add(u.pk)
+        users_ordered.append(u)
+    if ws.owner_id and ws.owner_id not in seen:
+        owner = User.objects.filter(pk=ws.owner_id).first()
+        if owner is not None:
+            users_ordered.append(owner)
+            seen.add(owner.pk)
+    users_ordered.sort(key=lambda u: u.email.lower())
+
+    rows = []
+    for u in users_ordered:
+        m = Membership.objects.filter(user=u, workspace=ws).first()
+        ud = uds.get(u.pk)
+        client_links = list(
+            UserClient.objects.filter(user=u, workspace=ws).select_related("client").order_by("client__name")
+        )
+        project_links = list(
+            UserProject.objects.filter(user=u, workspace=ws)
+            .select_related("project", "project__client")
+            .order_by("project__name")
+        )
+        rows.append(
+            {
+                "membership": m,
+                "user": u,
+                "department": ud.department if ud else None,
+                "client_links": client_links,
+                "project_links": project_links,
+            }
+        )
+    return rows
+
+
 @platform_admin_required
 @admin_active_workspace_required
 def admin_config(request):
-    return render(
-        request,
-        page_admin + "configuration.html",
-        context=_admin_context(request),
+    ws = getattr(request, "active_admin_workspace", None)
+    ctx = _admin_context(request)
+    if ws is None:
+        return render(request, page_admin + "configuration.html", context=ctx)
+
+    client_form = ClientCreateForm()
+    project_form = ProjectCreateForm(workspace=ws)
+    task_form = TaskCreateForm(workspace=ws)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "create_client":
+            client_form = ClientCreateForm(request.POST)
+            if client_form.is_valid():
+                client_form.save(workspace=ws, created_by=request.user)
+                messages.success(request, "Cliente criado.")
+                return redirect("admin-config")
+        elif action == "create_project":
+            project_form = ProjectCreateForm(request.POST, workspace=ws)
+            if project_form.is_valid():
+                project_form.save(workspace=ws, created_by=request.user)
+                messages.success(request, "Projeto criado.")
+                return redirect("admin-config")
+        elif action == "create_task":
+            task_form = TaskCreateForm(request.POST, workspace=ws)
+            if task_form.is_valid():
+                task_form.save()
+                messages.success(request, "Tarefa criada.")
+                return redirect("admin-config")
+        elif action == "link_user_client":
+            try:
+                uid = int(request.POST.get("user_id", ""))
+                cid = int(request.POST.get("client_id", ""))
+            except (TypeError, ValueError):
+                messages.error(request, "Dados inválidos para vínculo com cliente.")
+            else:
+                user_obj = User.objects.filter(pk=uid).first()
+                client_obj = Client.objects.filter(pk=cid, workspace=ws).first()
+                if user_obj and client_obj and _user_in_workspace_admin_context(user_obj, ws):
+                    UserClient.objects.get_or_create(
+                        user=user_obj, client=client_obj, workspace=ws
+                    )
+                    messages.success(request, "Cliente vinculado ao membro.")
+                else:
+                    messages.error(request, "Não foi possível vincular o cliente.")
+            return redirect("admin-config")
+        elif action == "unlink_user_client":
+            try:
+                ucid = int(request.POST.get("uc_id", ""))
+            except (TypeError, ValueError):
+                messages.error(request, "Vínculo inválido.")
+            else:
+                deleted, _ = UserClient.objects.filter(pk=ucid, workspace=ws).delete()
+                if deleted:
+                    messages.success(request, "Vínculo com cliente removido.")
+                else:
+                    messages.error(request, "Vínculo não encontrado.")
+            return redirect("admin-config")
+        elif action == "link_user_project":
+            try:
+                uid = int(request.POST.get("user_id", ""))
+                pid = int(request.POST.get("project_id", ""))
+            except (TypeError, ValueError):
+                messages.error(request, "Dados inválidos para vínculo com projeto.")
+            else:
+                user_obj = User.objects.filter(pk=uid).first()
+                project_obj = Project.objects.filter(pk=pid, workspace=ws).first()
+                if user_obj and project_obj and _user_in_workspace_admin_context(user_obj, ws):
+                    UserProject.objects.get_or_create(
+                        user=user_obj, project=project_obj, workspace=ws
+                    )
+                    messages.success(request, "Projeto vinculado ao membro.")
+                else:
+                    messages.error(request, "Não foi possível vincular o projeto.")
+            return redirect("admin-config")
+        elif action == "unlink_user_project":
+            try:
+                upid = int(request.POST.get("up_id", ""))
+            except (TypeError, ValueError):
+                messages.error(request, "Vínculo inválido.")
+            else:
+                deleted, _ = UserProject.objects.filter(pk=upid, workspace=ws).delete()
+                if deleted:
+                    messages.success(request, "Vínculo com projeto removido.")
+                else:
+                    messages.error(request, "Vínculo não encontrado.")
+            return redirect("admin-config")
+
+    clients = Client.objects.filter(workspace=ws).order_by("name")
+    projects = Project.objects.filter(workspace=ws).select_related("client").order_by("name")
+    tasks = (
+        Task.objects.filter(project__workspace=ws)
+        .select_related("project", "project__client")
+        .order_by("project__name", "name")
     )
+    active_clients = Client.objects.filter(workspace=ws, is_active=True).order_by("name")
+    active_projects = (
+        Project.objects.filter(workspace=ws, is_active=True)
+        .select_related("client")
+        .order_by("name")
+    )
+    member_rows = _admin_config_member_rows(ws)
+
+    ctx.update(
+        {
+            "config_workspace": ws,
+            "client_form": client_form,
+            "project_form": project_form,
+            "task_form": task_form,
+            "clients": clients,
+            "projects": projects,
+            "tasks": tasks,
+            "active_clients": active_clients,
+            "active_projects": active_projects,
+            "member_rows": member_rows,
+            "member_count": len(member_rows),
+            "client_count": clients.count(),
+            "project_count": projects.count(),
+            "task_count": tasks.count(),
+        }
+    )
+    return render(request, page_admin + "configuration.html", context=ctx)
 
 
 @platform_admin_required

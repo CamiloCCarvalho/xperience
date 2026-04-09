@@ -7,115 +7,41 @@
                 <header class="config-card-header">
                     <div class="config-card-title">
                         <i class="fas fa-building" aria-hidden="true"></i>
-                        <h2>Gerenciar Empresa</h2>
+                        <h2>Workspace</h2>
                     </div>
-                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
                     </button>
                 </header>
 
-                <form class="config-form" action="#" method="post">
-                    <div class="config-grid config-grid-two">
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Atualizar Nome da Empresa</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="Empresa1">
-                            </div>
+                <div class="config-form config-form-readonly">
+                    <p class="config-readonly-title">{{ config_workspace.workspace_name }}</p>
+                    {% if config_workspace.workspace_description %}
+                    <p class="config-readonly-desc">{{ config_workspace.workspace_description }}</p>
+                    {% endif %}
+                    <div class="config-stat-grid">
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ member_count }}</span>
+                            <span class="config-stat-label">Membros</span>
                         </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Descrição da Empresa</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="Descrição aqui">
-                            </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ client_count }}</span>
+                            <span class="config-stat-label">Clientes</span>
                         </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Data de Fundação da Empresa</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="15/05/2023">
-                            </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ project_count }}</span>
+                            <span class="config-stat-label">Projetos</span>
                         </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Logomarca da Empresa</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="file" value="Selecionar arquivo">
-                            </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ task_count }}</span>
+                            <span class="config-stat-label">Tarefas</span>
                         </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Número de Funcionários</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="60">
-                            </div>
-                        </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Número de Clientes</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="100">
-                            </div>
-                        </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Número de Projetos</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="12">
-                            </div>
-                        </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Número de Tarefas</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="26">
-                            </div>
-                        </div>
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Número de Fornecedores</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="5">
-                            </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">—</span>
+                            <span class="config-stat-label">Fornecedores</span>
                         </div>
                     </div>
-
-
-                    <div class="config-actions">
-                        <button type="submit" class="config-btn-save">
-                            <i class="fas fa-save" aria-hidden="true"></i>
-                            Atualizar dados
-                        </button>
-                    </div>
-                </form>
-            </article>
-        </div>
-    </section>
-
-
-    <section class="main-container">
-        <div class="spaceon-grid">
-            <article class="spaceon-card config-card">
-                <header class="config-card-header">
-                    <div class="config-card-title">
-                        <i class="fas fa-building" aria-hidden="true"></i>
-                        <h2>Gerenciar Clientes</h2>
-                    </div>
-                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
-                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
-                    </button>
-                </header>
-
-                <form class="config-form" action="#" method="post">
-                    <div class="config-grid config-grid-two">
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Criar Cliente</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="Cliente1">
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <div class="config-actions">
-                        <button type="submit" class="config-btn-save">
-                            <i class="fas fa-save" aria-hidden="true"></i>
-                            Atualizar dados
-                        </button>
-                    </div>
-                </form>
+                </div>
             </article>
         </div>
     </section>
@@ -125,32 +51,63 @@
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
-                        <i class="fas fa-building" aria-hidden="true"></i>
-                        <h2>Gerenciar Projetos</h2>
+                        <i class="fas fa-address-book" aria-hidden="true"></i>
+                        <h2>Gerenciar clientes</h2>
                     </div>
-                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
                     </button>
                 </header>
 
-                <form class="config-form" action="#" method="post">
-                    <div class="config-grid config-grid-two">
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Criar Projeto</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="Cliente1 > Projeto1">
+                <div class="config-form">
+                    {% if clients %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Documento</th>
+                                    <th>Email</th>
+                                    <th>Ativo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in clients %}
+                                <tr>
+                                    <td>{{ c.name }}</td>
+                                    <td>{{ c.document|default:"—" }}</td>
+                                    <td>{{ c.email|default:"—" }}</td>
+                                    <td>{% if c.is_active %}Sim{% else %}Não{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum cliente cadastrado ainda.</p>
+                    {% endif %}
+
+                    <h3 class="config-subheading">Adicionar cliente</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_client">
+                        <div class="config-grid config-grid-two">
+                            {% for field in client_form %}
+                            <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
                             </div>
+                            {% endfor %}
                         </div>
-                    </div>
-
-
-                    <div class="config-actions">
-                        <button type="submit" class="config-btn-save">
-                            <i class="fas fa-save" aria-hidden="true"></i>
-                            Atualizar dados
-                        </button>
-                    </div>
-                </form>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">
+                                <i class="fas fa-plus" aria-hidden="true"></i>
+                                Adicionar cliente
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </article>
         </div>
     </section>
@@ -160,32 +117,64 @@
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
-                        <i class="fas fa-building" aria-hidden="true"></i>
-                        <h2>Gerenciar Tarefas</h2>
+                        <i class="fas fa-project-diagram" aria-hidden="true"></i>
+                        <h2>Gerenciar projetos</h2>
                     </div>
-                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
                     </button>
                 </header>
 
-                <form class="config-form" action="#" method="post">
-                    <div class="config-grid config-grid-two">
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Criar Tarefa</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="Projeto1 > Tarefa1">
+                <div class="config-form">
+                    {% if projects %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Projeto</th>
+                                    <th>Cliente</th>
+                                    <th>Ativo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in projects %}
+                                <tr>
+                                    <td>{{ p.name }}</td>
+                                    <td>{{ p.client.name }}</td>
+                                    <td>{% if p.is_active %}Sim{% else %}Não{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum projeto cadastrado ainda.</p>
+                    {% endif %}
+
+                    <h3 class="config-subheading">Adicionar projeto</h3>
+                    {% if not active_clients %}
+                    <p class="config-empty-hint">Cadastre ao menos um cliente ativo antes de criar projetos.</p>
+                    {% endif %}
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_project">
+                        <div class="config-grid config-grid-two">
+                            {% for field in project_form %}
+                            <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}{% if field.name == 'description' %} config-field-full{% endif %}">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
                             </div>
+                            {% endfor %}
                         </div>
-                    </div>
-
-
-                    <div class="config-actions">
-                        <button type="submit" class="config-btn-save">
-                            <i class="fas fa-save" aria-hidden="true"></i>
-                            Atualizar dados
-                        </button>
-                    </div>
-                </form>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save" {% if not active_clients %}disabled{% endif %}>
+                                <i class="fas fa-plus" aria-hidden="true"></i>
+                                Adicionar projeto
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </article>
         </div>
     </section>
@@ -195,32 +184,66 @@
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
-                        <i class="fas fa-building" aria-hidden="true"></i>
-                        <h2>Gerenciar Pessoas</h2>
+                        <i class="fas fa-tasks" aria-hidden="true"></i>
+                        <h2>Gerenciar tarefas</h2>
                     </div>
-                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
                     </button>
                 </header>
 
-                <form class="config-form" action="#" method="post">
-                    <div class="config-grid config-grid-two">
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Vincular Pessoa</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="Pessoa1 > Cliente1 > Projeto1 > Tarefa1">
+                <div class="config-form">
+                    {% if tasks %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Tarefa</th>
+                                    <th>Projeto</th>
+                                    <th>Cliente</th>
+                                    <th>Ativa</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in tasks %}
+                                <tr>
+                                    <td>{{ t.name }}</td>
+                                    <td>{{ t.project.name }}</td>
+                                    <td>{{ t.project.client.name }}</td>
+                                    <td>{% if t.is_active %}Sim{% else %}Não{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhuma tarefa cadastrada ainda.</p>
+                    {% endif %}
+
+                    <h3 class="config-subheading">Adicionar tarefa</h3>
+                    {% if not active_projects %}
+                    <p class="config-empty-hint">Cadastre ao menos um projeto ativo antes de criar tarefas.</p>
+                    {% endif %}
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_task">
+                        <div class="config-grid config-grid-two">
+                            {% for field in task_form %}
+                            <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
                             </div>
+                            {% endfor %}
                         </div>
-                    </div>
-
-
-                    <div class="config-actions">
-                        <button type="submit" class="config-btn-save">
-                            <i class="fas fa-save" aria-hidden="true"></i>
-                            Atualizar dados
-                        </button>
-                    </div>
-                </form>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save" {% if not active_projects %}disabled{% endif %}>
+                                <i class="fas fa-plus" aria-hidden="true"></i>
+                                Adicionar tarefa
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </article>
         </div>
     </section>
@@ -230,32 +253,128 @@
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
-                        <i class="fas fa-building" aria-hidden="true"></i>
-                        <h2>Gerenciar Fornecedores</h2>
+                        <i class="fas fa-user-friends" aria-hidden="true"></i>
+                        <h2>Membros e acessos</h2>
                     </div>
-                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
                     </button>
                 </header>
 
-                <form class="config-form" action="#" method="post">
-                    <div class="config-grid config-grid-two">
-                        <div class="config-field">
-                            <label for="cfg-data-nascimento">Criar Fornecedor</label>
-                            <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="Cadastrar novo Fornecedor">
+                <div class="config-form">
+                    <p class="config-empty-hint config-empty-hint--top">Usuários com membership neste workspace. Vincule clientes e projetos que cada um pode usar nos apontamentos.</p>
+
+                    {% if member_rows %}
+                    {% for row in member_rows %}
+                    <div class="config-member-card">
+                        <div class="config-member-head">
+                            <div>
+                                <strong class="config-member-email">{{ row.user.email }}</strong>
+                                {% if row.user.get_full_name %}
+                                <span class="config-member-name">{{ row.user.get_full_name }}</span>
+                                {% endif %}
                             </div>
+                            {% if row.department %}
+                            <span class="config-member-dept">Dept.: {{ row.department.name }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="config-access-block">
+                            <span class="config-access-label">Clientes permitidos</span>
+                            <div class="config-chip-row">
+                                {% for uc in row.client_links %}
+                                <span class="config-chip">
+                                    {{ uc.client.name }}
+                                    <form method="post" action="{% url 'admin-config' %}" class="config-chip-unlink">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="unlink_user_client">
+                                        <input type="hidden" name="uc_id" value="{{ uc.pk }}">
+                                        <button type="submit" class="config-chip-remove" title="Remover vínculo" aria-label="Remover {{ uc.client.name }}">&times;</button>
+                                    </form>
+                                </span>
+                                {% empty %}
+                                <span class="config-chip config-chip--muted">Nenhum cliente vinculado</span>
+                                {% endfor %}
+                            </div>
+                            {% if active_clients %}
+                            <form method="post" action="{% url 'admin-config' %}" class="config-inline-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="link_user_client">
+                                <input type="hidden" name="user_id" value="{{ row.user.pk }}">
+                                <div class="config-field config-field-inline">
+                                    <label class="sr-only" for="client-pick-{{ row.user.pk }}">Cliente</label>
+                                    <select name="client_id" id="client-pick-{{ row.user.pk }}" required>
+                                        <option value="">Selecionar cliente…</option>
+                                        {% for c in active_clients %}
+                                        <option value="{{ c.pk }}">{{ c.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="config-btn-secondary">Vincular cliente</button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        <div class="config-access-block">
+                            <span class="config-access-label">Projetos permitidos</span>
+                            <div class="config-chip-row">
+                                {% for up in row.project_links %}
+                                <span class="config-chip">
+                                    {{ up.project.name }} · {{ up.project.client.name }}
+                                    <form method="post" action="{% url 'admin-config' %}" class="config-chip-unlink">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="unlink_user_project">
+                                        <input type="hidden" name="up_id" value="{{ up.pk }}">
+                                        <button type="submit" class="config-chip-remove" title="Remover vínculo" aria-label="Remover {{ up.project.name }}">&times;</button>
+                                    </form>
+                                </span>
+                                {% empty %}
+                                <span class="config-chip config-chip--muted">Nenhum projeto vinculado</span>
+                                {% endfor %}
+                            </div>
+                            {% if active_projects %}
+                            <form method="post" action="{% url 'admin-config' %}" class="config-inline-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="link_user_project">
+                                <input type="hidden" name="user_id" value="{{ row.user.pk }}">
+                                <div class="config-field config-field-inline">
+                                    <label class="sr-only" for="project-pick-{{ row.user.pk }}">Projeto</label>
+                                    <select name="project_id" id="project-pick-{{ row.user.pk }}" required>
+                                        <option value="">Selecionar projeto…</option>
+                                        {% for p in active_projects %}
+                                        <option value="{{ p.pk }}">{{ p.client.name }} — {{ p.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="config-btn-secondary">Vincular projeto</button>
+                            </form>
+                            {% endif %}
                         </div>
                     </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum membro neste workspace. Use <a href="{% url 'admin-members-add' %}">adicionar membros</a>.</p>
+                    {% endif %}
+                </div>
+            </article>
+        </div>
+    </section>
 
-
-                    <div class="config-actions">
-                        <button type="submit" class="config-btn-save">
-                            <i class="fas fa-save" aria-hidden="true"></i>
-                            Atualizar dados
-                        </button>
+    <section class="main-container">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-truck" aria-hidden="true"></i>
+                        <h2>Gerenciar fornecedores</h2>
                     </div>
-                </form>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div class="config-form">
+                    <p class="config-empty-hint">Em breve: cadastro de fornecedores por workspace.</p>
+                </div>
             </article>
         </div>
     </section>

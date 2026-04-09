@@ -115,6 +115,24 @@
     box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
 }
 
+.q1-notice {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+    padding: 8px 0;
+}
+
+.q1-access-empty {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+    padding: 8px 10px;
+    border: 1px dashed var(--color-border);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
+}
+
 .q1-hours-control {
     display: grid;
     grid-template-columns: 1fr 32px 32px;

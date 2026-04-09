@@ -250,3 +250,318 @@
         font-size: 18px;
     }
 }
+
+.spaceon-config-page .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.spaceon-config-page .config-form-readonly {
+    padding-bottom: 16px;
+}
+
+.spaceon-config-page .config-readonly-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-title);
+    margin-bottom: 6px;
+}
+
+.spaceon-config-page .config-readonly-desc {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin-bottom: 14px;
+    line-height: 1.45;
+}
+
+.spaceon-config-page .config-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.spaceon-config-page .config-stat-box {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+    background: var(--color-bg-secondary);
+}
+
+.spaceon-config-page .config-stat-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--green-light);
+}
+
+.spaceon-config-page .config-stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.spaceon-config-page .config-subheading {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-title);
+    margin: 18px 0 10px;
+}
+
+.spaceon-config-page .config-empty-hint {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin-bottom: 10px;
+}
+
+.spaceon-config-page .config-empty-hint--top {
+    margin-bottom: 16px;
+}
+
+.spaceon-config-page .config-empty-hint a {
+    color: var(--green-light);
+    font-weight: 600;
+}
+
+.spaceon-config-page .config-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+.spaceon-config-page .config-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.spaceon-config-page .config-data-table th,
+.spaceon-config-page .config-data-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.spaceon-config-page .config-data-table th {
+    font-weight: 700;
+    color: var(--color-title);
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, transparent);
+}
+
+.spaceon-config-page .config-data-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.spaceon-config-page .config-field textarea,
+.spaceon-config-page .config-field .config-widget-input {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 7px 10px;
+    font-size: 15px;
+    font-family: inherit;
+}
+
+.spaceon-config-page .config-field textarea {
+    min-height: 64px;
+    resize: vertical;
+}
+
+.spaceon-config-page .config-field-full {
+    grid-column: 1 / -1;
+}
+
+.spaceon-config-page .config-field-checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.spaceon-config-page .config-field-checkbox label {
+    order: 2;
+    margin: 0;
+}
+
+.spaceon-config-page .config-field-checkbox input {
+    width: auto;
+    height: auto;
+    order: 1;
+}
+
+.spaceon-config-page .config-btn-save:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.spaceon-config-page .config-member-card {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: color-mix(in srgb, var(--color-bg-secondary) 65%, transparent);
+}
+
+.spaceon-config-page .config-member-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.spaceon-config-page .config-member-email {
+    display: block;
+    color: var(--color-title);
+    font-size: 15px;
+}
+
+.spaceon-config-page .config-member-name {
+    display: block;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+.spaceon-config-page .config-member-dept {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green-dark);
+    align-self: center;
+}
+
+.spaceon-config-page .config-access-block {
+    margin-bottom: 14px;
+}
+
+.spaceon-config-page .config-access-block:last-child {
+    margin-bottom: 0;
+}
+
+.spaceon-config-page .config-access-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 6px;
+}
+
+.spaceon-config-page .config-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.spaceon-config-page .config-chip {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px 5px 10px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--green-light) 14%, var(--color-bg-primary));
+    border: 1px solid color-mix(in srgb, var(--green-light) 35%, var(--color-border));
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-title);
+}
+
+.spaceon-config-page .config-chip--muted {
+    background: var(--color-bg-primary);
+    border-style: dashed;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+.spaceon-config-page .config-chip-sub {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    width: 100%;
+    flex-basis: 100%;
+    margin: -2px 0 0;
+}
+
+.spaceon-config-page .config-chip-unlink {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+
+.spaceon-config-page .config-chip-remove {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    border-radius: 4px;
+}
+
+.spaceon-config-page .config-chip-remove:hover {
+    color: #cb2f49;
+    background: rgba(203, 47, 73, 0.12);
+}
+
+.spaceon-config-page .config-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.spaceon-config-page .config-field-inline {
+    flex: 1 1 200px;
+    margin: 0;
+}
+
+.spaceon-config-page .config-field-inline select {
+    width: 100%;
+    height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 7px 10px;
+    font-size: 15px;
+}
+
+.spaceon-config-page .config-btn-secondary {
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--green-light) 45%, var(--color-border));
+    padding: 0 14px;
+    background: var(--color-bg-secondary);
+    color: var(--green-dark);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.spaceon-config-page .config-btn-secondary:hover {
+    background: color-mix(in srgb, var(--green-light) 12%, var(--color-bg-secondary));
+}
+
+[data-theme="dark"] .spaceon-config-page .config-field textarea,
+[data-theme="dark"] .spaceon-config-page .config-field .config-widget-input,
+[data-theme="dark"] .spaceon-config-page .config-field-inline select {
+    background: #2b2f35;
+}

@@ -7,7 +7,16 @@ from django.shortcuts import redirect, render
 
 from app.avatar import user_avatar_url, workspace_avatar_url
 from app.decorators import member_active_workspace_required, platform_member_required
-from app.models import User, UserDepartment, Workspace
+from app.models import (
+    Client,
+    Project,
+    Task,
+    User,
+    UserClient,
+    UserDepartment,
+    UserProject,
+    Workspace,
+)
 from app.workspace_session import (
     member_workspaces_queryset,
     resolve_member_workspace,
@@ -119,6 +128,41 @@ def _entry_form_visibility(user: User, ws: Optional[Workspace]) -> dict[str, obj
     return base
 
 
+def _entry_access_querysets(user: User, ws: Workspace) -> dict[str, object]:
+    """
+    Clientes / projetos / tarefas que o membro pode usar nos apontamentos
+    (UserClient / UserProject no workspace ativo).
+    """
+    client_ids = UserClient.objects.filter(user=user, workspace=ws).values_list(
+        "client_id", flat=True
+    )
+    project_ids = UserProject.objects.filter(user=user, workspace=ws).values_list(
+        "project_id", flat=True
+    )
+    clients = (
+        Client.objects.filter(pk__in=client_ids, workspace=ws, is_active=True)
+        .order_by("name")
+    )
+    projects = (
+        Project.objects.filter(pk__in=project_ids, workspace=ws, is_active=True)
+        .select_related("client")
+        .order_by("client__name", "name")
+    )
+    tasks = (
+        Task.objects.filter(
+            project_id__in=project_ids,
+            is_active=True,
+        )
+        .select_related("project", "project__client")
+        .order_by("project__name", "name")
+    )
+    return {
+        "entry_clients": clients,
+        "entry_projects": projects,
+        "entry_tasks": tasks,
+    }
+
+
 @platform_member_required
 def user_workspaces(request):
     user = request.user
@@ -159,6 +203,16 @@ def user_home(request):
     ctx = _member_area_context(request)
     ws = ctx.get("active_member_workspace")
     ctx["entry_form"] = _entry_form_visibility(request.user, ws)
+    if ws is not None:
+        ctx.update(_entry_access_querysets(request.user, ws))
+    else:
+        ctx.update(
+            {
+                "entry_clients": Client.objects.none(),
+                "entry_projects": Project.objects.none(),
+                "entry_tasks": Task.objects.none(),
+            }
+        )
     today = date.today()
     ctx.update(_calendar_month_context(today.year, today.month))
     return render(request, page_user + "home.html", context=ctx)

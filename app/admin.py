@@ -1,11 +1,16 @@
 from django.contrib import admin
 
 from .models import (
+    Client,
     Department,
+    Project,
+    Task,
     TimeEntry,
     TimeEntryTemplate,
     User,
+    UserClient,
     UserDepartment,
+    UserProject,
     WorkSchedule,
     Workspace,
 )
@@ -65,6 +70,7 @@ class TimeEntryTemplateAdmin(admin.ModelAdmin):
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ("name", "workspace", "schedule", "template")
     list_filter = ("workspace",)
+    search_fields = ("name", "workspace__workspace_name")
 
 
 @admin.register(UserDepartment)
@@ -73,8 +79,52 @@ class UserDepartmentAdmin(admin.ModelAdmin):
     list_filter = ("workspace",)
 
 
+@admin.register(Client)
+class ClientAdmin(admin.ModelAdmin):
+    list_display = ("name", "workspace", "is_active", "created_at", "created_by")
+    list_filter = ("workspace", "is_active")
+    search_fields = ("name", "document", "email")
+    autocomplete_fields = ("workspace", "created_by")
+
+
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ("name", "client", "workspace", "is_active", "created_at")
+    list_filter = ("workspace", "is_active")
+    search_fields = ("name", "client__name")
+    autocomplete_fields = ("workspace", "client", "created_by")
+
+
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display = ("name", "project", "is_active")
+    list_filter = ("is_active", "project__workspace")
+    search_fields = ("name", "project__name")
+    autocomplete_fields = ("project",)
+
+
+@admin.register(UserClient)
+class UserClientAdmin(admin.ModelAdmin):
+    list_display = ("user", "client", "workspace")
+    list_filter = ("workspace",)
+    search_fields = ("user__email", "client__name")
+    autocomplete_fields = ("user", "client", "workspace")
+
+
+@admin.register(UserProject)
+class UserProjectAdmin(admin.ModelAdmin):
+    list_display = ("user", "project", "workspace")
+    list_filter = ("workspace",)
+    search_fields = ("user__email", "project__name")
+    autocomplete_fields = ("user", "project", "workspace")
+
+
 @admin.register(TimeEntry)
 class TimeEntryAdmin(admin.ModelAdmin):
-    list_display = ("user", "workspace", "department", "date", "hours")
+    list_display = ("user", "workspace", "department", "date", "hours", "client", "project", "task")
     list_filter = ("workspace", "department")
     date_hierarchy = "date"
+    autocomplete_fields = ("user", "workspace", "department", "client", "project", "task")
+
+    def save_model(self, request, obj, form, change):
+        obj.save(skip_access_check=request.user.is_superuser)

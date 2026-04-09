@@ -2,8 +2,11 @@ from django import forms
 from django.contrib.auth.password_validation import validate_password
 
 from app.models import (
+    Client,
     Department,
     Membership,
+    Project,
+    Task,
     TimeEntryTemplate,
     User,
     UserDepartment,
@@ -308,3 +311,92 @@ class DepartmentForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
+
+
+_config_field_attrs = {"class": "config-widget-input"}
+
+
+class ClientCreateForm(forms.ModelForm):
+    class Meta:
+        model = Client
+        fields = ("name", "document", "email", "phone", "is_active")
+        labels = {
+            "name": "Nome",
+            "document": "Documento (CNPJ/CPF)",
+            "email": "Email",
+            "phone": "Telefone",
+            "is_active": "Ativo",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs=_config_field_attrs),
+            "document": forms.TextInput(attrs=_config_field_attrs),
+            "email": forms.EmailInput(attrs=_config_field_attrs),
+            "phone": forms.TextInput(attrs=_config_field_attrs),
+        }
+
+    def save(self, commit=True, *, workspace: Workspace | None = None, created_by: User | None = None):
+        obj = super().save(commit=False)
+        if workspace is not None:
+            obj.workspace = workspace
+        if created_by is not None:
+            obj.created_by = created_by
+        if commit:
+            obj.save()
+        return obj
+
+
+class ProjectCreateForm(forms.ModelForm):
+    class Meta:
+        model = Project
+        fields = ("client", "name", "description", "is_active")
+        labels = {
+            "client": "Cliente",
+            "name": "Nome do projeto",
+            "description": "Descrição",
+            "is_active": "Ativo",
+        }
+        widgets = {
+            "client": forms.Select(attrs=_config_field_attrs),
+            "name": forms.TextInput(attrs=_config_field_attrs),
+            "description": forms.Textarea(attrs={**_config_field_attrs, "rows": 2}),
+        }
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        self._workspace = workspace
+        super().__init__(*args, **kwargs)
+        if workspace is not None:
+            self.fields["client"].queryset = Client.objects.filter(
+                workspace=workspace, is_active=True
+            ).order_by("name")
+
+    def save(self, commit=True, *, workspace: Workspace | None = None, created_by: User | None = None):
+        obj = super().save(commit=False)
+        if workspace is not None:
+            obj.workspace = workspace
+        if created_by is not None:
+            obj.created_by = created_by
+        if commit:
+            obj.save()
+        return obj
+
+
+class TaskCreateForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ("project", "name", "is_active")
+        labels = {
+            "project": "Projeto",
+            "name": "Nome da tarefa",
+            "is_active": "Ativa",
+        }
+        widgets = {
+            "project": forms.Select(attrs=_config_field_attrs),
+            "name": forms.TextInput(attrs=_config_field_attrs),
+        }
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if workspace is not None:
+            self.fields["project"].queryset = Project.objects.filter(
+                workspace=workspace, is_active=True
+            ).select_related("client").order_by("client__name", "name")

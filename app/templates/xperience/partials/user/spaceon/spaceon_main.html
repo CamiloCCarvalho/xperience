@@ -47,19 +47,46 @@
                         {% if entry_form.use_client %}
                         <div class="q1-field">
                             <label for="entry-client">Cliente</label>
-                            <input id="entry-client" name="client" type="text" maxlength="255" autocomplete="organization">
+                            {% if entry_clients %}
+                            <select id="entry-client" name="client_id" autocomplete="organization">
+                                <option value="">Selecione…</option>
+                                {% for c in entry_clients %}
+                                <option value="{{ c.pk }}">{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <p class="q1-access-empty">Nenhum cliente liberado para você neste workspace. Peça ao gestor.</p>
+                            {% endif %}
                         </div>
                         {% endif %}
                         {% if entry_form.use_project %}
                         <div class="q1-field">
                             <label for="entry-project">Projeto</label>
-                            <input id="entry-project" name="project" type="text" maxlength="255">
+                            {% if entry_projects %}
+                            <select id="entry-project" name="project_id">
+                                <option value="">Selecione…</option>
+                                {% for p in entry_projects %}
+                                <option value="{{ p.pk }}" data-client-id="{{ p.client_id }}">{{ p.client.name }} — {{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <p class="q1-access-empty">Nenhum projeto liberado para você neste workspace. Peça ao gestor.</p>
+                            {% endif %}
                         </div>
                         {% endif %}
                         {% if entry_form.use_task %}
                         <div class="q1-field">
                             <label for="entry-task">Tarefa</label>
-                            <input id="entry-task" name="task" type="text" maxlength="255">
+                            {% if entry_tasks %}
+                            <select id="entry-task" name="task_id">
+                                <option value="">Selecione…</option>
+                                {% for t in entry_tasks %}
+                                <option value="{{ t.pk }}" data-project-id="{{ t.project_id }}" data-client-id="{{ t.project.client_id }}">{{ t.project.name }} — {{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <p class="q1-access-empty">Nenhuma tarefa disponível nos seus projetos. Peça ao gestor.</p>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
