@@ -177,10 +177,10 @@ def user_workspaces(request):
         chosen = Workspace.objects.filter(pk=ws_id, memberships__user=user).first()
         if chosen is not None:
             set_member_workspace(request, chosen.pk)
-            #messages.success(
-            #    request,
-            #    f"Acessando o workspace «{chosen.workspace_name}».",
-            #)
+            messages.success(
+                request,
+                f"Acessando o workspace «{chosen.workspace_name}».",
+            )
             return redirect("user-home")
         messages.error(request, "Workspace inválido ou sem permissão.")
 
