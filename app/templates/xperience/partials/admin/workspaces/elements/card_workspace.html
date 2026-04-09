@@ -2,8 +2,8 @@
     <form method="post" action="{% url 'admin-workspaces' %}" class="workspace-select-form">
         {% csrf_token %}
         <input type="hidden" name="workspace_id" value="{{ workspace.pk }}">
-        <button type="submit" class="workspace-card-btn" aria-label="Abrir gestão do workspace {{ workspace.workspace_name }}">
-            <article class="workspace-card">
+        <article class="workspace-card">
+            <button type="submit" class="workspace-card-main-btn" aria-label="Abrir gestão do workspace {{ workspace.workspace_name }}">
                 <div class="workspace-card-avatar" aria-hidden="true">
                     <img src="{{ workspace.display_avatar_url }}" alt="" />
                 </div>
@@ -11,7 +11,18 @@
                 {% if workspace.workspace_description %}
                 <p class="workspace-description">{{ workspace.workspace_description }}</p>
                 {% endif %}
-            </article>
-        </button>
+            </button>
+            <button
+                type="submit"
+                name="action"
+                value="delete_workspace"
+                class="workspace-card-delete-btn"
+                title="Excluir workspace"
+                aria-label="Excluir workspace {{ workspace.workspace_name }}"
+                onclick="return confirm('Excluir o workspace «{{ workspace.workspace_name|escapejs }}»? Esta ação remove membros, clientes, projetos, tarefas e apontamentos deste workspace. Contas de usuário continuam existindo se estiverem em outros workspaces.');"
+            >
+                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+            </button>
+        </article>
     </form>
 </li>

@@ -29,6 +29,8 @@ from app.models import (
 )
 from app.workspace_session import (
     attach_admin_workspace_to_request,
+    clear_admin_workspace,
+    get_admin_workspace_id,
     set_admin_workspace,
 )
 
@@ -54,6 +56,32 @@ def admin_workspaces(request):
         w.display_avatar_url = workspace_avatar_url(w)
 
     if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+
+        if action == "delete_workspace":
+            try:
+                del_id = int(request.POST.get("workspace_id", ""))
+            except (TypeError, ValueError):
+                del_id = 0
+            to_delete = Workspace.objects.filter(pk=del_id, owner=user).first()
+            if to_delete is None:
+                messages.error(
+                    request,
+                    "Não foi possível excluir: workspace inválido ou não pertence à sua conta.",
+                )
+            else:
+                name = to_delete.workspace_name
+                if get_admin_workspace_id(request) == to_delete.pk:
+                    clear_admin_workspace(request)
+                to_delete.delete()
+                messages.success(
+                    request,
+                    f"Workspace «{name}» excluído. Membros, clientes, projetos e apontamentos "
+                    "deste workspace foram removidos; contas de usuário em outros workspaces "
+                    "permanecem intactas.",
+                )
+            return redirect("admin-workspaces")
+
         try:
             ws_id = int(request.POST.get("workspace_id", ""))
         except (TypeError, ValueError):
