@@ -798,7 +798,7 @@
     margin-bottom: 10px;
 }
 
-.workspaces-page .workspace-card h2 {
+.workspaces-page .workspace-card h2:not(.workspace-name) {
     color: #f0f5ff;
     font-size: 43px;
     font-weight: 700;
@@ -806,7 +806,7 @@
     text-align: center;
 }
 
-.workspaces-page .workspace-card p {
+.workspaces-page .workspace-card p:not(.workspace-description):not(.workspace-owner-hint) {
     color: rgba(210, 220, 235, 0.62);
     font-size: 26px;
     line-height: 1.1;
@@ -856,11 +856,11 @@
     background-color: #edf1f7;
 }
 
-.workspaces-page:not([data-theme="dark"]) .workspace-card h2 {
+.workspaces-page:not([data-theme="dark"]) .workspace-card h2:not(.workspace-name) {
     color: #1f2937;
 }
 
-.workspaces-page:not([data-theme="dark"]) .workspace-card p {
+.workspaces-page:not([data-theme="dark"]) .workspace-card p:not(.workspace-description):not(.workspace-owner-hint) {
     color: rgba(55, 65, 81, 0.72);
 }
 
@@ -873,11 +873,11 @@
         width: min(360px, 100%);
     }
 
-    .workspaces-page .workspace-card h2 {
+    .workspaces-page .workspace-card h2:not(.workspace-name) {
         font-size: 36px;
     }
 
-    .workspaces-page .workspace-card p {
+    .workspaces-page .workspace-card p:not(.workspace-description):not(.workspace-owner-hint) {
         font-size: 22px;
     }
 
@@ -904,11 +904,11 @@
         font-size: 34px;
     }
 
-    .workspaces-page .workspace-card h2 {
+    .workspaces-page .workspace-card h2:not(.workspace-name) {
         font-size: 28px;
     }
 
-    .workspaces-page .workspace-card p {
+    .workspaces-page .workspace-card p:not(.workspace-description):not(.workspace-owner-hint) {
         font-size: 17px;
     }
 

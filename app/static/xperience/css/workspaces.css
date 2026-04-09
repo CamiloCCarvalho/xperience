@@ -71,6 +71,7 @@
     display: flex;
     width: 260px;
     flex: 0 0 260px;
+    align-items: stretch;
 }
 
 .workspaces-page .workspace-grid li > a {
@@ -78,9 +79,26 @@
     width: 100%;
 }
 
+.workspaces-page .workspace-grid li .workspace-select-form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
+.workspaces-page .workspace-grid li .workspace-card-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 240px;
+}
+
 .workspaces-page .workspace-card {
-    width: 260px;
-    height: 240px;
+    width: 100%;
+    min-height: 240px;
+    height: auto;
     border-radius: 14px;
     color: #f0f5ff;
     background: rgba(24, 40, 55, 0.16); /* semi-transparent base, fits site palette */
@@ -97,6 +115,7 @@
     justify-content: flex-start;
     gap: 8px;
     overflow: hidden;
+    flex: 1;
     transition:
         background 0.45s cubic-bezier(0.65,0,0.35,1),
         box-shadow 0.45s cubic-bezier(0.65,0,0.35,1),
@@ -132,6 +151,7 @@
     display: block;
 }
 
+.workspaces-page .workspace-card h2.workspace-name,
 .workspaces-page .workspace-card .workspace-name {
     color: #f0f5ff;
     font-size: clamp(26px, 2vw, 32px);
@@ -161,6 +181,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}
+
+/* Sobrescreve style.css (.workspace-card p / h2) no card do membro */
+.workspaces-page .workspace-card p.workspace-owner-hint {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: rgba(210, 220, 235, 0.62);
+    text-align: center;
+    width: 100%;
+    margin: auto 0 0;
+    padding-top: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -219,14 +259,23 @@
     color: rgba(55, 65, 81, 0.72);
 }
 
+.workspaces-page:not([data-theme="dark"]) .workspace-card p.workspace-owner-hint {
+    color: rgba(55, 65, 81, 0.68);
+}
+
 @media (max-width: 990px) {
     .workspaces-page .workspace-grid {
         flex-wrap: wrap;
     }
 
     .workspaces-page .workspace-card {
-        width: min(300px, 100%);
-        height: 220px;
+        width: 100%;
+        min-height: 220px;
+        height: auto;
+    }
+
+    .workspaces-page .workspace-grid li .workspace-card-btn {
+        min-height: 220px;
     }
 
     .workspaces-page .workspace-grid li {
@@ -234,6 +283,7 @@
         flex: 0 0 min(300px, 100%);
     }
 
+    .workspaces-page .workspace-card h2.workspace-name,
     .workspaces-page .workspace-card .workspace-name {
         font-size: 28px;
     }
@@ -255,8 +305,13 @@
     }
 
     .workspaces-page .workspace-card {
-        height: 200px;
+        min-height: 200px;
+        height: auto;
         padding: 16px;
+    }
+
+    .workspaces-page .workspace-grid li .workspace-card-btn {
+        min-height: 200px;
     }
 
     .workspaces-page .workspace-grid li {
@@ -271,6 +326,7 @@
         font-size: 30px;
     }
 
+    .workspaces-page .workspace-card h2.workspace-name,
     .workspaces-page .workspace-card .workspace-name {
         font-size: 22px;
     }
