@@ -1,3 +1,9 @@
+# Others
+.github
+
+# Media Files #
+app/images
+
 # Django #
 *.log
 *.pot
@@ -5,6 +11,7 @@
 __pycache__
 db.sqlite3
 media
+.dev
 
 # Backup files #
 *.bak
@@ -127,4 +134,3 @@ _local_settings.py
 gunicorn-error-log
 db.sqlite3
 db copy.sqlite3
-static/

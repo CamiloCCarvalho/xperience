@@ -1,0 +1,32 @@
+{% extends "global/public/public_page.html" %}
+{% block title %}Entrar{% endblock title %}
+{% block public_page_content %}
+{% include "xperience/partials/public/header.html" %}
+<main class="main">
+    <div class="main-container">
+        <section class="auth-card" aria-label="Login">
+            <div class="auth-panel auth-panel-login" style="max-width: 28rem; margin: 0 auto;">
+                <h1>Login</h1>
+                <form class="auth-form" method="post" action="{% url 'public-login' %}">
+                    {% csrf_token %}
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}<p class="error">{{ form.email.errors|striptags }}</p>{% endif %}
+
+                    <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}<p class="error">{{ form.password.errors|striptags }}</p>{% endif %}
+
+                    {% if form.non_field_errors %}
+                    <p class="error">{{ form.non_field_errors|striptags }}</p>
+                    {% endif %}
+
+                    <button type="submit" class="btn-primary">Entrar</button>
+                </form>
+                <p class="auth-disclaimer"><a href="{% url 'public-home' %}">Voltar ao início</a></p>
+            </div>
+        </section>
+    </div>
+</main>
+{% include "xperience/partials/public/footer.html" %}
+{% endblock public_page_content %}

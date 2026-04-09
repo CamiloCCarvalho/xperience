@@ -1,12 +1,13 @@
 <!-- main content -->
 <main class="main">
+
     <section class="main-container">
         <div class="spaceon-grid">
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
                         <i class="fas fa-building" aria-hidden="true"></i>
-                        <h2>Dados Profissionais</h2>
+                        <h2>Gerenciar Empresa</h2>
                     </div>
                     <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
@@ -16,106 +17,237 @@
                 <form class="config-form" action="#" method="post">
                     <div class="config-grid config-grid-two">
                         <div class="config-field">
-                            <label for="cfg-data-nascimento">Data de Nascimento</label>
+                            <label for="cfg-data-nascimento">Atualizar Nome da Empresa</label>
                             <div class="field-with-icon">
-                                <input id="cfg-data-nascimento" type="text" value="17/05/1993">
-                                <i class="far fa-calendar-alt" aria-hidden="true"></i>
+                                <input id="cfg-data-nascimento" type="text" value="Empresa1">
                             </div>
                         </div>
-
                         <div class="config-field">
-                            <label for="cfg-data-entrada">Data de Entrada na Empresa</label>
+                            <label for="cfg-data-nascimento">Descrição da Empresa</label>
                             <div class="field-with-icon">
-                                <input id="cfg-data-entrada" type="text" value="15/05/2023">
-                                <i class="far fa-calendar-alt" aria-hidden="true"></i>
+                                <input id="cfg-data-nascimento" type="text" value="Descrição aqui">
+                            </div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Data de Fundação da Empresa</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="15/05/2023">
+                            </div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Logomarca da Empresa</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="file" value="Selecionar arquivo">
+                            </div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Número de Funcionários</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="60">
+                            </div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Número de Clientes</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="100">
+                            </div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Número de Projetos</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="12">
+                            </div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Número de Tarefas</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="26">
+                            </div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Número de Fornecedores</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="5">
                             </div>
                         </div>
                     </div>
 
+
+                    <div class="config-actions">
+                        <button type="submit" class="config-btn-save">
+                            <i class="fas fa-save" aria-hidden="true"></i>
+                            Atualizar dados
+                        </button>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </section>
+
+
+    <section class="main-container">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Gerenciar Clientes</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <form class="config-form" action="#" method="post">
                     <div class="config-grid config-grid-two">
                         <div class="config-field">
-                            <label for="cfg-cargo">Cargo Atual</label>
-                            <input id="cfg-cargo" type="text" value="Desenvolvedor Python RPA">
-                        </div>
-
-                        <div class="config-field">
-                            <label for="cfg-senioridade">Senioridade</label>
-                            <select id="cfg-senioridade">
-                                <option>Pleno</option>
-                            </select>
+                            <label for="cfg-data-nascimento">Criar Cliente</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="Cliente1">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="config-grid config-grid-four">
-                        <div class="config-field">
-                            <label for="cfg-valor-contrato">Valor do Contrato (R$/mês)</label>
-                            <div class="input-group">
-                                <span>R$</span>
-                                <input id="cfg-valor-contrato" type="text" value="4500,0">
-                            </div>
-                        </div>
 
-                        <div class="config-field">
-                            <label for="cfg-carga-dia">Carga Horária por Dia</label>
-                            <div class="input-group">
-                                <input id="cfg-carga-dia" type="text" value="8,0">
-                                <span>h</span>
-                            </div>
-                        </div>
+                    <div class="config-actions">
+                        <button type="submit" class="config-btn-save">
+                            <i class="fas fa-save" aria-hidden="true"></i>
+                            Atualizar dados
+                        </button>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </section>
 
-                        <div class="config-field">
-                            <label for="cfg-percentual-extra">Percentual Hora Extra</label>
-                            <div class="input-group">
-                                <input id="cfg-percentual-extra" type="text" value="0,4">
-                                <span>%</span>
-                            </div>
-                            <small>Ex: 0.4 = 40% acima do valor hora (140% total)</small>
-                        </div>
+    <section class="main-container">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Gerenciar Projetos</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
 
+                <form class="config-form" action="#" method="post">
+                    <div class="config-grid config-grid-two">
                         <div class="config-field">
-                            <label for="cfg-horas-mes">Horas Trabalhadas/Mês</label>
-                            <input id="cfg-horas-mes" type="text" value="160,0">
+                            <label for="cfg-data-nascimento">Criar Projeto</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="Cliente1 > Projeto1">
+                            </div>
                         </div>
                     </div>
 
-                    <section class="calculated-box" aria-label="Valores calculados automaticamente">
-                        <h3>
-                            <i class="fas fa-calculator" aria-hidden="true"></i>
-                            Valores Calculados Automaticamente
-                        </h3>
 
-                        <div class="calc-grid">
-                            <div class="calc-item">
-                                <span class="calc-label">Dias Úteis:</span>
-                                <span class="calc-badge badge-purple">22</span>
-                            </div>
-                            <div class="calc-item">
-                                <span class="calc-label">Valor/Hora:</span>
-                                <span class="calc-badge badge-yellow">R$ 25.57</span>
-                            </div>
-                            <div class="calc-item">
-                                <span class="calc-label">Valor/Dia:</span>
-                                <span class="calc-badge badge-cyan">R$ 204.55</span>
-                            </div>
-                            <div class="calc-item">
-                                <span class="calc-label">Valor/Hora Extra:</span>
-                                <span class="calc-badge badge-red">R$ 35.80</span>
-                            </div>
-                            <div class="calc-item">
-                                <span class="calc-label">Carga Horária/Dia:</span>
-                                <span class="calc-badge badge-green">8h</span>
-                            </div>
-                            <div class="calc-item">
-                                <span class="calc-label">Percentual H.E.:</span>
-                                <span class="calc-badge badge-gray">40%</span>
+                    <div class="config-actions">
+                        <button type="submit" class="config-btn-save">
+                            <i class="fas fa-save" aria-hidden="true"></i>
+                            Atualizar dados
+                        </button>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </section>
+
+    <section class="main-container">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Gerenciar Tarefas</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <form class="config-form" action="#" method="post">
+                    <div class="config-grid config-grid-two">
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Criar Tarefa</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="Projeto1 > Tarefa1">
                             </div>
                         </div>
+                    </div>
 
-                        <p class="calc-formula">
-                            <i class="fas fa-info-circle" aria-hidden="true"></i>
-                            Fórmula: Valor/Hora = Valor Contrato ÷ Dias Úteis ÷ Carga Horária/Dia | Valor/Dia = Valor Contrato ÷ Dias Úteis | Valor/Hora Extra = Valor/Hora × (1 + Percentual)
-                        </p>
-                    </section>
+
+                    <div class="config-actions">
+                        <button type="submit" class="config-btn-save">
+                            <i class="fas fa-save" aria-hidden="true"></i>
+                            Atualizar dados
+                        </button>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </section>
+
+    <section class="main-container">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Gerenciar Pessoas</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <form class="config-form" action="#" method="post">
+                    <div class="config-grid config-grid-two">
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Vincular Pessoa</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="Pessoa1 > Cliente1 > Projeto1 > Tarefa1">
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="config-actions">
+                        <button type="submit" class="config-btn-save">
+                            <i class="fas fa-save" aria-hidden="true"></i>
+                            Atualizar dados
+                        </button>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </section>
+
+    <section class="main-container">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Gerenciar Fornecedores</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel">
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <form class="config-form" action="#" method="post">
+                    <div class="config-grid config-grid-two">
+                        <div class="config-field">
+                            <label for="cfg-data-nascimento">Criar Fornecedor</label>
+                            <div class="field-with-icon">
+                                <input id="cfg-data-nascimento" type="text" value="Cadastrar novo Fornecedor">
+                            </div>
+                        </div>
+                    </div>
+
 
                     <div class="config-actions">
                         <button type="submit" class="config-btn-save">

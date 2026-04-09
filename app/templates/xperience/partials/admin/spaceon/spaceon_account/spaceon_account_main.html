@@ -22,7 +22,7 @@
                         <div class="acc-identity">
                             <div class="acc-field">
                                 <label for="acc-fullname">Nome completo</label>
-                                <input id="acc-fullname" type="text" value="Camilo Carvalho">
+                                <input id="acc-fullname" type="text" value="Nome do usuário">
                             </div>
                             <div class="acc-field">
                                 <label for="acc-role">Cargo</label>
@@ -49,16 +49,29 @@
                             <input id="acc-address" type="text" value="Rua Exemplo, 123 - São Paulo/SP">
                         </div>
                         <div class="acc-field">
-                            <label for="acc-project-main">Projeto principal</label>
-                            <input id="acc-project-main" type="text" value="Projeto Time Tracker">
+                            <label for="acc-project-main">Plano Contratado</label>
+                            <input id="acc-project-main" type="text" value="Premium">
                         </div>
                         <div class="acc-field">
-                            <label for="acc-projects">Projetos ativos</label>
-                            <input id="acc-projects" type="text" value="4 projetos ativos">
+                            <label for="acc-projects">Data primeira contratação</label>
+                            <input id="acc-projects" type="text" value="15/05/2023">
                         </div>
                         <div class="acc-field">
                             <label for="acc-permission">Nível de acesso</label>
-                            <input id="acc-permission" type="text" value="Funcionário">
+                            <input id="acc-permission" type="text" value="Administrador">
+                        </div>
+
+                        <div class="acc-field">
+                            <label for="acc-project-main">Expiração do Plano</label>
+                            <input id="acc-project-main" type="text" value="15/05/2023">
+                        </div>
+                        <div class="acc-field">
+                            <label for="acc-projects">Dias restantes</label>
+                            <input id="acc-projects" type="text" value="333">
+                        </div>
+                        <div class="acc-field">
+                            <label for="acc-permission">Data da ultima renovação</label>
+                            <input id="acc-permission" type="text" value="15/05/2023">
                         </div>
                     </section>
 
@@ -67,11 +80,11 @@
                         <div class="acc-security-actions">
                             <button type="button" class="acc-btn acc-btn-outline">Ver/Trocar senha</button>
                             <button type="button" class="acc-btn acc-btn-outline">Solicitar troca de e-mail</button>
-                            <button type="button" class="acc-btn acc-btn-outline">Ativar autenticação em 2 fatores</button>
+                            <button type="button" class="acc-btn acc-btn-outline">Renovar assinatura</button>
                         </div>
                     </section>
 
-                    <section class="acc-summary">
+                    <section class="acc-summary" style="display: none;">
                         <h3>Resumo de atuação</h3>
                         <div class="acc-summary-grid">
                             <div class="acc-summary-item">

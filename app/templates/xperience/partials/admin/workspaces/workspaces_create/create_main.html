@@ -1,0 +1,60 @@
+<!-- main content -->
+<main class="main">
+    <div class="main-container">
+        <div class="spaceon-grid admin-ws-create-layout">
+            <article class="spaceon-card admin-ws-create-card">
+                <header class="admin-ws-create-header">
+                    <div class="admin-ws-create-title">
+                        <i class="fas fa-layer-group" aria-hidden="true"></i>
+                        <h2>Criar workspace</h2>
+                    </div>
+                </header>
+
+                <div class="admin-ws-create-body">
+                    <p class="admin-ws-create-hint">Gestão · novo workspace</p>
+
+                    <form
+                        class="admin-ws-create-form"
+                        method="post"
+                        action="{% url 'admin-workspaces-create' %}"
+                    >
+                        {% csrf_token %}
+
+                        <div class="admin-ws-create-fields">
+                            <div class="admin-ws-create-field">
+                                <label for="id_workspace_name">{{ form.workspace_name.label }}</label>
+                                {{ form.workspace_name }}
+                                {% if form.workspace_name.errors %}
+                                <p class="admin-ws-create-error">{{ form.workspace_name.errors|striptags }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="admin-ws-create-field admin-ws-create-field--wide">
+                                <label for="id_workspace_description">{{ form.workspace_description.label }}</label>
+                                {{ form.workspace_description }}
+                                {% if form.workspace_description.errors %}
+                                <p class="admin-ws-create-error">{{ form.workspace_description.errors|striptags }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if form.non_field_errors %}
+                        <p class="admin-ws-create-error">{{ form.non_field_errors|striptags }}</p>
+                        {% endif %}
+
+                        <div class="admin-ws-create-actions">
+                            <button type="submit" class="admin-ws-create-submit">
+                                <i class="fas fa-plus-circle" aria-hidden="true"></i>
+                                Criar workspace
+                            </button>
+                        </div>
+                    </form>
+
+                    <p class="admin-ws-create-back">
+                        <a href="{% url 'admin-workspaces' %}">Voltar aos workspaces</a>
+                    </p>
+                </div>
+            </article>
+        </div>
+    </div>
+</main>

@@ -1,0 +1,41 @@
+{% extends "global/public/public_page.html" %}
+{% block title %}Cadastro{% endblock title %}
+{% block public_page_content %}
+{% include "xperience/partials/public/header.html" %}
+<main class="main">
+    <div class="main-container">
+        <section class="auth-card" aria-label="Cadastro de administrador">
+            <div class="auth-panel auth-panel-signup" style="max-width: 28rem; margin: 0 auto;">
+                <h1>Cadastro — administrador da plataforma</h1>
+                <p class="auth-disclaimer">Grava uma nova conta no banco com perfil de administrador. Em seguida, faça login na página inicial.</p>
+                <form class="auth-form" method="post" action="{% url 'public-register' %}">
+                    {% csrf_token %}
+                    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}<p class="error">{{ form.username.errors|striptags }}</p>{% endif %}
+
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}<p class="error">{{ form.email.errors|striptags }}</p>{% endif %}
+
+                    <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}<p class="error">{{ form.password.errors|striptags }}</p>{% endif %}
+
+                    <label for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }}</label>
+                    {{ form.password_confirm }}
+                    {% if form.password_confirm.errors %}<p class="error">{{ form.password_confirm.errors|striptags }}</p>{% endif %}
+
+                    {% if form.non_field_errors %}
+                    <p class="error">{{ form.non_field_errors|striptags }}</p>
+                    {% endif %}
+
+                    <button type="submit" class="btn-primary">Criar conta</button>
+                </form>
+                <p class="auth-disclaimer"><a href="{% url 'public-home' %}">Voltar ao início</a></p>
+            </div>
+        </section>
+    </div>
+</main>
+{% include "xperience/partials/public/footer.html" %}
+{% endblock public_page_content %}

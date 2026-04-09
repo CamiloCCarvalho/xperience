@@ -1,0 +1,208 @@
+/* Layout exclusivo da página «Adicionar membro» (.admin-members-add-page no body) */
+
+.admin-members-add-page .admin-members-add-layout {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.admin-members-add-page .admin-members-add-card {
+    width: min(760px, 96%);
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.admin-members-add-page .admin-members-add-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    border-radius: 11px 11px 0 0;
+}
+
+.admin-members-add-page .admin-members-add-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-members-add-page .admin-members-add-title i {
+    font-size: 18px;
+    opacity: 0.95;
+}
+
+.admin-members-add-page .admin-members-add-title h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.admin-members-add-page .admin-members-add-body {
+    padding: 16px 18px 18px;
+}
+
+.admin-members-add-page .admin-members-add-hint {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--green-light);
+    margin: 0 0 10px;
+}
+
+.admin-members-add-page .admin-members-add-lead {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+.admin-members-add-page .admin-members-add-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.admin-members-add-page .admin-members-add-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-members-add-page .admin-members-add-field--full {
+    grid-column: 1 / -1;
+}
+
+.admin-members-add-page .admin-members-add-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.admin-members-add-page .admin-members-add-field input[type="text"],
+.admin-members-add-page .admin-members-add-field input[type="email"],
+.admin-members-add-page .admin-members-add-field input[type="password"],
+.admin-members-add-page .admin-members-add-field select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 9px 11px;
+    font-size: 14px;
+    font-family: inherit;
+    min-height: 40px;
+}
+
+.admin-members-add-page .admin-members-add-field select {
+    cursor: pointer;
+    appearance: auto;
+}
+
+.admin-members-add-page .admin-members-add-field input:focus-visible,
+.admin-members-add-page .admin-members-add-field select:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: 1px;
+}
+
+.admin-members-add-page .admin-members-add-error {
+    margin: 0;
+    font-size: 13px;
+    color: #f87171;
+}
+
+.admin-members-add-page .admin-members-add-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.admin-members-add-page .admin-members-add-submit {
+    border: 0;
+    border-radius: 8px;
+    min-height: 42px;
+    padding: 0 18px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.admin-members-add-page .admin-members-add-submit:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+.admin-members-add-page .admin-members-add-back {
+    margin: 16px 0 0;
+    text-align: center;
+    font-size: 14px;
+}
+
+.admin-members-add-page .admin-members-add-back a {
+    color: var(--color-text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.admin-members-add-page .admin-members-add-back a:hover {
+    color: var(--green-light);
+}
+
+[data-theme="dark"] .admin-members-add-page .admin-members-add-card {
+    background: #2a313b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .admin-members-add-page .admin-members-add-field input[type="text"],
+[data-theme="dark"] .admin-members-add-page .admin-members-add-field input[type="email"],
+[data-theme="dark"] .admin-members-add-page .admin-members-add-field input[type="password"],
+[data-theme="dark"] .admin-members-add-page .admin-members-add-field select {
+    background: #232a33;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-members-add-page:not([data-theme="dark"]) .admin-members-add-hint {
+    color: var(--green-dark, #1e8449);
+}
+
+@media (max-width: 700px) {
+    .admin-members-add-page .admin-members-add-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-members-add-page .admin-members-add-field--full {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 620px) {
+    .admin-members-add-page .admin-members-add-body {
+        padding: 14px 14px 16px;
+    }
+
+    .admin-members-add-page .admin-members-add-actions {
+        justify-content: stretch;
+    }
+
+    .admin-members-add-page .admin-members-add-submit {
+        width: 100%;
+    }
+}
