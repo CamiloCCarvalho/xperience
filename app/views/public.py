@@ -44,10 +44,10 @@ def home(request):
             register_form = AdminRegisterForm(request.POST, prefix="register")
             if register_form.is_valid():
                 register_form.save()
-                messages.success(
-                    request,
-                    "Administrador cadastrado. Entre com email e senha.",
-                )
+                #messages.success(
+                #    request,
+                #    "Administrador cadastrado. Entre com email e senha.",
+                #)
                 return redirect("public-login")
 
     return render(
@@ -68,10 +68,10 @@ def register(request):
         form = AdminRegisterForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(
-                request,
-                "Administrador cadastrado. Entre com email e senha.",
-            )
+            #messages.success(
+            #    request,
+            #    "Administrador cadastrado. Entre com email e senha.",
+            #)
             return redirect("public-login")
     else:
         form = AdminRegisterForm()
