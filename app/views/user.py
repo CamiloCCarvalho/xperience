@@ -105,6 +105,7 @@ def _entry_form_visibility(user: User, ws: Optional[Workspace]) -> dict[str, obj
         return base
     ud = (
         UserDepartment.objects.filter(user=user, workspace=ws)
+        .order_by("end_date", "-is_primary", "pk")
         .select_related("department", "department__template")
         .first()
     )
@@ -213,6 +214,7 @@ def user_home(request):
                 "entry_tasks": Task.objects.none(),
             }
         )
+    # Calendário na home é montado no cliente (mês conforme relógio local do navegador).
     today = date.today()
     ctx.update(_calendar_month_context(today.year, today.month))
     return render(request, page_user + "home.html", context=ctx)

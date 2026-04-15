@@ -8,9 +8,20 @@
                     <h2>Pré-apontamento</h2>
                 </header>
 
-                <p class="q1-pre-entry-hint" id="q1-pre-entry-hint">
-                    Preencha os campos conforme o template do gestor. A <strong>data</strong> será definida ao selecionar um dia no calendário (em breve).
-                </p>
+                <p class="q1-pre-entry-hint" id="q1-pre-entry-hint"></p>
+
+                <div
+                    id="q1-time-entry-api"
+                    class="q1-api-endpoints"
+                    hidden
+                    data-workspace-id="{{ active_member_workspace.pk|default:'' }}"
+                    data-manual-create-url="{% url 'user-time-entry-manual-create' %}"
+                    data-month-counts-url="{% url 'user-time-entry-month-counts' %}"
+                    data-timer-draft-url="{% url 'user-time-entry-timer-draft' %}"
+                    data-timer-start-url="{% url 'user-time-entry-timer-start' %}"
+                    data-timer-stop-url="{% url 'user-time-entry-timer-stop' %}"
+                    data-timer-complete-url="{% url 'user-time-entry-timer-complete' %}"
+                ></div>
 
                 {% if entry_form.configured and entry_form.template_name %}
                 <p class="q1-template-meta">
@@ -28,17 +39,71 @@
                 </p>
                 {% endif %}
 
-                <form class="q1-form" action="#" method="post" aria-describedby="q1-pre-entry-hint">
+                <form
+                    id="q1-pre-entry-form"
+                    class="q1-form"
+                    action="#"
+                    method="post"
+                    aria-describedby="q1-pre-entry-hint"
+                    data-configured="{% if entry_form.configured %}true{% else %}false{% endif %}"
+                >
                     {% csrf_token %}
 
-                    <div class="q1-row">
-                        <div class="q1-field q1-hours">
-                            <label for="horas-gastas">Horas *</label>
-                            <div class="q1-hours-control">
-                                <input id="horas-gastas" name="hours" type="number" value="0" min="0" step="0.25" required>
-                                <button type="button" aria-label="Aumentar horas">+</button>
-                                <button type="button" aria-label="Diminuir horas">-</button>
+                    <fieldset class="q1-mode-fieldset">
+                        <legend class="sr-only">Modo de lançamento</legend>
+                        <div class="q1-mode-options">
+                            <label class="q1-mode-option">
+                                <input type="radio" name="launch_mode" value="duration" checked>
+                                <span>Horas totais</span>
+                            </label>
+                            <label class="q1-mode-option">
+                                <input type="radio" name="launch_mode" value="time_range">
+                                <span>Entrada e saída</span>
+                            </label>
+                            <label class="q1-mode-option">
+                                <input type="radio" name="launch_mode" value="timer">
+                                <span>Cronômetro</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div id="q1-block-duration" class="q1-mode-block">
+                        <div class="q1-row">
+                            <div class="q1-field q1-hours">
+                                <label for="horas-gastas">Horas *</label>
+                                <div class="q1-hours-control">
+                                    <input id="horas-gastas" name="hours" type="number" value="0" min="0" step="0.25">
+                                    <button type="button" aria-label="Aumentar horas">+</button>
+                                    <button type="button" aria-label="Diminuir horas">-</button>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="q1-block-range" class="q1-mode-block q1-hidden">
+                        <div class="q1-row q1-row-two">
+                            <div class="q1-field">
+                                <label for="entry-start-time">Início *</label>
+                                <input id="entry-start-time" name="start_time" type="time" step="60">
+                            </div>
+                            <div class="q1-field">
+                                <label for="entry-end-time">Fim *</label>
+                                <input id="entry-end-time" name="end_time" type="time" step="60">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="q1-block-timer" class="q1-mode-block q1-hidden">
+                        <p id="q1-timer-status" class="q1-timer-status" role="status" aria-live="polite"></p>
+                        <div class="q1-timer-actions">
+                            <button type="button" class="q1-btn q1-btn-primary" id="q1-timer-start">
+                                <i class="fas fa-play" aria-hidden="true"></i>
+                                Iniciar cronômetro
+                            </button>
+                            <button type="button" class="q1-btn q1-btn-secondary" id="q1-timer-stop" disabled>
+                                <i class="fas fa-stop" aria-hidden="true"></i>
+                                Parar cronômetro
+                            </button>
                         </div>
                     </div>
 
@@ -113,10 +178,21 @@
                     </div>
                     {% endif %}
 
+                    <div id="q1-post-timer-wrap" class="q1-post-timer-wrap q1-hidden">
+                        <p class="q1-post-timer-hint">
+                            Cronômetro finalizado. Preencha os campos exigidos pelo template (se houver) e salve.
+                        </p>
+                        <input type="hidden" id="q1-timer-stopped-entry-id" value="">
+                        <button type="button" class="q1-btn q1-btn-primary" id="q1-timer-save-template">
+                            <i class="fas fa-save" aria-hidden="true"></i>
+                            Salvar dados do apontamento
+                        </button>
+                    </div>
+
                     <div class="q1-actions">
-                        <button type="submit" class="q1-btn q1-btn-primary">
-                            <i class="fas fa-lock" aria-hidden="true"></i>
-                            Preparar Apontamento
+                        <button type="button" class="q1-btn q1-btn-primary" id="q1-btn-prepare">
+                            <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                            Preparar apontamento
                         </button>
                         <button type="button" class="q1-btn q1-btn-secondary">
                             <i class="fas fa-tag" aria-hidden="true"></i>
@@ -134,20 +210,31 @@
             </article>
         </div>
 
-        <div class="spaceon-grid">
-            <article class="spaceon-card q3-calendar-card">
+        <div class="spaceon-grid" id="q3-calendar-section-wrap">
+            <article
+                class="spaceon-card q3-calendar-card"
+                id="q3-calendar-card"
+            >
                 <header class="q3-calendar-header">
                     <div class="q3-calendar-title">
                         <i class="fas fa-calendar" aria-hidden="true"></i>
                         <h3>Calendário</h3>
                     </div>
                     <div class="q3-calendar-controls">
-                        <span>{{ calendar_heading }}</span>
-                        <button type="button" aria-label="Mês anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
-                        <button type="button" aria-label="Próximo mês"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-                        <button type="button" aria-label="Atualizar"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+                        <span id="q3-calendar-month-label" class="q3-calendar-month-label" aria-live="polite">{{ calendar_heading }}</span>
+                        <button type="button" id="q3-cal-prev" class="q3-cal-nav-btn" aria-label="Mês anterior" title="Mês anterior">
+                            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="q3-cal-next" class="q3-cal-nav-btn" aria-label="Próximo mês" title="Próximo mês">
+                            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="q3-cal-today" class="q3-cal-nav-btn" aria-label="Ir para o mês atual" title="Mês atual (sua região)">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </header>
+
+                <p class="q3-calendar-status" id="q3-calendar-status" role="status"></p>
 
                 <div class="q3-calendar-wrapper">
                     <table class="q3-calendar-table" aria-label="Calendário mensal">
@@ -162,23 +249,8 @@
                                 <th>Sáb</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for week in calendar_days %}
-                            <tr>
-                                {% for day in week %}
-                                    {% if day %}
-                                <td class="calendar-day">
-                                    <span class="day-number">{{ day }}</span>
-                                    <div class="day-content">
-                                        <!-- entradas dinâmicas futuras (TimeEntry) -->
-                                    </div>
-                                </td>
-                                    {% else %}
-                                <td class="calendar-day muted-day"></td>
-                                    {% endif %}
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
+                        <tbody id="q3-calendar-body">
+                            {# Grade do calendário: spaceon_time_entry.js (mês = relógio local) #}
                         </tbody>
                     </table>
                 </div>

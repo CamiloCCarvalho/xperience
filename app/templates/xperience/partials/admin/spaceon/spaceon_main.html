@@ -3,7 +3,7 @@
     <div class="main-container">
         {% if active_admin_workspace %}
         <section class="admin-config-intro" aria-label="Workspace ativo">
-            <h1>Apontamentos — {{ active_admin_workspace.workspace_name }}</h1>
+            <h1>{{ active_admin_workspace.workspace_name }}</h1>
             {% if active_admin_workspace.workspace_description %}
             <p class="admin-config-muted">{{ active_admin_workspace.workspace_description }}</p>
             {% endif %}

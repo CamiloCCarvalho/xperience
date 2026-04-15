@@ -1,7 +1,5 @@
-"app/urls.py"
-
 from django.urls import path
-from app.views import public, user, admin
+from app.views import admin, public, time_entry, user
 
 urlpatterns = [
 
@@ -23,6 +21,51 @@ urlpatterns = [
     path("user/spaceon/dashboard/", user.user_dashboard, name="user-dashboard"),
     path("user/spaceon/config/", user.user_config, name="user-config"),
     path("user/spaceon/account/", user.user_account, name="user-account"),
+    path(
+        "user/spaceon/time-entry/timer/draft/",
+        time_entry.timer_active_draft,
+        name="user-time-entry-timer-draft",
+    ),
+    path(
+        "user/spaceon/time-entry/timer/start/",
+        time_entry.timer_start,
+        name="user-time-entry-timer-start",
+    ),
+    path(
+        "user/spaceon/time-entry/timer/stop/",
+        time_entry.timer_stop,
+        name="user-time-entry-timer-stop",
+    ),
+    path(
+        "user/spaceon/time-entry/timer/complete/",
+        time_entry.timer_saved_complete_fields,
+        name="user-time-entry-timer-complete",
+    ),
+    path(
+        "user/spaceon/time-entry/prepared-submit/",
+        time_entry.prepared_entry_submit,
+        name="user-time-entry-prepared-submit",
+    ),
+    path(
+        "user/spaceon/time-entry/counts/",
+        time_entry.time_entry_month_counts,
+        name="user-time-entry-month-counts",
+    ),
+    path(
+        "user/spaceon/time-entry/manual/create/",
+        time_entry.manual_time_entry_create,
+        name="user-time-entry-manual-create",
+    ),
+    path(
+        "user/spaceon/time-entry/manual/<int:pk>/update/",
+        time_entry.manual_time_entry_update,
+        name="user-time-entry-manual-update",
+    ),
+    path(
+        "user/spaceon/time-entry/manual/<int:pk>/delete/",
+        time_entry.manual_time_entry_delete,
+        name="user-time-entry-manual-delete",
+    ),
 
     # admin routes (administrador da plataforma, não Django admin)
     path("user_admin/workspaces/", admin.admin_workspaces, name="admin-workspaces"),

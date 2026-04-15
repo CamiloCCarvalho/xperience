@@ -1,4 +1,7 @@
+from datetime import date
+
 from django.contrib import messages
+from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 
 from app.avatar import user_avatar_url, workspace_avatar_url
@@ -10,6 +13,7 @@ from app.forms import (
     ProjectCreateForm,
     TaskCreateForm,
     TimeEntryTemplateForm,
+    UserDepartmentAssignForm,
     WorkScheduleForm,
     WorkspaceCreateForm,
 )
@@ -103,21 +107,25 @@ def admin_workspaces(request):
 
 
 def _admin_home_member_rows(ws: Workspace):
-    uds = {
-        ud.user_id: ud
-        for ud in UserDepartment.objects.filter(workspace=ws).select_related("department")
-    }
+    uds_by_user: dict[int, list[UserDepartment]] = {}
+    for ud in (
+        UserDepartment.objects.filter(workspace=ws)
+        .select_related("department")
+        .order_by("-is_primary", "department__name")
+    ):
+        uds_by_user.setdefault(ud.user_id, []).append(ud)
     rows = []
     for m in (
         Membership.objects.filter(workspace=ws)
         .select_related("user")
         .order_by("user__email")
     ):
-        ud = uds.get(m.user_id)
+        user_departments = uds_by_user.get(m.user_id, [])
         rows.append(
             {
                 "user": m.user,
-                "department": ud.department if ud else None,
+                "department_links": user_departments,
+                "department": user_departments[0].department if user_departments else None,
             }
         )
     return rows
@@ -134,6 +142,7 @@ def admin_home(request):
     template_form = TimeEntryTemplateForm(workspace=ws)
     schedule_form = WorkScheduleForm(workspace=ws)
     department_form = DepartmentForm(workspace=ws)
+    user_department_form = UserDepartmentAssignForm(workspace=ws)
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -143,43 +152,156 @@ def admin_home(request):
                 template_form.save()
                 messages.success(request, "Template criado.")
                 return redirect("admin-home")
+        elif action == "update_template":
+            template = TimeEntryTemplate.objects.filter(
+                pk=request.POST.get("template_id"),
+                workspace=ws,
+            ).first()
+            if template is None:
+                messages.error(request, "Template inválido.")
+                return redirect("admin-home")
+            template_form = TimeEntryTemplateForm(request.POST, workspace=ws, instance=template)
+            if template_form.is_valid():
+                template_form.save()
+                messages.success(request, "Template atualizado.")
+                return redirect("admin-home")
+        elif action == "delete_template":
+            deleted, _ = TimeEntryTemplate.objects.filter(
+                pk=request.POST.get("template_id"),
+                workspace=ws,
+            ).delete()
+            messages.success(request, "Template removido.") if deleted else messages.error(
+                request, "Template não encontrado."
+            )
+            return redirect("admin-home")
         elif action == "create_schedule":
             schedule_form = WorkScheduleForm(request.POST, workspace=ws)
             if schedule_form.is_valid():
                 schedule_form.save()
                 messages.success(request, "Expediente criado.")
                 return redirect("admin-home")
+        elif action == "update_schedule":
+            schedule = WorkSchedule.objects.filter(
+                pk=request.POST.get("schedule_id"),
+                workspace=ws,
+            ).first()
+            if schedule is None:
+                messages.error(request, "Expediente inválido.")
+                return redirect("admin-home")
+            schedule_form = WorkScheduleForm(request.POST, workspace=ws, instance=schedule)
+            if schedule_form.is_valid():
+                schedule_form.save()
+                messages.success(request, "Expediente atualizado.")
+                return redirect("admin-home")
+        elif action == "delete_schedule":
+            deleted, _ = WorkSchedule.objects.filter(
+                pk=request.POST.get("schedule_id"),
+                workspace=ws,
+            ).delete()
+            messages.success(request, "Expediente removido.") if deleted else messages.error(
+                request, "Expediente não encontrado."
+            )
+            return redirect("admin-home")
         elif action == "create_department":
             department_form = DepartmentForm(request.POST, workspace=ws)
             if department_form.is_valid():
                 department_form.save()
                 messages.success(request, "Departamento criado.")
                 return redirect("admin-home")
+        elif action == "update_department":
+            department = Department.objects.filter(
+                pk=request.POST.get("department_id"),
+                workspace=ws,
+            ).first()
+            if department is None:
+                messages.error(request, "Departamento inválido.")
+                return redirect("admin-home")
+            department_form = DepartmentForm(request.POST, workspace=ws, instance=department)
+            if department_form.is_valid():
+                department_form.save()
+                messages.success(request, "Departamento atualizado.")
+                return redirect("admin-home")
+        elif action == "delete_department":
+            deleted, _ = Department.objects.filter(
+                pk=request.POST.get("department_id"),
+                workspace=ws,
+            ).delete()
+            messages.success(request, "Departamento removido.") if deleted else messages.error(
+                request, "Departamento não encontrado."
+            )
+            return redirect("admin-home")
         elif action == "assign_user_department":
             try:
                 uid = int(request.POST.get("user_id", ""))
-                did = int(request.POST.get("department_id", ""))
             except (TypeError, ValueError):
                 messages.error(request, "Dados inválidos.")
             else:
                 user_obj = User.objects.filter(pk=uid).first()
-                dept = Department.objects.filter(pk=did, workspace=ws).first()
-                if (
-                    user_obj
-                    and dept
-                    and Membership.objects.filter(user=user_obj, workspace=ws).exists()
-                ):
-                    UserDepartment.objects.update_or_create(
-                        user=user_obj,
+                if user_obj and Membership.objects.filter(user=user_obj, workspace=ws).exists():
+                    user_department_form = UserDepartmentAssignForm(
+                        request.POST,
                         workspace=ws,
-                        defaults={"department": dept},
                     )
-                    messages.success(request, "Departamento do membro atualizado.")
+                    if user_department_form.is_valid():
+                        user_department = user_department_form.save(commit=False)
+                        user_department.user = user_obj
+                        user_department.workspace = ws
+                        new_start_date = user_department.start_date or date.today()
+                        active_links = UserDepartment.objects.filter(
+                            user=user_obj,
+                            workspace=ws,
+                            end_date__isnull=True,
+                        )
+                        same_department_active = active_links.filter(
+                            department=user_department.department
+                        ).first()
+                        if same_department_active is not None:
+                            messages.info(
+                                request,
+                                "Este membro já está ativo neste departamento.",
+                            )
+                            return redirect("admin-home")
+
+                        try:
+                            with transaction.atomic():
+                                # Ao trocar de departamento, encerramos o vínculo ativo anterior.
+                                for current in active_links:
+                                    current.end_date = new_start_date
+                                    if user_department.is_primary:
+                                        current.is_primary = False
+                                    current.save(update_fields=["end_date", "is_primary"])
+
+                                if user_department.is_primary:
+                                    UserDepartment.objects.filter(
+                                        user=user_obj,
+                                        workspace=ws,
+                                        is_primary=True,
+                                    ).update(is_primary=False)
+
+                                user_department.save()
+                        except IntegrityError:
+                            messages.error(
+                                request,
+                                "Não foi possível salvar o vínculo. Execute as migrations "
+                                "pendentes (`python manage.py migrate`) para habilitar "
+                                "múltiplos departamentos por usuário.",
+                            )
+                        else:
+                            messages.success(request, "Departamento vinculado ao membro.")
                 else:
                     messages.error(
                         request,
                         "Não foi possível atribuir: verifique usuário e departamento.",
                     )
+            return redirect("admin-home")
+        elif action == "delete_user_department":
+            deleted, _ = UserDepartment.objects.filter(
+                pk=request.POST.get("user_department_id"),
+                workspace=ws,
+            ).delete()
+            messages.success(request, "Vínculo de departamento removido.") if deleted else messages.error(
+                request, "Vínculo de departamento não encontrado."
+            )
             return redirect("admin-home")
 
     departments = list(
@@ -196,6 +318,7 @@ def admin_home(request):
             "template_form": template_form,
             "schedule_form": schedule_form,
             "department_form": department_form,
+            "user_department_form": user_department_form,
         }
     )
     return render(request, page_admin + "home.html", context=ctx)
@@ -279,24 +402,79 @@ def admin_config(request):
 
     if request.method == "POST":
         action = request.POST.get("action")
+        if action == "update_workspace_budget":
+            budget_raw = (request.POST.get("budget_total") or "").strip()
+            ws.budget_total = budget_raw or None
+            ws.updated_by = request.user
+            ws.save(update_fields=["budget_total", "updated_by"])
+            messages.success(request, "Budget do workspace atualizado.")
+            return redirect("admin-config")
         if action == "create_client":
             client_form = ClientCreateForm(request.POST)
             if client_form.is_valid():
-                client_form.save(workspace=ws, created_by=request.user)
+                client_form.save(workspace=ws, created_by=request.user, updated_by=request.user)
                 messages.success(request, "Cliente criado.")
                 return redirect("admin-config")
+        elif action == "update_client":
+            client = Client.objects.filter(pk=request.POST.get("client_id"), workspace=ws).first()
+            if client is None:
+                messages.error(request, "Cliente inválido.")
+                return redirect("admin-config")
+            client_form = ClientCreateForm(request.POST, instance=client)
+            if client_form.is_valid():
+                client_form.save(workspace=ws, updated_by=request.user)
+                messages.success(request, "Cliente atualizado.")
+                return redirect("admin-config")
+        elif action == "delete_client":
+            deleted, _ = Client.objects.filter(pk=request.POST.get("client_id"), workspace=ws).delete()
+            messages.success(request, "Cliente removido.") if deleted else messages.error(
+                request, "Cliente não encontrado."
+            )
+            return redirect("admin-config")
         elif action == "create_project":
             project_form = ProjectCreateForm(request.POST, workspace=ws)
             if project_form.is_valid():
-                project_form.save(workspace=ws, created_by=request.user)
+                project_form.save(workspace=ws, created_by=request.user, updated_by=request.user)
                 messages.success(request, "Projeto criado.")
                 return redirect("admin-config")
+        elif action == "update_project":
+            project = Project.objects.filter(pk=request.POST.get("project_id"), workspace=ws).first()
+            if project is None:
+                messages.error(request, "Projeto inválido.")
+                return redirect("admin-config")
+            project_form = ProjectCreateForm(request.POST, workspace=ws, instance=project)
+            if project_form.is_valid():
+                project_form.save(workspace=ws, updated_by=request.user)
+                messages.success(request, "Projeto atualizado.")
+                return redirect("admin-config")
+        elif action == "delete_project":
+            deleted, _ = Project.objects.filter(pk=request.POST.get("project_id"), workspace=ws).delete()
+            messages.success(request, "Projeto removido.") if deleted else messages.error(
+                request, "Projeto não encontrado."
+            )
+            return redirect("admin-config")
         elif action == "create_task":
             task_form = TaskCreateForm(request.POST, workspace=ws)
             if task_form.is_valid():
                 task_form.save()
                 messages.success(request, "Tarefa criada.")
                 return redirect("admin-config")
+        elif action == "update_task":
+            task = Task.objects.filter(pk=request.POST.get("task_id"), project__workspace=ws).first()
+            if task is None:
+                messages.error(request, "Tarefa inválida.")
+                return redirect("admin-config")
+            task_form = TaskCreateForm(request.POST, workspace=ws, instance=task)
+            if task_form.is_valid():
+                task_form.save()
+                messages.success(request, "Tarefa atualizada.")
+                return redirect("admin-config")
+        elif action == "delete_task":
+            deleted, _ = Task.objects.filter(pk=request.POST.get("task_id"), project__workspace=ws).delete()
+            messages.success(request, "Tarefa removida.") if deleted else messages.error(
+                request, "Tarefa não encontrada."
+            )
+            return redirect("admin-config")
         elif action == "link_user_client":
             try:
                 uid = int(request.POST.get("user_id", ""))

@@ -565,3 +565,89 @@
 [data-theme="dark"] .spaceon-config-page .config-field-inline select {
     background: #2b2f35;
 }
+
+/* Workspace gestor — abas horizontais (uma seção por vez) */
+.spaceon-config-page .admin-config-ws-stack {
+    width: 100%;
+    max-width: min(960px, 100%);
+    margin: 0 auto;
+    padding: 0 12px;
+    box-sizing: border-box;
+}
+
+.spaceon-config-page .admin-config-ws-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.25rem;
+    padding: 8px 2px 0;
+    margin: 0 0 4px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.spaceon-config-page .admin-config-ws-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.85rem;
+    margin-bottom: -1px;
+    border-radius: 10px 10px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    background: transparent;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.spaceon-config-page .admin-config-ws-tab:hover {
+    color: var(--color-title);
+    background: color-mix(in srgb, var(--color-bg-secondary) 55%, transparent);
+}
+
+.spaceon-config-page .admin-config-ws-tab:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: 2px;
+}
+
+.spaceon-config-page .admin-config-ws-tab--active {
+    color: var(--color-title);
+    background: var(--color-bg-secondary);
+    border-color: var(--color-border);
+    border-bottom: 1px solid var(--color-bg-secondary);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.spaceon-config-page .admin-config-ws-panel:not(.admin-config-ws-panel--active) {
+    display: none;
+}
+
+.spaceon-config-page .admin-config-ws-panel.admin-config-ws-panel--active {
+    display: block;
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-tab--active {
+    background: #2a313b;
+    border-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: #2a313b;
+    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 720px) {
+    .spaceon-config-page .admin-config-ws-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        gap: 0.15rem;
+        padding-bottom: 2px;
+    }
+
+    .spaceon-config-page .admin-config-ws-tab {
+        flex: 0 0 auto;
+        padding: 0.45rem 0.7rem;
+        font-size: 0.8125rem;
+    }
+}

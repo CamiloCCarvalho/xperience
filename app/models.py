@@ -1,4 +1,7 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from typing import ClassVar
 from django.contrib.auth.models import BaseUserManager
@@ -76,6 +79,26 @@ class Workspace(models.Model):
     owner = models.ForeignKey('User', on_delete=models.CASCADE)
     workspace_name = models.CharField(max_length=255)
     workspace_description = models.TextField(blank=True)
+    budget_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_workspaces",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_workspaces",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     workspace_avatar = models.ImageField(
@@ -177,6 +200,11 @@ class TimeEntryTemplate(models.Model):
 
 
 class Department(models.Model):
+    class TimeTrackingMode(models.TextChoices):
+        DURATION = "duration", "Duração"
+        TIME_RANGE = "time_range", "Intervalo"
+        TIMER = "timer", "Cronômetro"
+
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
@@ -197,6 +225,19 @@ class Department(models.Model):
         blank=True,
         related_name="departments",
     )
+    time_tracking_mode = models.CharField(
+        max_length=20,
+        choices=TimeTrackingMode.choices,
+        default=TimeTrackingMode.DURATION,
+    )
+    can_edit_time_entries = models.BooleanField(
+        default=True,
+        help_text="Se falso, membros não devem editar apontamentos salvos (regra de aplicação na view).",
+    )
+    can_delete_time_entries = models.BooleanField(
+        default=True,
+        help_text="Se falso, membros não devem excluir apontamentos (regra de aplicação na view).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -211,7 +252,7 @@ class Department(models.Model):
 
 
 class UserDepartment(models.Model):
-    """Um departamento por usuário em cada workspace."""
+    """Permite histórico de realocação e departamento principal por workspace."""
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_departments")
     workspace = models.ForeignKey(
@@ -224,13 +265,36 @@ class UserDepartment(models.Model):
         on_delete=models.CASCADE,
         related_name="user_assignments",
     )
+    is_primary = models.BooleanField(default=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("user", "workspace")
+        constraints = [
+            # Garante um único departamento principal por usuário/workspace.
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                condition=Q(is_primary=True),
+                name="app_userdepartment_primary_per_workspace",
+            ),
+            # Histórico: só pode existir um vínculo "ativo" (sem end_date) por usuário/workspace.
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                condition=Q(end_date__isnull=True),
+                name="app_userdepartment_single_active_per_workspace",
+            ),
+        ]
         verbose_name = "Departamento do usuário"
         verbose_name_plural = "Departamentos dos usuários"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError(
+                {"end_date": "A data final não pode ser anterior à data inicial."}
+            )
 
     def __str__(self):
         return f"{self.user.email} → {self.department.name}"
@@ -248,6 +312,12 @@ class Client(models.Model):
     document = models.CharField(max_length=64, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=64, blank=True)
+    budget = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         User,
@@ -255,6 +325,13 @@ class Client(models.Model):
         null=True,
         blank=True,
         related_name="created_clients",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_clients",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -282,6 +359,19 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    budget = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    deadline = models.DateField(null=True, blank=True)
+    estimated_hours = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         User,
@@ -289,6 +379,13 @@ class Project(models.Model):
         null=True,
         blank=True,
         related_name="created_projects",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_projects",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -420,10 +517,28 @@ class UserProject(models.Model):
         return f"{self.user.email} → {self.project.name}"
 
 
+class TimeEntryQuerySet(models.QuerySet):
+    """Consultas de apontamentos; use ``saved_only()`` em agregações (rascunhos ficam de fora)."""
+
+    def saved_only(self):
+        return self.filter(status=self.model.Status.SAVED)
+
+
 class TimeEntry(models.Model):
     class EntryType(models.TextChoices):
         INTERNAL = "internal", "Interno"
         EXTERNAL = "external", "Externo"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Rascunho"
+        SAVED = "saved", "Salvo"
+
+    class EntryMode(models.TextChoices):
+        DURATION = "duration", "Duração"
+        TIME_RANGE = "time_range", "Intervalo"
+        TIMER = "timer", "Cronômetro"
+
+    _MAX_MINUTES_PER_DAY = 24 * 60
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="time_entries")
     workspace = models.ForeignKey(
@@ -436,8 +551,26 @@ class TimeEntry(models.Model):
         on_delete=models.CASCADE,
         related_name="time_entries",
     )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.SAVED,
+    )
+    entry_mode = models.CharField(
+        max_length=20,
+        choices=EntryMode.choices,
+        default=EntryMode.DURATION,
+    )
+    timer_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Início do cronômetro (rascunho em andamento ou referência ao salvar).",
+    )
     date = models.DateField()
-    hours = models.DecimalField(max_digits=6, decimal_places=2)
+    hours = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
     client = models.ForeignKey(
         Client,
         null=True,
@@ -468,8 +601,23 @@ class TimeEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = TimeEntryQuerySet.as_manager()
+
     class Meta:
         ordering = ["-date", "-pk"]
+        indexes = [
+            models.Index(fields=["workspace", "date"]),
+            models.Index(fields=["user", "date"]),
+            models.Index(fields=["project"]),
+            models.Index(fields=["user", "workspace", "status"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                condition=Q(status="draft"),
+                name="app_timeentry_one_draft_per_user_workspace",
+            ),
+        ]
         verbose_name = "Apontamento"
         verbose_name_plural = "Apontamentos"
 
@@ -492,11 +640,79 @@ class TimeEntry(models.Model):
             elif self.task.project_id != self.project_id:
                 errors["task"] = "A tarefa não pertence ao projeto selecionado."
 
+        if self.department_id and self.workspace_id and self.department.workspace_id != self.workspace_id:
+            errors["department"] = "O departamento não pertence a este workspace."
+
+        is_draft = self.status == self.Status.DRAFT
+        has_hours = self.hours is not None
+        has_start = self.start_time is not None
+        has_end = self.end_time is not None
+        has_time_range = has_start and has_end
+
+        if not is_draft and has_start != has_end:
+            errors["end_time"] = "Informe início e fim para usar o modo por intervalo."
+
+        if (
+            not is_draft
+            and has_time_range
+            and self.entry_mode in (self.EntryMode.TIME_RANGE, self.EntryMode.TIMER)
+        ):
+            if self.end_time <= self.start_time:
+                errors["end_time"] = (
+                    "O horário de fim deve ser maior que o de início no mesmo dia "
+                    "(apontamento não pode atravessar meia-noite)."
+                )
+            else:
+                start_total_minutes = self.start_time.hour * 60 + self.start_time.minute
+                end_total_minutes = self.end_time.hour * 60 + self.end_time.minute
+                self.duration_minutes = end_total_minutes - start_total_minutes
+
+        if has_hours and self.duration_minutes is None:
+            minutes_decimal = (self.hours * Decimal("60")).quantize(
+                Decimal("1"),
+                rounding=ROUND_HALF_UP,
+            )
+            self.duration_minutes = int(minutes_decimal)
+
+        if is_draft:
+            if errors:
+                raise ValidationError(errors)
+            return
+
+        # --- salvo: validação por modo de entrada ---
+        mode = self.entry_mode
+        if mode == self.EntryMode.DURATION:
+            if not has_hours and not (self.duration_minutes is not None and self.duration_minutes > 0):
+                errors["hours"] = "Informe horas ou duração em minutos."
+        elif mode == self.EntryMode.TIME_RANGE:
+            if not has_time_range:
+                errors["start_time"] = "Informe início e fim no mesmo dia."
+        elif mode == self.EntryMode.TIMER:
+            measurable = (
+                has_hours
+                or (self.duration_minutes is not None and self.duration_minutes > 0)
+                or has_time_range
+            )
+            if not measurable:
+                errors["hours"] = "Finalize o cronômetro com duração ou intervalo de horários."
+            if self.timer_started_at and self.timer_started_at.date() != self.date:
+                errors["date"] = "A data do apontamento deve ser a mesma do início do cronômetro."
+        else:
+            errors["entry_mode"] = "Modo de entrada inválido."
+
+        if self.duration_minutes is not None and self.duration_minutes > self._MAX_MINUTES_PER_DAY:
+            errors["duration_minutes"] = "Duração não pode exceder 24 horas no mesmo dia (MVP)."
+
+        if has_hours and self.hours is not None and self.hours > Decimal("24"):
+            errors["hours"] = "Horas não podem exceder 24 por apontamento (MVP)."
+
         if errors:
             raise ValidationError(errors)
 
     def _assert_user_access(self) -> None:
         """Garante que o usuário do apontamento tem vínculos UserClient / UserProject."""
+        if self.status == self.Status.DRAFT and not self.client_id and not self.project_id:
+            return
         ws_id = self.workspace_id
         if self.client_id:
             has_client = UserClient.objects.filter(
@@ -522,4 +738,6 @@ class TimeEntry(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.email} {self.date} {self.hours}h"
+        if self.hours is not None:
+            return f"{self.user.email} {self.date} {self.hours}h"
+        return f"{self.user.email} {self.date} {self.duration_minutes}min"
