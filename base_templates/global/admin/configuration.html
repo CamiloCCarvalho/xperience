@@ -7,7 +7,7 @@
     <title>{% block title %}{% endblock title %} | Xperience</title>
     <!-- user spaceon configuration styles -->
     <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_config.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_config.css' %}?v=6">
     <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=1">
     <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=4">
 </head>
@@ -25,7 +25,8 @@
     <!-- scripts -->
     <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
     <script src="{% static 'xperience/js/header_user_menu.js' %}?v=1" defer></script>
-    <script src="{% static 'xperience/js/admin_config_workspace_tabs.js' %}?v=1"></script>
+    <script src="{% static 'xperience/js/admin_config_workspace_tabs.js' %}?v=3" defer></script>
+    <script src="{% static 'xperience/js/admin_config_workspace_entity_modals.js' %}?v=1" defer></script>
     <script>
         document.querySelectorAll("[data-config-toggle]").forEach(function (btn) {
             btn.addEventListener("click", function () {

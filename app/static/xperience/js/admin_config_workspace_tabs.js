@@ -1,6 +1,6 @@
 /**
  * Abas na configuração do workspace (gestor): Empresa, Clientes, Projetos, etc.
- * Estado na URL (#admin-config-ws-empresa, …).
+ * Estado na URL (#admin-config-ws-empresa, …). Mesmo padrão visual que admin-tt (faixa verde + painéis).
  */
 (function () {
     var PANEL_IDS = [
@@ -21,7 +21,7 @@
     }
 
     function activate(panelId) {
-        var stack = document.querySelector(".admin-config-ws-stack");
+        var stack = document.querySelector(".admin-config-ws-main .admin-tt-stack");
         if (!stack) {
             return;
         }
@@ -31,15 +31,15 @@
                 return;
             }
             var on = id === panelId;
-            el.classList.toggle("admin-config-ws-panel--active", on);
+            el.classList.toggle("admin-tt-panel--active", on);
             el.setAttribute("aria-hidden", on ? "false" : "true");
         });
-        stack.querySelectorAll('a.admin-config-ws-tab[role="tab"]').forEach(function (tab) {
+        stack.querySelectorAll('a.admin-tt-tab[role="tab"]').forEach(function (tab) {
             var href = tab.getAttribute("href") || "";
             var tid = href.charAt(0) === "#" ? href.slice(1) : "";
             var on = tid === panelId;
             tab.setAttribute("aria-selected", on ? "true" : "false");
-            tab.classList.toggle("admin-config-ws-tab--active", on);
+            tab.classList.toggle("admin-tt-tab--active", on);
         });
     }
 
@@ -56,11 +56,11 @@
     }
 
     function wireTabs() {
-        var stack = document.querySelector(".admin-config-ws-stack");
+        var stack = document.querySelector(".admin-config-ws-main .admin-tt-stack");
         if (!stack) {
             return;
         }
-        stack.querySelectorAll("a.admin-config-ws-tab").forEach(function (tab) {
+        stack.querySelectorAll("a.admin-tt-tab").forEach(function (tab) {
             tab.addEventListener("click", function (e) {
                 var href = tab.getAttribute("href") || "";
                 if (href.charAt(0) !== "#") {
@@ -81,8 +81,13 @@
     }
 
     function init() {
-        if (!document.querySelector(".admin-config-ws-stack")) {
+        var stack = document.querySelector(".admin-config-ws-main .admin-tt-stack");
+        if (!stack) {
             return;
+        }
+        var force = stack.getAttribute("data-admin-config-force-hash");
+        if (force && window.location.hash !== force) {
+            window.location.hash = force;
         }
         sync();
         wireTabs();

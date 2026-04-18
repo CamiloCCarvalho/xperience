@@ -380,7 +380,11 @@ class WorkSchedule(models.Model):
         default=8,
         validators=[MinValueValidator(1), MaxValueValidator(24)],
     )
-    has_fixed_days = models.BooleanField(default=True)
+    has_fixed_days = models.BooleanField(
+        default=True,
+        verbose_name="Folga Fixa",
+        help_text="Se ativado, o expediente usa os dias da semana escolhidos de forma fixa.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

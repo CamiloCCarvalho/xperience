@@ -1,9 +1,14 @@
 /**
- * Abas horizontais na home admin Spaceon (Templates / Departamentos / Membros).
+ * Abas horizontais na home admin Spaceon (Templates / Expedientes / Departamentos / Membros).
  * Estado persistido via hash da URL (#admin-tt-templates, etc.).
  */
 (function () {
-    var PANEL_IDS = ["admin-tt-templates", "admin-tt-departamentos", "admin-tt-membros"];
+    var PANEL_IDS = [
+        "admin-tt-templates",
+        "admin-tt-expedientes",
+        "admin-tt-departamentos",
+        "admin-tt-membros",
+    ];
 
     function panelFromHash() {
         var id = (window.location.hash || "").replace(/^#/, "");
@@ -74,8 +79,13 @@
     }
 
     function init() {
-        if (!document.querySelector(".admin-spaceon-home .admin-tt-stack")) {
+        var stack = document.querySelector(".admin-spaceon-home .admin-tt-stack");
+        if (!stack) {
             return;
+        }
+        var force = stack.getAttribute("data-admin-tt-force-hash");
+        if (force && window.location.hash !== force) {
+            window.location.hash = force;
         }
         sync();
         wireTabs();

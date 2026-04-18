@@ -1,58 +1,118 @@
 /* Admin — configuração de apontamentos (parcial em .main.admin-spaceon-home) */
 
+/*
+ * Espaço abaixo do header (sobretudo na aba Membros), por interferência de:
+ *
+ * 1) global_style.css — .container { min-height: 100vh; justify-content: space-between }
+ *    reparte o espaço livre ENTRE os filhos (mensagens, header, main). Quando
+ *    <main> fica baixo, o intervalo header → main aumenta.
+ *
+ * 2) workspaces.css / user_avatar.css — .workspaces-page .main { justify-content: center }
+ *    e .workspaces-page .main-container { justify-content: center } centralizam
+ *    o conteúdo na altura do main / main-container.
+ *
+ * Corrigir só na home admin Spaceon (main com .admin-spaceon-home).
+ */
+.home-page.spaceon-page.workspaces-page .container:has(.main.admin-spaceon-home) {
+    justify-content: flex-start;
+    /* Garante coluna com altura da viewport (global já tem min-height: 100vh) */
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/*
+ * O fundo pontilhado está em .home-page .main (style.css). Com pouco conteúdo,
+ * a altura do <main> acompanhava só o conteúdo e o restante do .container ficava
+ * “em branco”. flex:1 faz o main ocupar o espaço livre até o fim da viewport.
+ */
+.home-page.spaceon-page.workspaces-page .container:has(.main.admin-spaceon-home) > main.main.admin-spaceon-home {
+    flex: 1 1 auto;
+    align-self: stretch;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.workspaces-page .main.admin-spaceon-home {
+    justify-content: flex-start;
+}
+
+.workspaces-page .main.admin-spaceon-home .main-container {
+    justify-content: flex-start;
+}
+
 .admin-spaceon-home .admin-tt-stack {
     width: 100%;
     max-width: min(760px, 100%);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 0;
 }
 
-/* Abas horizontais (uma seção visível por vez) */
+/* Cartão único: faixa verde com abas + painéis */
+.admin-spaceon-home .admin-tt-tabbed-shell {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.admin-spaceon-home .admin-tt-tabs-strip {
+    padding: 0 8px;
+    margin: 0;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    border-radius: 11px 11px 0 0;
+}
+
+/* Abas no verde (continuidade visual com o header da sessão) */
 .admin-spaceon-home .admin-tt-tabs {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 0.25rem;
-    padding: 0 2px;
-    margin: 0 0 0.15rem;
-    border-bottom: 1px solid var(--color-border);
+    gap: 0;
+    padding: 0;
+    margin: 0;
+    border-bottom: none;
 }
 
 .admin-spaceon-home .admin-tt-tab {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.55rem 1.1rem;
-    margin-bottom: -1px;
+    padding: 0.65rem 1.2rem;
+    margin: 0 2px 0 0;
     border-radius: 10px 10px 0 0;
     border: 1px solid transparent;
     border-bottom: none;
     font-size: 0.9375rem;
     font-weight: 600;
     text-decoration: none;
-    color: var(--color-text-muted);
+    color: rgba(255, 255, 255, 0.78);
     background: transparent;
-    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .admin-spaceon-home .admin-tt-tab:hover {
-    color: var(--color-title);
-    background: color-mix(in srgb, var(--color-bg-secondary) 55%, transparent);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .admin-spaceon-home .admin-tt-tab:focus-visible {
-    outline: 2px solid var(--green-light);
+    outline: 2px solid #fff;
     outline-offset: 2px;
 }
 
 .admin-spaceon-home .admin-tt-tab--active {
-    color: var(--color-title);
+    color: var(--green-dark);
     background: var(--color-bg-secondary);
-    border-color: var(--color-border);
-    border-bottom: 1px solid var(--color-bg-secondary);
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+    border-color: rgba(255, 255, 255, 0.4);
+    border-bottom-color: var(--color-bg-secondary);
+    margin-bottom: -1px;
+    padding-bottom: calc(0.65rem + 1px);
+    font-weight: 700;
+    box-shadow: 0 -3px 14px rgba(0, 0, 0, 0.1);
 }
 
 .admin-spaceon-home .admin-tt-panel:not(.admin-tt-panel--active) {
@@ -63,44 +123,12 @@
     display: block;
 }
 
-.admin-spaceon-home .admin-tt-card {
-    width: 100%;
-    overflow: hidden;
-    border-radius: 12px;
-    border: 1px solid var(--color-border);
-    background: var(--color-bg-secondary);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
-    margin-bottom: 0;
-}
-
-.admin-spaceon-home .admin-tt-header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 12px 16px;
-    color: #fff;
-    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
-    border-radius: 11px 11px 0 0;
-}
-
-.admin-spaceon-home .admin-tt-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.admin-spaceon-home .admin-tt-title i {
-    font-size: 18px;
-    opacity: 0.95;
-}
-
-.admin-spaceon-home .admin-tt-title h2 {
+.admin-spaceon-home .admin-tt-tabbed-shell .admin-tt-panel {
     margin: 0;
-    color: #fff;
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    line-height: 1.25;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
 .admin-spaceon-home .admin-tt-body {
@@ -237,16 +265,17 @@
     min-height: 40px;
 }
 
-[data-theme="dark"] .admin-spaceon-home .admin-tt-card {
+[data-theme="dark"] .admin-spaceon-home .admin-tt-tabbed-shell {
     background: #2a313b;
     border-color: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .admin-spaceon-home .admin-tt-tab--active {
+    color: #bbf7d0;
     background: #2a313b;
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.14);
     border-bottom-color: #2a313b;
-    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 -3px 16px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .admin-spaceon-home .admin-config-field input[type="text"],
@@ -260,11 +289,14 @@
 }
 
 @media (max-width: 480px) {
-    .admin-spaceon-home .admin-tt-tabs {
-        flex-wrap: nowrap;
+    .admin-spaceon-home .admin-tt-tabs-strip {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
+    }
+
+    .admin-spaceon-home .admin-tt-tabs {
+        flex-wrap: nowrap;
         gap: 0.15rem;
         padding-bottom: 2px;
     }
@@ -273,6 +305,10 @@
         flex: 0 0 auto;
         padding: 0.5rem 0.85rem;
         font-size: 0.875rem;
+    }
+
+    .admin-spaceon-home .admin-tt-tab--active {
+        padding-bottom: calc(0.5rem + 1px);
     }
 }
 
@@ -289,4 +325,425 @@
     .admin-spaceon-home .admin-config-inline-form .btn-primary {
         width: 100%;
     }
+}
+
+/* Lista de templates (estilizada) + modal de edição */
+.admin-spaceon-home .admin-tt-template-list {
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.admin-spaceon-home .admin-tt-template-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 55%, var(--color-bg-secondary));
+}
+
+.admin-spaceon-home .admin-tt-template-row__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.admin-spaceon-home .admin-tt-template-row__name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-title);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.admin-spaceon-home .admin-tt-template-row__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.admin-spaceon-home .admin-tt-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--green-light) 16%, transparent);
+    color: var(--green-dark);
+    border: 1px solid color-mix(in srgb, var(--green-light) 32%, transparent);
+}
+
+.admin-spaceon-home .admin-tt-pill--muted {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    font-size: 0.75rem;
+    background: var(--color-bg-primary);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+}
+
+/* Expedientes: horas/dia e dias da semana por extenso (sem caixa alta) */
+.admin-spaceon-home .admin-tt-pill--hours,
+.admin-spaceon-home .admin-tt-pill--weekday {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.admin-spaceon-home .admin-tt-pill--hours {
+    background: color-mix(in srgb, var(--green-light) 22%, transparent);
+    border-color: color-mix(in srgb, var(--green-light) 42%, transparent);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-pill--hours {
+    background: rgba(74, 222, 128, 0.16);
+    border-color: rgba(74, 222, 128, 0.32);
+}
+
+.admin-spaceon-home .admin-tt-template-row__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.admin-spaceon-home .admin-tt-template-del-form {
+    margin: 0;
+    display: inline-flex;
+}
+
+.admin-spaceon-home .admin-tt-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg-primary);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, filter 0.15s ease;
+}
+
+.admin-spaceon-home .admin-tt-icon-btn:hover {
+    color: var(--color-title);
+    border-color: color-mix(in srgb, var(--green-light) 40%, var(--color-border));
+    filter: brightness(1.02);
+}
+
+.admin-spaceon-home .admin-tt-icon-btn--edit:hover {
+    color: var(--green-dark);
+}
+
+.admin-spaceon-home .admin-tt-icon-btn--danger:hover {
+    color: #c0392b;
+    border-color: rgba(192, 57, 43, 0.35);
+}
+
+.admin-spaceon-home .admin-tt-icon-btn:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: 2px;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog {
+    border: none;
+    padding: 0;
+    margin: auto;
+    max-width: calc(100vw - 2rem);
+    width: min(440px, 100%);
+    background: transparent;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog::backdrop {
+    background: rgba(15, 18, 24, 0.55);
+    backdrop-filter: blur(4px);
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__panel {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+    max-height: min(85vh, 640px);
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid color-mix(in srgb, #fff 18%, transparent);
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    color: #fff;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__head h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.15s ease;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__close:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__close:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__body {
+    padding: 16px 18px 18px;
+    overflow-y: auto;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__form {
+    margin-top: 0;
+}
+
+/* Evita que <dialog> fechado reserve espaço em alguns UAs */
+.admin-spaceon-home .admin-tt-body dialog:not([open]) {
+    display: none;
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-template-row {
+    background: color-mix(in srgb, #232a33 65%, #2a313b);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-pill {
+    background: rgba(74, 222, 128, 0.12);
+    color: #86efac;
+    border-color: rgba(74, 222, 128, 0.28);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-pill--muted {
+    background: #232a33;
+    color: rgba(255, 255, 255, 0.55);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-icon-btn {
+    background: #232a33;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-icon-btn:hover {
+    color: #fff;
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-edit-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.68);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-edit-dialog__panel {
+    background: #2a313b;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 480px) {
+    .admin-spaceon-home .admin-tt-template-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-spaceon-home .admin-tt-template-row__actions {
+        justify-content: flex-end;
+    }
+}
+
+.admin-spaceon-home .admin-tt-entity-meta {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+}
+
+.admin-spaceon-home .admin-tt-entity-meta--inline {
+    display: inline-block;
+    margin-left: 0.35rem;
+}
+
+.admin-spaceon-home .admin-tt-ud-links {
+    list-style: none;
+    margin: 0.35rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.admin-spaceon-home .admin-tt-ud-link-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 40%, transparent);
+}
+
+.admin-spaceon-home .admin-tt-ud-link-row__text {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.875rem;
+    color: var(--color-text);
+}
+
+.admin-spaceon-home .admin-tt-ud-link-row__text strong {
+    font-weight: 600;
+    color: var(--color-title);
+}
+
+.admin-spaceon-home .admin-tt-ud-links-empty {
+    list-style: none;
+    margin: 0;
+    padding: 0.15rem 0;
+}
+
+.admin-spaceon-home .admin-tt-member-row__actions {
+    align-self: flex-start;
+}
+
+.admin-spaceon-home .admin-tt-icon-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__head--stack {
+    align-items: flex-start;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__head--stack .admin-tt-edit-dialog__close {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog__subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0.92;
+    word-break: break-word;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-ud-link-row {
+    background: #232a33;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Expediente: criar (botão centralizado + modal) */
+.admin-spaceon-home .admin-tt-create-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.15rem;
+    padding-top: 0.25rem;
+}
+
+.admin-spaceon-home .admin-tt-create-open-btn {
+    min-width: 7.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+.admin-spaceon-home .admin-tt-sch-create-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.1rem;
+    padding-top: 0.25rem;
+}
+
+.admin-spaceon-home .admin-tt-sch-create-form .admin-config-field,
+.admin-spaceon-home .admin-tt-create-dialog-form .admin-config-field {
+    margin-bottom: 1rem;
+}
+
+/* Dias da semana como “pills” nos modais criar/editar expediente */
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_create-working_days_pick,
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_edit-working_days_pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_create-working_days_pick > div,
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_edit-working_days_pick > div {
+    margin: 0;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_create-working_days_pick label,
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_edit-working_days_pick label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0.38rem 0.72rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_create-working_days_pick label:has(input:checked),
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_edit-working_days_pick label:has(input:checked) {
+    background: color-mix(in srgb, var(--green-light) 22%, transparent);
+    border-color: color-mix(in srgb, var(--green-light) 42%, transparent);
+    color: var(--green-dark);
+}
+
+[data-theme="dark"] .admin-spaceon-home .admin-tt-edit-dialog #id_sch_create-working_days_pick label:has(input:checked),
+[data-theme="dark"] .admin-spaceon-home .admin-tt-edit-dialog #id_sch_edit-working_days_pick label:has(input:checked) {
+    background: rgba(74, 222, 128, 0.16);
+    border-color: rgba(74, 222, 128, 0.35);
+    color: #bbf7d0;
+}
+
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_create-working_days_pick input,
+.admin-spaceon-home .admin-tt-edit-dialog #id_sch_edit-working_days_pick input {
+    accent-color: var(--green-dark);
 }

@@ -2,13 +2,6 @@
 <main class="main admin-spaceon-home">
     <div class="main-container">
         {% if active_admin_workspace %}
-        <section class="admin-config-intro" aria-label="Workspace ativo">
-            <h1>{{ active_admin_workspace.workspace_name }}</h1>
-            {% if active_admin_workspace.workspace_description %}
-            <p class="admin-config-muted">{{ active_admin_workspace.workspace_description }}</p>
-            {% endif %}
-            <p class="admin-config-muted">Configure templates, expedientes, departamentos e vínculo dos membros a departamentos neste workspace.</p>
-        </section>
         {% include "xperience/partials/admin/spaceon/spaceon_home_time_tracking.html" %}
         {% else %}
         <section class="admin-config-intro">

@@ -1,7 +1,12 @@
-{# Configuração de apontamento: templates, expedientes + departamentos, usuários #}
+{# Configuração de apontamento: templates, expedientes, departamentos, membros #}
 
-<div class="admin-tt-stack">
-    <nav class="admin-tt-tabs" role="tablist" aria-label="Seções de apontamentos">
+<div
+    class="admin-tt-stack"
+    {% if member_assign_dialog_open %}data-admin-tt-force-hash="#admin-tt-membros"{% elif schedule_edit_dialog_open or schedule_create_dialog_open %}data-admin-tt-force-hash="#admin-tt-expedientes"{% elif department_edit_dialog_open or department_create_dialog_open %}data-admin-tt-force-hash="#admin-tt-departamentos"{% elif template_edit_dialog_open or template_create_dialog_open %}data-admin-tt-force-hash="#admin-tt-templates"{% endif %}
+>
+    <div class="admin-tt-tabbed-shell spaceon-card">
+    <header class="admin-tt-tabs-strip">
+    <nav class="admin-tt-tabs" role="tablist" aria-label="Templates, expedientes, departamentos e membros">
         <a
             href="#admin-tt-templates"
             class="admin-tt-tab admin-tt-tab--active"
@@ -10,6 +15,14 @@
             aria-controls="admin-tt-templates"
             aria-selected="true"
         >Templates</a>
+        <a
+            href="#admin-tt-expedientes"
+            class="admin-tt-tab"
+            role="tab"
+            id="tab-admin-tt-expedientes"
+            aria-controls="admin-tt-expedientes"
+            aria-selected="false"
+        >Expedientes</a>
         <a
             href="#admin-tt-departamentos"
             class="admin-tt-tab"
@@ -27,248 +40,428 @@
             aria-selected="false"
         >Membros</a>
     </nav>
+    </header>
 
 <article
     id="admin-tt-templates"
-    class="spaceon-card admin-tt-card admin-tt-panel admin-tt-panel--active"
+    class="admin-tt-panel admin-tt-panel--active"
     role="tabpanel"
-    aria-labelledby="hdr-templates"
+    aria-labelledby="tab-admin-tt-templates"
     aria-hidden="false"
 >
-    <header class="admin-tt-header">
-        <div class="admin-tt-title">
-            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-            <h2 id="hdr-templates">Templates de apontamento</h2>
-        </div>
-    </header>
     <div class="admin-tt-body">
         <p class="admin-config-muted">Controla quais campos poderão aparecer nos lançamentos (uso futuro no formulário).</p>
         {% if time_templates %}
-        <ul class="admin-config-list">
+        <ul class="admin-tt-template-list" role="list">
             {% for t in time_templates %}
-            <li>
-                <strong>{{ t.name }}</strong>
-                — cliente: {{ t.use_client|yesno:"sim,não" }},
-                projeto: {{ t.use_project|yesno:"sim,não" }},
-                tarefa: {{ t.use_task|yesno:"sim,não" }},
-                tipo: {{ t.use_type|yesno:"sim,não" }},
-                descrição: {{ t.use_description|yesno:"sim,não" }}
-                <form method="post" class="admin-config-inline-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="delete_template">
-                    <input type="hidden" name="template_id" value="{{ t.pk }}">
-                    <button type="submit" class="btn-primary">Excluir</button>
-                </form>
+            <li class="admin-tt-template-row">
+                <div class="admin-tt-template-row__main">
+                    <span class="admin-tt-template-row__name">{{ t.name }}</span>
+                    <div class="admin-tt-template-row__badges" aria-label="Campos do template">
+                        {% if t.use_client %}<span class="admin-tt-pill">Cliente</span>{% endif %}
+                        {% if t.use_project %}<span class="admin-tt-pill">Projeto</span>{% endif %}
+                        {% if t.use_task %}<span class="admin-tt-pill">Tarefa</span>{% endif %}
+                        {% if t.use_type %}<span class="admin-tt-pill">Tipo</span>{% endif %}
+                        {% if t.use_description %}<span class="admin-tt-pill">Descrição</span>{% endif %}
+                        {% if not t.use_client and not t.use_project and not t.use_task and not t.use_type and not t.use_description %}
+                        <span class="admin-tt-pill admin-tt-pill--muted">Sem campos opcionais</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="admin-tt-template-row__actions">
+                    <button
+                        type="button"
+                        class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                        title="Editar template"
+                        aria-label="Editar template"
+                        data-admin-tt-template-edit
+                        data-template-id="{{ t.pk }}"
+                        data-name="{{ t.name|escape }}"
+                        data-use-client="{% if t.use_client %}1{% else %}0{% endif %}"
+                        data-use-project="{% if t.use_project %}1{% else %}0{% endif %}"
+                        data-use-task="{% if t.use_task %}1{% else %}0{% endif %}"
+                        data-use-type="{% if t.use_type %}1{% else %}0{% endif %}"
+                        data-use-description="{% if t.use_description %}1{% else %}0{% endif %}"
+                    >
+                        <i class="fas fa-pen" aria-hidden="true"></i>
+                    </button>
+                    <form method="post" class="admin-tt-template-del-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_template">
+                        <input type="hidden" name="template_id" value="{{ t.pk }}">
+                        <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir template" aria-label="Excluir template">
+                            <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                </div>
             </li>
             {% endfor %}
         </ul>
         {% else %}
         <p class="admin-config-muted">Nenhum template ainda.</p>
         {% endif %}
-        <form method="post" class="admin-config-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="create_template">
-            <h4>Novo template</h4>
-            {% for field in template_form %}
-            <div class="admin-config-field">
-                {% if field.name == "name" %}
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% else %}
-                <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
-                {% endif %}
-                {{ field.errors }}
+        <div class="admin-tt-create-actions">
+            <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-tt-template-create-open" aria-haspopup="dialog" aria-controls="admin-tt-template-create-dialog">
+                Criar
+            </button>
+        </div>
+
+        <dialog
+            id="admin-tt-template-create-dialog"
+            class="admin-tt-edit-dialog"
+            aria-labelledby="admin-tt-template-create-title"
+            data-auto-open="{% if template_create_dialog_open %}1{% else %}0{% endif %}"
+        >
+            <div class="admin-tt-edit-dialog__panel">
+                <div class="admin-tt-edit-dialog__head">
+                    <h3 id="admin-tt-template-create-title">Novo template</h3>
+                    <button type="button" class="admin-tt-edit-dialog__close" id="admin-tt-template-create-close" aria-label="Fechar">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="admin-tt-edit-dialog__body">
+                    <form method="post" class="admin-config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_template">
+                        {% for field in template_form %}
+                        <div class="admin-config-field">
+                            {% if field.name == "name" %}
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% else %}
+                            <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
+                            {% endif %}
+                            {{ field.errors }}
+                        </div>
+                        {% endfor %}
+                        <div class="admin-tt-sch-create-form__actions">
+                            <button type="submit" class="btn-primary">Criar template</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            {% endfor %}
-            <button type="submit" class="btn-primary">Criar template</button>
-        </form>
+        </dialog>
 
         {% if time_templates %}
-        <form method="post" class="admin-config-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_template">
-            <h4>Editar template</h4>
-            <div class="admin-config-field">
-                <label for="template-id-update">Template</label>
-                <select id="template-id-update" name="template_id" class="auth-input" required>
-                    <option value="">Selecione…</option>
-                    {% for t in time_templates %}
-                    <option value="{{ t.pk }}">{{ t.name }}</option>
-                    {% endfor %}
-                </select>
+        <dialog
+            id="admin-tt-template-edit-dialog"
+            class="admin-tt-edit-dialog"
+            aria-labelledby="admin-tt-template-edit-title"
+            data-auto-open="{% if template_edit_dialog_open %}1{% else %}0{% endif %}"
+        >
+            <div class="admin-tt-edit-dialog__panel">
+                <div class="admin-tt-edit-dialog__head">
+                    <h3 id="admin-tt-template-edit-title">Editar template</h3>
+                    <button type="button" class="admin-tt-edit-dialog__close" id="admin-tt-template-edit-close" aria-label="Fechar">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="admin-tt-edit-dialog__body">
+                    <form method="post" class="admin-config-form admin-tt-edit-dialog__form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_template">
+                        <input type="hidden" name="template_id" id="admin-tt-template-edit-id" value="{{ template_edit_target_id }}">
+                        {% for field in template_edit_form %}
+                        <div class="admin-config-field">
+                            {% if field.name == "name" %}
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% else %}
+                            <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
+                            {% endif %}
+                            {{ field.errors }}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn-primary">Salvar template</button>
+                    </form>
+                </div>
             </div>
-            {% for field in template_form %}
-            <div class="admin-config-field">
-                {% if field.name == "name" %}
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% else %}
-                <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
-                {% endif %}
-                {{ field.errors }}
-            </div>
-            {% endfor %}
-            <button type="submit" class="btn-primary">Salvar template</button>
-        </form>
+        </dialog>
         {% endif %}
     </div>
 </article>
 
 <article
-    id="admin-tt-departamentos"
-    class="spaceon-card admin-tt-card admin-tt-panel"
+    id="admin-tt-expedientes"
+    class="admin-tt-panel"
     role="tabpanel"
-    aria-labelledby="hdr-dept-block"
+    aria-labelledby="tab-admin-tt-expedientes"
     aria-hidden="true"
 >
-    <header class="admin-tt-header">
-        <div class="admin-tt-title">
-            <i class="fas fa-business-time" aria-hidden="true"></i>
-            <h2 id="hdr-dept-block">Expedientes e departamentos</h2>
-        </div>
-    </header>
     <div class="admin-tt-body">
         <div class="admin-tt-subsection">
             <h3 class="admin-tt-subtitle">Expedientes (regras de trabalho)</h3>
             {% if work_schedules %}
-            <ul class="admin-config-list">
+            <ul class="admin-tt-template-list" role="list">
                 {% for s in work_schedules %}
-                <li>
-                    <strong>{{ s.name }}</strong> — {{ s.expected_hours_per_day }}h/dia;
-                    dias: {{ s.working_days|join:", " }}; fixos: {{ s.has_fixed_days|yesno:"sim,não" }}
-                    <form method="post" class="admin-config-inline-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="delete_schedule">
-                        <input type="hidden" name="schedule_id" value="{{ s.pk }}">
-                        <button type="submit" class="btn-primary">Excluir</button>
-                    </form>
+                <li class="admin-tt-template-row">
+                    <div class="admin-tt-template-row__main">
+                        <span class="admin-tt-template-row__name">{{ s.name }}</span>
+                        <div class="admin-tt-template-row__badges" aria-label="Horas previstas, dias com expediente e folga fixa">
+                            <span class="admin-tt-pill admin-tt-pill--hours">{{ s.expected_hours_per_day }} h/dia</span>
+                            {% if s.working_days %}
+                                {% for day in s.working_days %}
+                                <span class="admin-tt-pill admin-tt-pill--weekday">{% if day == "mon" %}segunda{% elif day == "tue" %}terça{% elif day == "wed" %}quarta{% elif day == "thu" %}quinta{% elif day == "fri" %}sexta{% elif day == "sat" %}sábado{% elif day == "sun" %}domingo{% else %}{{ day }}{% endif %}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="admin-tt-pill admin-tt-pill--muted">Sem dias</span>
+                            {% endif %}
+                            <span class="admin-tt-pill admin-tt-pill--weekday">Folga Fixa · {% if s.has_fixed_days %}sim{% else %}não{% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="admin-tt-template-row__actions">
+                        <button
+                            type="button"
+                            class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                            title="Editar expediente"
+                            aria-label="Editar expediente"
+                            data-admin-tt-schedule-edit
+                            data-schedule-id="{{ s.pk }}"
+                            data-name="{{ s.name|escape }}"
+                            data-hours="{{ s.expected_hours_per_day }}"
+                            data-has-fixed-days="{% if s.has_fixed_days %}1{% else %}0{% endif %}"
+                            data-working-days="{{ s.working_days|join:',' }}"
+                        >
+                            <i class="fas fa-pen" aria-hidden="true"></i>
+                        </button>
+                        <form method="post" class="admin-tt-template-del-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_schedule">
+                            <input type="hidden" name="schedule_id" value="{{ s.pk }}">
+                            <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir expediente" aria-label="Excluir expediente">
+                                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    </div>
                 </li>
                 {% endfor %}
             </ul>
             {% else %}
             <p class="admin-config-muted">Nenhum expediente cadastrado.</p>
             {% endif %}
-            <form method="post" class="admin-config-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="create_schedule">
-                <h4>Novo expediente</h4>
-                {% for field in schedule_form %}
-                <div class="admin-config-field">
-                    {% if field.name == "working_days_pick" %}
-                    <span class="admin-config-label">{{ field.label }}</span>
-                    <div class="admin-config-checkboxes">{{ field }}</div>
-                    {% elif field.name == "has_fixed_days" %}
-                    <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
-                    {% else %}
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% endif %}
-                    {{ field.errors }}
+            <div class="admin-tt-create-actions">
+                <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-sch-create-open" aria-haspopup="dialog" aria-controls="admin-sch-create-dialog">
+                    Criar
+                </button>
+            </div>
+
+            <dialog
+                id="admin-sch-create-dialog"
+                class="admin-tt-edit-dialog"
+                aria-labelledby="admin-sch-create-title"
+                data-auto-open="{% if schedule_create_dialog_open %}1{% else %}0{% endif %}"
+            >
+                <div class="admin-tt-edit-dialog__panel">
+                    <div class="admin-tt-edit-dialog__head">
+                        <h3 id="admin-sch-create-title">Novo expediente</h3>
+                        <button type="button" class="admin-tt-edit-dialog__close" id="admin-sch-create-close" aria-label="Fechar">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="admin-tt-edit-dialog__body">
+                        <form method="post" class="admin-config-form admin-tt-edit-dialog__form admin-tt-sch-create-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="create_schedule">
+                            {% for field in schedule_form %}
+                            <div class="admin-config-field">
+                                {% if field.name == "working_days_pick" %}
+                                <span class="admin-config-label">{{ field.label }}</span>
+                                <div class="admin-config-checkboxes admin-tt-sch-create-weekdays">{{ field }}</div>
+                                {% elif field.name == "has_fixed_days" %}
+                                <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
+                                {% else %}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% endif %}
+                                {{ field.errors }}
+                            </div>
+                            {% endfor %}
+                            <div class="admin-tt-sch-create-form__actions">
+                                <button type="submit" class="btn-primary">Criar expediente</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                {% endfor %}
-                <button type="submit" class="btn-primary">Salvar expediente</button>
-            </form>
+            </dialog>
 
             {% if work_schedules %}
-            <form method="post" class="admin-config-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="update_schedule">
-                <h4>Editar expediente</h4>
-                <div class="admin-config-field">
-                    <label for="schedule-id-update">Expediente</label>
-                    <select id="schedule-id-update" name="schedule_id" class="auth-input" required>
-                        <option value="">Selecione…</option>
-                        {% for s in work_schedules %}
-                        <option value="{{ s.pk }}">{{ s.name }}</option>
-                        {% endfor %}
-                    </select>
+            <dialog
+                id="admin-sch-edit-dialog"
+                class="admin-tt-edit-dialog"
+                aria-labelledby="admin-sch-edit-title"
+                data-auto-open="{% if schedule_edit_dialog_open %}1{% else %}0{% endif %}"
+            >
+                <div class="admin-tt-edit-dialog__panel">
+                    <div class="admin-tt-edit-dialog__head">
+                        <h3 id="admin-sch-edit-title">Editar expediente</h3>
+                        <button type="button" class="admin-tt-edit-dialog__close" id="admin-sch-edit-close" aria-label="Fechar">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="admin-tt-edit-dialog__body">
+                        <form method="post" class="admin-config-form admin-tt-edit-dialog__form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_schedule">
+                            <input type="hidden" name="schedule_id" id="admin-sch-edit-id" value="{{ schedule_edit_target_id }}">
+                            {% for field in schedule_edit_form %}
+                            <div class="admin-config-field">
+                                {% if field.name == "working_days_pick" %}
+                                <span class="admin-config-label">{{ field.label }}</span>
+                                <div class="admin-config-checkboxes">{{ field }}</div>
+                                {% elif field.name == "has_fixed_days" %}
+                                <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
+                                {% else %}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% endif %}
+                                {{ field.errors }}
+                            </div>
+                            {% endfor %}
+                            <button type="submit" class="btn-primary">Salvar expediente</button>
+                        </form>
+                    </div>
                 </div>
-                {% for field in schedule_form %}
-                <div class="admin-config-field">
-                    {% if field.name == "working_days_pick" %}
-                    <span class="admin-config-label">{{ field.label }}</span>
-                    <div class="admin-config-checkboxes">{{ field }}</div>
-                    {% elif field.name == "has_fixed_days" %}
-                    <label class="admin-config-cb-label"><span class="admin-config-cb">{{ field }}</span> {{ field.label }}</label>
-                    {% else %}
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% endif %}
-                    {{ field.errors }}
-                </div>
-                {% endfor %}
-                <button type="submit" class="btn-primary">Salvar edição</button>
-            </form>
+            </dialog>
             {% endif %}
         </div>
+    </div>
+</article>
 
+<article
+    id="admin-tt-departamentos"
+    class="admin-tt-panel"
+    role="tabpanel"
+    aria-labelledby="tab-admin-tt-departamentos"
+    aria-hidden="true"
+>
+    <div class="admin-tt-body">
         <div class="admin-tt-subsection">
             <h3 class="admin-tt-subtitle">Departamentos</h3>
             <p class="admin-config-muted">Cada departamento usa um expediente e um template (opcionais até você preencher).</p>
             {% if departments %}
-            <table class="admin-config-table">
-                <thead>
-                    <tr><th>Nome</th><th>Expediente</th><th>Template</th><th>Modo</th><th>Ações</th></tr>
-                </thead>
-                <tbody>
-                    {% for d in departments %}
-                    <tr>
-                        <td>{{ d.name }}</td>
-                        <td>{{ d.schedule.name|default:"—" }}</td>
-                        <td>{{ d.template.name|default:"—" }}</td>
-                        <td>{{ d.get_time_tracking_mode_display }}</td>
-                        <td>
-                            <form method="post" class="admin-config-inline-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="delete_department">
-                                <input type="hidden" name="department_id" value="{{ d.pk }}">
-                                <button type="submit" class="btn-primary">Excluir</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <ul class="admin-tt-template-list" role="list">
+                {% for d in departments %}
+                <li class="admin-tt-template-row">
+                    <div class="admin-tt-template-row__main">
+                        <span class="admin-tt-template-row__name">{{ d.name }}</span>
+                        <p class="admin-tt-entity-meta">
+                            {{ d.get_time_tracking_mode_display }} ·
+                            expediente: {{ d.schedule.name|default:"—" }} ·
+                            template: {{ d.template.name|default:"—" }}
+                        </p>
+                        <div class="admin-tt-template-row__badges" aria-label="Permissões de apontamento">
+                            {% if d.can_edit_time_entries %}
+                            <span class="admin-tt-pill">Editar apontamentos</span>
+                            {% endif %}
+                            {% if d.can_delete_time_entries %}
+                            <span class="admin-tt-pill">Excluir apontamentos</span>
+                            {% endif %}
+                            {% if not d.can_edit_time_entries and not d.can_delete_time_entries %}
+                            <span class="admin-tt-pill admin-tt-pill--muted">Sem edição/exclusão</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="admin-tt-template-row__actions">
+                        <button
+                            type="button"
+                            class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                            title="Editar departamento"
+                            aria-label="Editar departamento"
+                            data-admin-tt-dept-edit
+                            data-dept-id="{{ d.pk }}"
+                            data-name="{{ d.name|escape }}"
+                            data-schedule-id="{{ d.schedule_id|default_if_none:'' }}"
+                            data-template-id="{{ d.template_id|default_if_none:'' }}"
+                            data-mode="{{ d.time_tracking_mode }}"
+                            data-can-edit="{% if d.can_edit_time_entries %}1{% else %}0{% endif %}"
+                            data-can-delete="{% if d.can_delete_time_entries %}1{% else %}0{% endif %}"
+                        >
+                            <i class="fas fa-pen" aria-hidden="true"></i>
+                        </button>
+                        <form method="post" class="admin-tt-template-del-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_department">
+                            <input type="hidden" name="department_id" value="{{ d.pk }}">
+                            <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir departamento" aria-label="Excluir departamento">
+                                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
             <p class="admin-config-muted">Nenhum departamento.</p>
             {% endif %}
-            <form method="post" class="admin-config-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="create_department">
-                <h4>Novo departamento</h4>
-                {% for field in department_form %}
-                <div class="admin-config-field">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {{ field.errors }}
+            <div class="admin-tt-create-actions">
+                <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-dept-create-open" aria-haspopup="dialog" aria-controls="admin-dept-create-dialog">
+                    Criar
+                </button>
+            </div>
+
+            <dialog
+                id="admin-dept-create-dialog"
+                class="admin-tt-edit-dialog"
+                aria-labelledby="admin-dept-create-title"
+                data-auto-open="{% if department_create_dialog_open %}1{% else %}0{% endif %}"
+            >
+                <div class="admin-tt-edit-dialog__panel">
+                    <div class="admin-tt-edit-dialog__head">
+                        <h3 id="admin-dept-create-title">Novo departamento</h3>
+                        <button type="button" class="admin-tt-edit-dialog__close" id="admin-dept-create-close" aria-label="Fechar">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="admin-tt-edit-dialog__body">
+                        <form method="post" class="admin-config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="create_department">
+                            {% for field in department_form %}
+                            <div class="admin-config-field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                            </div>
+                            {% endfor %}
+                            <div class="admin-tt-sch-create-form__actions">
+                                <button type="submit" class="btn-primary">Criar departamento</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                {% endfor %}
-                <button type="submit" class="btn-primary">Criar departamento</button>
-            </form>
+            </dialog>
 
             {% if departments %}
-            <form method="post" class="admin-config-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="update_department">
-                <h4>Editar departamento</h4>
-                <div class="admin-config-field">
-                    <label for="department-id-update">Departamento</label>
-                    <select id="department-id-update" name="department_id" class="auth-input" required>
-                        <option value="">Selecione…</option>
-                        {% for d in departments %}
-                        <option value="{{ d.pk }}">{{ d.name }}</option>
-                        {% endfor %}
-                    </select>
+            <dialog
+                id="admin-dept-edit-dialog"
+                class="admin-tt-edit-dialog"
+                aria-labelledby="admin-dept-edit-title"
+                data-auto-open="{% if department_edit_dialog_open %}1{% else %}0{% endif %}"
+            >
+                <div class="admin-tt-edit-dialog__panel">
+                    <div class="admin-tt-edit-dialog__head">
+                        <h3 id="admin-dept-edit-title">Editar departamento</h3>
+                        <button type="button" class="admin-tt-edit-dialog__close" id="admin-dept-edit-close" aria-label="Fechar">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="admin-tt-edit-dialog__body">
+                        <form method="post" class="admin-config-form admin-tt-edit-dialog__form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_department">
+                            <input type="hidden" name="department_id" id="admin-dept-edit-id" value="{{ department_edit_target_id }}">
+                            {% for field in department_edit_form %}
+                            <div class="admin-config-field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                            </div>
+                            {% endfor %}
+                            <button type="submit" class="btn-primary">Salvar departamento</button>
+                        </form>
+                    </div>
                 </div>
-                {% for field in department_form %}
-                <div class="admin-config-field">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {{ field.errors }}
-                </div>
-                {% endfor %}
-                <button type="submit" class="btn-primary">Salvar edição</button>
-            </form>
+            </dialog>
             {% endif %}
         </div>
     </div>
@@ -276,71 +469,110 @@
 
 <article
     id="admin-tt-membros"
-    class="spaceon-card admin-tt-card admin-tt-panel"
+    class="admin-tt-panel"
     role="tabpanel"
-    aria-labelledby="hdr-users"
+    aria-labelledby="tab-admin-tt-membros"
     aria-hidden="true"
 >
-    <header class="admin-tt-header">
-        <div class="admin-tt-title">
-            <i class="fas fa-users-cog" aria-hidden="true"></i>
-            <h2 id="hdr-users">Membros e departamento</h2>
-        </div>
-    </header>
     <div class="admin-tt-body">
         <p class="admin-config-muted">Usuários vinculados ao workspace. É possível manter histórico e múltiplos departamentos por membro.</p>
         {% if member_rows %}
-        <table class="admin-config-table">
-            <thead>
-                <tr><th>Usuário</th><th>Departamentos</th><th>Novo vínculo</th></tr>
-            </thead>
-            <tbody>
-                {% for row in member_rows %}
-                <tr>
-                    <td>{{ row.user.email }}{% if row.user.first_name %} ({{ row.user.first_name }}){% endif %}</td>
-                    <td>
+        <ul class="admin-tt-template-list admin-tt-member-list" role="list">
+            {% for row in member_rows %}
+            <li class="admin-tt-template-row admin-tt-member-row">
+                <div class="admin-tt-template-row__main">
+                    <span class="admin-tt-template-row__name">{{ row.user.email }}{% if row.user.first_name %} ({{ row.user.first_name }}){% endif %}</span>
+                    <ul class="admin-tt-ud-links" role="list">
                         {% for ud in row.department_links %}
-                        <div>
-                            {{ ud.department.name }}
-                            {% if ud.is_primary %}(principal){% endif %}
-                            {% if ud.start_date %} · início: {{ ud.start_date|date:"d/m/Y" }}{% endif %}
-                            {% if ud.end_date %} · fim: {{ ud.end_date|date:"d/m/Y" }}{% else %} · ativo{% endif %}
-                            <form method="post" class="admin-config-inline-form">
+                        <li class="admin-tt-ud-link-row">
+                            <div class="admin-tt-ud-link-row__text">
+                                <strong>{{ ud.department.name }}</strong>
+                                {% if ud.is_primary %}<span class="admin-tt-pill">Principal</span>{% endif %}
+                                {% if ud.start_date %}<span class="admin-tt-entity-meta admin-tt-entity-meta--inline">início {{ ud.start_date|date:"d/m/Y" }}</span>{% endif %}
+                                {% if ud.end_date %}
+                                <span class="admin-tt-entity-meta admin-tt-entity-meta--inline">fim {{ ud.end_date|date:"d/m/Y" }}</span>
+                                {% else %}
+                                <span class="admin-tt-pill admin-tt-pill--muted">Ativo</span>
+                                {% endif %}
+                            </div>
+                            <form method="post" class="admin-tt-template-del-form">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete_user_department">
                                 <input type="hidden" name="user_department_id" value="{{ ud.pk }}">
-                                <button type="submit" class="btn-primary">Remover</button>
+                                <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Remover vínculo" aria-label="Remover vínculo">
+                                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                </button>
                             </form>
-                        </div>
+                        </li>
                         {% empty %}
-                        —
+                        <li class="admin-config-muted admin-tt-ud-links-empty">Nenhum departamento vinculado.</li>
                         {% endfor %}
-                    </td>
-                    <td>
-                        <form method="post" class="admin-config-inline-form">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="assign_user_department">
-                            <input type="hidden" name="user_id" value="{{ row.user.pk }}">
-                            {% for field in user_department_form %}
-                            <div class="admin-config-field">
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {{ field }}
-                            </div>
-                            {% endfor %}
-                            <button type="submit" class="btn-primary">Adicionar</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </ul>
+                </div>
+                <div class="admin-tt-template-row__actions admin-tt-member-row__actions">
+                    <button
+                        type="button"
+                        class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                        title="Novo vínculo com departamento"
+                        aria-label="Novo vínculo com departamento"
+                        data-admin-tt-ud-assign
+                        data-user-id="{{ row.user.pk }}"
+                        data-user-label="{{ row.user.email|escape }}"
+                        data-clear-form="1"
+                        {% if not departments %}disabled{% endif %}
+                    >
+                        <i class="fas fa-user-plus" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
         {% if not departments %}
-        <p class="admin-config-muted">Crie ao menos um departamento acima para poder atribuir membros.</p>
+        <p class="admin-config-muted">Crie ao menos um departamento na aba Departamentos para poder atribuir membros.</p>
+        {% endif %}
+        {% if member_rows and departments %}
+        <dialog
+            id="admin-ud-assign-dialog"
+            class="admin-tt-edit-dialog"
+            aria-labelledby="admin-ud-assign-title"
+            data-auto-open="{% if member_assign_dialog_open %}1{% else %}0{% endif %}"
+        >
+            <div class="admin-tt-edit-dialog__panel">
+                <div class="admin-tt-edit-dialog__head admin-tt-edit-dialog__head--stack">
+                    <div>
+                        <h3 id="admin-ud-assign-title">Novo vínculo</h3>
+                        <p class="admin-tt-edit-dialog__subtitle" id="admin-ud-assign-member-label">
+                            {% if member_assign_dialog_open %}{{ member_assign_target_user_email }}{% endif %}
+                        </p>
+                    </div>
+                    <button type="button" class="admin-tt-edit-dialog__close" id="admin-ud-assign-close" aria-label="Fechar">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="admin-tt-edit-dialog__body">
+                    <form method="post" class="admin-config-form admin-tt-edit-dialog__form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="assign_user_department">
+                        <input type="hidden" name="user_id" id="admin-ud-assign-user-id" value="{{ member_assign_target_user_id }}">
+                        {% for field in user_department_assign_form %}
+                        <div class="admin-config-field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn-primary">Adicionar vínculo</button>
+                    </form>
+                </div>
+            </div>
+        </dialog>
         {% endif %}
         {% else %}
         <p class="admin-config-muted">Nenhum membro neste workspace. Use “Adicionar membro” na lista de workspaces.</p>
         {% endif %}
     </div>
 </article>
+
+    </div>
 
 </div>

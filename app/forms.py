@@ -244,7 +244,7 @@ class WorkScheduleForm(forms.ModelForm):
         labels = {
             "name": "Nome do expediente",
             "expected_hours_per_day": "Horas previstas por dia",
-            "has_fixed_days": "Usa dias fixos da semana",
+            "has_fixed_days": "Folga Fixa",
         }
         widgets = {
             "name": forms.TextInput(attrs=_auth_input_attrs),
