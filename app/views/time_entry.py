@@ -1,9 +1,10 @@
 import json
 from calendar import monthrange
+from collections import defaultdict
 from datetime import date
+from decimal import Decimal
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -11,7 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from app.decorators import member_active_workspace_required, platform_member_required
 from app.forms import ManualTimeEntryForm, manual_time_entry_form_first_error
-from app.models import TimeEntry, User
+from app.models import Department, TimeEntry, User
 from app.time_entry_manual import (
     assert_manual_entry_editable,
     complete_saved_timer_template_fields,
@@ -24,8 +25,10 @@ from app.time_entry_prepared import (
     duration_entry_created_payload,
 )
 from app.time_entry_timer import (
+    _json_bool,
     assert_user_may_delete_time_entry,
     assert_user_may_edit_time_entry,
+    discard_pending_timer_saved_entry,
     get_active_draft,
     get_member_primary_department,
     start_timer,
@@ -54,8 +57,10 @@ def _format_validation_error(exc: ValidationError) -> str:
 @require_GET
 def time_entry_month_counts(request):
     """
-    Contagem de apontamentos salvos por dia no mês (workspace ativo), para o calendário.
-    Retorna apenas datas com pelo menos um registro; o cliente trata ausência como zero.
+    Contagem e soma de horas de apontamentos salvos por dia no mês (workspace ativo),
+    para o calendário. Inclui meta diária (expediente do departamento principal do membro).
+    Retorna apenas datas com pelo menos um registro em ``by_date``; o cliente trata ausência
+    como zero. ``expected_hours_per_day`` é ``null`` quando não há expediente vinculado.
     """
     user = request.user
     assert isinstance(user, User)
@@ -70,18 +75,47 @@ def time_entry_month_counts(request):
     last = monthrange(year, month)[1]
     start = date(year, month, 1)
     end = date(year, month, last)
-    rows = (
+    by_count: defaultdict[date, int] = defaultdict(int)
+    by_hours: defaultdict[date, Decimal] = defaultdict(lambda: Decimal("0"))
+    for row in (
         TimeEntry.objects.saved_only()
         .filter(user=user, workspace=ws, date__gte=start, date__lte=end)
-        .values("date")
-        .annotate(total=Count("pk"))
-    )
-    by_date: dict[str, int] = {}
-    for row in rows:
+        .values("date", "hours", "duration_minutes")
+    ):
         d = row["date"]
-        key = d.isoformat() if isinstance(d, date) else str(d)
-        by_date[key] = int(row["total"])
-    return JsonResponse({"by_date": by_date})
+        if not isinstance(d, date):
+            continue
+        by_count[d] += 1
+        piece = Decimal("0")
+        if row["hours"] is not None:
+            piece = Decimal(str(row["hours"]))
+        elif row.get("duration_minutes"):
+            piece = (Decimal(int(row["duration_minutes"])) / Decimal(60)).quantize(Decimal("0.01"))
+        by_hours[d] += piece
+
+    by_date: dict[str, int] = {}
+    by_date_hours: dict[str, float] = {}
+    for d, total in by_count.items():
+        if total <= 0:
+            continue
+        key = d.isoformat()
+        by_date[key] = int(total)
+        by_date_hours[key] = float(by_hours[d].quantize(Decimal("0.01")))
+
+    expected_hours_per_day: int | None = None
+    dept = get_member_primary_department(user, ws)
+    if dept is not None:
+        dept = Department.objects.select_related("schedule").filter(pk=dept.pk).first()
+        if dept and dept.schedule_id:
+            expected_hours_per_day = int(dept.schedule.expected_hours_per_day)
+
+    return JsonResponse(
+        {
+            "by_date": by_date,
+            "by_date_hours": by_date_hours,
+            "expected_hours_per_day": expected_hours_per_day,
+        }
+    )
 
 
 def _parse_json_body(request) -> dict:
@@ -118,8 +152,9 @@ def timer_start(request):
     user = request.user
     assert isinstance(user, User)
     ws = request.active_member_workspace
+    data = _parse_json_body(request)
     try:
-        entry = start_timer(user, ws)
+        entry = start_timer(user, ws, is_overtime=_json_bool(data.get("is_overtime")))
     except ValidationError as exc:
         msg = exc.messages[0] if exc.messages else str(exc)
         return _json_error(msg, status=400)
@@ -168,6 +203,31 @@ def timer_stop(request):
         return _json_error(msg, status=400)
 
     return JsonResponse({"entry": time_entry_timer_payload(entry)}, status=200)
+
+
+@platform_member_required
+@member_active_workspace_required
+@require_POST
+def timer_discard_pending(request):
+    """Descarta apontamento salvo ao parar o cronômetro, antes de concluir o template."""
+    user = request.user
+    assert isinstance(user, User)
+    ws = request.active_member_workspace
+    data = _parse_json_body(request)
+    try:
+        entry_id = int(data.get("entry_id") or 0)
+    except (TypeError, ValueError):
+        return _json_error("entry_id inválido.", status=400)
+    if entry_id <= 0:
+        return _json_error("Informe entry_id.", status=400)
+    try:
+        discard_pending_timer_saved_entry(user, ws, entry_id)
+    except ValidationError as exc:
+        msg = exc.messages[0] if exc.messages else str(exc)
+        return _json_error(msg, status=400)
+    except PermissionDenied as exc:
+        return _json_error(str(exc), status=403)
+    return JsonResponse({"ok": True}, status=200)
 
 
 @platform_member_required

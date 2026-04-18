@@ -1,25 +1,34 @@
 from datetime import date
+from typing import cast
 
 from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 
-from app.avatar import user_avatar_url, workspace_avatar_url
+from app.avatar import handle_user_avatar_upload, user_avatar_url, workspace_avatar_url
 from app.decorators import admin_active_workspace_required, platform_admin_required
 from app.forms import (
     ClientCreateForm,
+    CompensationHistoryForm,
     DepartmentForm,
+    EmployeeProfileForm,
+    JobHistoryForm,
     MemberAddForm,
     ProjectCreateForm,
     TaskCreateForm,
     TimeEntryTemplateForm,
+    UserBirthDateForm,
     UserDepartmentAssignForm,
+    WorkspaceUserDatesForm,
     WorkScheduleForm,
     WorkspaceCreateForm,
 )
 from app.models import (
     Client,
+    CompensationHistory,
     Department,
+    EmployeeProfile,
+    JobHistory,
     Membership,
     Project,
     Task,
@@ -388,6 +397,52 @@ def _admin_config_member_rows(ws: Workspace):
     return rows
 
 
+def _can_view_compensation(request_user: User, target_user: User, ws: Workspace) -> bool:
+    """Salário: admin/gestor do workspace ou o próprio colaborador."""
+    if request_user.pk == target_user.pk:
+        return True
+    if ws.owner_id == request_user.pk:
+        return True
+    return Membership.objects.filter(
+        user=request_user,
+        workspace=ws,
+        role__in=("admin", "manager"),
+    ).exists()
+
+
+def _upcoming_birthdays(ws: Workspace, days_ahead: int = 60):
+    today = date.today()
+    users = User.objects.filter(
+        memberships__workspace=ws,
+        birth_date__isnull=False,
+    ).distinct()
+    rows: list[dict[str, object]] = []
+    for u in users:
+        assert u.birth_date is not None
+        try:
+            next_bday = u.birth_date.replace(year=today.year)
+        except ValueError:
+            # Ajuste para 29/02 em ano não bissexto.
+            next_bday = date(today.year, 3, 1)
+        if next_bday < today:
+            try:
+                next_bday = next_bday.replace(year=today.year + 1)
+            except ValueError:
+                next_bday = date(today.year + 1, 3, 1)
+        delta = (next_bday - today).days
+        if delta <= days_ahead:
+            rows.append(
+                {
+                    "user": u,
+                    "birth_date": u.birth_date,
+                    "next_birthday": next_bday,
+                    "days_until": delta,
+                }
+            )
+    rows.sort(key=lambda item: cast(int, item["days_until"]))
+    return rows
+
+
 @platform_admin_required
 @admin_active_workspace_required
 def admin_config(request):
@@ -399,6 +454,10 @@ def admin_config(request):
     client_form = ClientCreateForm()
     project_form = ProjectCreateForm(workspace=ws)
     task_form = TaskCreateForm(workspace=ws)
+    user_dates_form = WorkspaceUserDatesForm(workspace=ws)
+    profile_form = EmployeeProfileForm(workspace=ws)
+    job_history_form = JobHistoryForm(workspace=ws)
+    compensation_form = CompensationHistoryForm(workspace=ws)
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -409,6 +468,47 @@ def admin_config(request):
             ws.save(update_fields=["budget_total", "updated_by"])
             messages.success(request, "Budget do workspace atualizado.")
             return redirect("admin-config")
+        if action == "update_user_dates":
+            user_dates_form = WorkspaceUserDatesForm(request.POST, workspace=ws)
+            if user_dates_form.is_valid():
+                target_user = user_dates_form.cleaned_data["user"]
+                target_user.birth_date = user_dates_form.cleaned_data["birth_date"]
+                target_user.platform_join_date = user_dates_form.cleaned_data["platform_join_date"]
+                target_user.save(update_fields=["birth_date", "platform_join_date"])
+                messages.success(request, "Dados globais do colaborador atualizados.")
+                return redirect("admin-config")
+        elif action == "upsert_employee_profile":
+            profile_form = EmployeeProfileForm(request.POST, workspace=ws)
+            if profile_form.is_valid():
+                candidate = profile_form.save(commit=False)
+                existing = EmployeeProfile.objects.filter(
+                    workspace=ws,
+                    user=candidate.user,
+                ).first()
+                if existing is not None:
+                    existing.employment_status = candidate.employment_status
+                    existing.hire_date = candidate.hire_date
+                    existing.termination_date = candidate.termination_date
+                    existing.current_job_title = candidate.current_job_title
+                    existing.save()
+                    messages.success(request, "Vínculo empregatício atualizado.")
+                else:
+                    candidate.workspace = ws
+                    candidate.save()
+                    messages.success(request, "Vínculo empregatício criado.")
+                return redirect("admin-config")
+        elif action == "create_job_history":
+            job_history_form = JobHistoryForm(request.POST, workspace=ws)
+            if job_history_form.is_valid():
+                job_history_form.save()
+                messages.success(request, "Histórico de cargo cadastrado.")
+                return redirect("admin-config")
+        elif action == "create_compensation_history":
+            compensation_form = CompensationHistoryForm(request.POST, workspace=ws)
+            if compensation_form.is_valid():
+                compensation_form.save()
+                messages.success(request, "Histórico de remuneração cadastrado.")
+                return redirect("admin-config")
         if action == "create_client":
             client_form = ClientCreateForm(request.POST)
             if client_form.is_valid():
@@ -548,6 +648,29 @@ def admin_config(request):
         .order_by("name")
     )
     member_rows = _admin_config_member_rows(ws)
+    employee_profiles = (
+        EmployeeProfile.objects.filter(workspace=ws)
+        .select_related("user")
+        .order_by("user__email")
+    )
+    latest_job_by_profile = {
+        item.employee_profile_id: item
+        for item in JobHistory.objects.filter(
+            employee_profile__workspace=ws,
+            end_date__isnull=True,
+        ).select_related("employee_profile")
+    }
+    compensation_history = (
+        CompensationHistory.objects.filter(employee_profile__workspace=ws)
+        .select_related("employee_profile", "employee_profile__user")
+        .order_by("employee_profile__user__email", "-start_date")
+    )
+    compensation_history_visible = [
+        ch
+        for ch in compensation_history
+        if _can_view_compensation(request.user, ch.employee_profile.user, ws)
+    ]
+    birthdays_preview = _upcoming_birthdays(ws)
 
     ctx.update(
         {
@@ -565,6 +688,14 @@ def admin_config(request):
             "client_count": clients.count(),
             "project_count": projects.count(),
             "task_count": tasks.count(),
+            "employee_profiles": employee_profiles,
+            "latest_job_by_profile": latest_job_by_profile,
+            "compensation_history": compensation_history_visible,
+            "user_dates_form": user_dates_form,
+            "employee_profile_form": profile_form,
+            "job_history_form": job_history_form,
+            "compensation_history_form": compensation_form,
+            "birthdays_preview": birthdays_preview,
         }
     )
     return render(request, page_admin + "configuration.html", context=ctx)
@@ -573,6 +704,13 @@ def admin_config(request):
 @platform_admin_required
 @admin_active_workspace_required
 def admin_account(request):
+    user = request.user
+    assert isinstance(user, User)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "update_avatar":
+            handle_user_avatar_upload(request, user)
+            return redirect("admin-account")
     return render(
         request,
         page_admin + "account.html",

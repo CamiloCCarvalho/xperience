@@ -1,19 +1,29 @@
 import json
+import shutil
+import tempfile
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from io import BytesIO
+from pathlib import Path
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from app.models import (
+    Client as AppClient,
     Department,
     Membership,
+    Project,
     TimeEntry,
     TimeEntryTemplate,
+    UserClient,
     UserDepartment,
+    UserProject,
+    WorkSchedule,
     Workspace,
 )
 from app.time_entry_timer import (
@@ -23,7 +33,7 @@ from app.time_entry_timer import (
     start_timer,
     stop_timer,
 )
-from app.workspace_session import SESSION_MEMBER_WORKSPACE_KEY
+from app.workspace_session import SESSION_ADMIN_WORKSPACE_KEY, SESSION_MEMBER_WORKSPACE_KEY
 
 User = get_user_model()
 
@@ -72,6 +82,7 @@ class TimerDomainTests(TestCase):
         saved = stop_timer(self.member, self.ws, stopped_at=stop_at)
         self.assertEqual(saved.status, TimeEntry.Status.SAVED)
         self.assertEqual(saved.duration_minutes, 30)
+        self.assertTrue(saved.timer_pending_template_completion)
 
     def test_second_start_blocked(self):
         start_timer(self.member, self.ws)
@@ -168,9 +179,14 @@ class TimerHttpTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertJSONEqual(r.content, {"active": False, "entry": None})
 
-        r = self.client.post(reverse("user-time-entry-timer-start"))
+        r = self.client.post(
+            reverse("user-time-entry-timer-start"),
+            data=json.dumps({"is_overtime": True}),
+            content_type="application/json",
+        )
         self.assertEqual(r.status_code, 201)
         eid = r.json()["entry"]["id"]
+        self.assertTrue(TimeEntry.objects.get(pk=eid).is_overtime)
 
         r = self.client.get(reverse("user-time-entry-timer-draft"))
         self.assertTrue(r.json()["active"])
@@ -185,6 +201,42 @@ class TimerHttpTests(TestCase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["entry"]["status"], TimeEntry.Status.SAVED)
+        self.assertTrue(TimeEntry.objects.get(pk=eid).timer_pending_template_completion)
+
+        r = self.client.post(
+            reverse("user-time-entry-timer-discard-pending"),
+            data=json.dumps({"entry_id": eid}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertFalse(TimeEntry.objects.filter(pk=eid).exists())
+
+    def test_timer_discard_forbidden_when_cannot_delete(self):
+        r = self.client.post(
+            reverse("user-time-entry-timer-start"),
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+        eid = r.json()["entry"]["id"]
+        started = TimeEntry.objects.get(pk=eid).timer_started_at
+        assert started is not None
+        stop_at = (started + timezone.timedelta(minutes=30)).isoformat()
+        r = self.client.post(
+            reverse("user-time-entry-timer-stop"),
+            data=json.dumps({"entry_id": eid, "stopped_at": stop_at}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.dept.can_delete_time_entries = False
+        self.dept.save(update_fields=["can_delete_time_entries"])
+        r2 = self.client.post(
+            reverse("user-time-entry-timer-discard-pending"),
+            data=json.dumps({"entry_id": eid}),
+            content_type="application/json",
+        )
+        self.assertEqual(r2.status_code, 403)
+        self.assertTrue(TimeEntry.objects.filter(pk=eid).exists())
 
 
 class PreparedSubmitHttpTests(TestCase):
@@ -326,6 +378,7 @@ class ManualTimeEntryApiTests(TestCase):
                 "entry_mode": TimeEntry.EntryMode.DURATION,
                 "date": "2026-05-10",
                 "hours": "2.5",
+                "is_overtime": True,
             },
         )
         self.assertEqual(r.status_code, 201, r.content)
@@ -333,6 +386,7 @@ class ManualTimeEntryApiTests(TestCase):
         te = TimeEntry.objects.get(pk=eid)
         self.assertEqual(te.entry_mode, TimeEntry.EntryMode.DURATION)
         self.assertEqual(te.hours, Decimal("2.50"))
+        self.assertTrue(te.is_overtime)
 
     def test_manual_create_time_range(self):
         r = self._post_json(
@@ -477,6 +531,14 @@ class TimerCompleteFieldsHttpTests(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         e.refresh_from_db()
         self.assertEqual(e.description, "Após stop")
+        self.assertFalse(e.timer_pending_template_completion)
+
+        r2 = self.client.post(
+            reverse("user-time-entry-timer-discard-pending"),
+            data=json.dumps({"entry_id": e.pk}),
+            content_type="application/json",
+        )
+        self.assertEqual(r2.status_code, 400, r2.content)
 
 
 class TimeEntryMonthCountsHttpTests(TestCase):
@@ -515,6 +577,14 @@ class TimeEntryMonthCountsHttpTests(TestCase):
         s.save()
 
     def test_month_counts_saved_only_per_day(self):
+        sched = WorkSchedule.objects.create(
+            workspace=self.ws,
+            name="Exp MC",
+            working_days=["mon"],
+            expected_hours_per_day=8,
+        )
+        self.dept.schedule = sched
+        self.dept.save(update_fields=["schedule"])
         d1 = date(2026, 4, 10)
         d2 = date(2026, 4, 11)
         for _ in range(2):
@@ -553,7 +623,325 @@ class TimeEntryMonthCountsHttpTests(TestCase):
         data = r.json()
         self.assertEqual(data["by_date"]["2026-04-10"], 2)
         self.assertEqual(data["by_date"]["2026-04-11"], 1)
+        self.assertEqual(data["expected_hours_per_day"], 8)
+        self.assertEqual(data["by_date_hours"]["2026-04-10"], 2.0)
+        self.assertEqual(data["by_date_hours"]["2026-04-11"], 0.5)
+
+    def test_month_counts_expected_null_without_schedule(self):
+        self.assertIsNone(self.dept.schedule_id)
+        d1 = date(2026, 5, 5)
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=d1,
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("2.00"),
+        )
+        r = self.client.get(
+            reverse("user-time-entry-month-counts"),
+            {"year": 2026, "month": 5},
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIsNone(data.get("expected_hours_per_day"))
+        self.assertEqual(data["by_date_hours"]["2026-05-05"], 2.0)
+
+    def test_month_counts_hours_from_duration_minutes(self):
+        sched = WorkSchedule.objects.create(
+            workspace=self.ws,
+            name="Exp DM",
+            working_days=["mon"],
+            expected_hours_per_day=8,
+        )
+        self.dept.schedule = sched
+        self.dept.save(update_fields=["schedule"])
+        d1 = date(2026, 6, 1)
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=d1,
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=None,
+            duration_minutes=90,
+        )
+        r = self.client.get(
+            reverse("user-time-entry-month-counts"),
+            {"year": 2026, "month": 6},
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["by_date"]["2026-06-01"], 1)
+        self.assertEqual(data["by_date_hours"]["2026-06-01"], 1.5)
 
     def test_month_counts_invalid_params(self):
         r = self.client.get(reverse("user-time-entry-month-counts"), {"year": 1999, "month": 4})
         self.assertEqual(r.status_code, 400)
+
+
+class UserHomeHistoryTableTests(TestCase):
+    """Histórico na home do membro: colunas alinhadas ao template e dados reais."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="ownerhist@example.com",
+            password="x",
+            first_name="O",
+            last_name="H",
+        )
+        self.member = User.objects.create_user(
+            email="memberhist@example.com",
+            password="x",
+            first_name="M",
+            last_name="H",
+        )
+        self.member.platform_role = User.PlatformRole.MEMBER
+        self.member.save(update_fields=["platform_role"])
+        self.ws = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WSHist",
+            workspace_description="",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws, role="user")
+        self.dept = Department.objects.create(workspace=self.ws, name="DeptHist")
+        self.tpl = TimeEntryTemplate.objects.create(
+            workspace=self.ws,
+            name="TplHist",
+            use_client=True,
+            use_project=True,
+            use_task=False,
+            use_type=True,
+            use_description=True,
+        )
+        self.dept.template = self.tpl
+        self.dept.save(update_fields=["template"])
+        UserDepartment.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            is_primary=True,
+        )
+        self.cli = AppClient.objects.create(workspace=self.ws, name="Cliente Histórico")
+        UserClient.objects.create(user=self.member, workspace=self.ws, client=self.cli)
+        self.proj = Project.objects.create(
+            workspace=self.ws,
+            client=self.cli,
+            name="Proj Histórico",
+        )
+        UserProject.objects.create(user=self.member, workspace=self.ws, project=self.proj)
+        self.client = Client()
+        self.client.force_login(self.member)
+        s = self.client.session
+        s[SESSION_MEMBER_WORKSPACE_KEY] = self.ws.pk
+        s.save()
+
+    def test_home_renders_saved_time_entry_row(self):
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 4, 2),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1.5"),
+            description="Marcador único da linha de histórico",
+            entry_type=TimeEntry.EntryType.INTERNAL,
+            client=self.cli,
+            project=self.proj,
+            is_overtime=False,
+        )
+        r = self.client.get(reverse("user-home"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Marcador único da linha de histórico")
+        self.assertContains(r, "Cliente Histórico")
+        self.assertContains(r, "Proj Histórico")
+
+    def test_home_history_filter_by_year_excludes_other_years(self):
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2025, 1, 1),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1"),
+            description="Só em 2025",
+            client=self.cli,
+            project=self.proj,
+        )
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 1, 1),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1"),
+            description="Só em 2026",
+            client=self.cli,
+            project=self.proj,
+        )
+        r = self.client.get(reverse("user-home"), {"year": "2026"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Só em 2026")
+        self.assertNotContains(r, "Só em 2025")
+
+    def test_home_history_filter_exact_year_month_day(self):
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 4, 10),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1"),
+            description="Marcador dia 10 de abril",
+            client=self.cli,
+            project=self.proj,
+        )
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 4, 11),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1"),
+            description="Marcador dia 11 de abril",
+            client=self.cli,
+            project=self.proj,
+        )
+        r = self.client.get(
+            reverse("user-home"),
+            {"hf_year": "2026", "hf_month": "4", "hf_day": "10"},
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Marcador dia 10 de abril")
+        self.assertNotContains(r, "Marcador dia 11 de abril")
+
+    def test_home_history_filter_legacy_year_month_day_keys(self):
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 5, 20),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1"),
+            description="Legacy filtro 20 maio",
+            client=self.cli,
+            project=self.proj,
+        )
+        r = self.client.get(
+            reverse("user-home"),
+            {"year": "2026", "month": "5", "day": "20"},
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Legacy filtro 20 maio")
+
+
+class UserAccountAvatarTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="ownerav@example.com",
+            password="x",
+            first_name="O",
+            last_name="A",
+        )
+        self.member = User.objects.create_user(
+            email="memberav@example.com",
+            password="x",
+            first_name="Mem",
+            last_name="Ber",
+        )
+        self.member.platform_role = User.PlatformRole.MEMBER
+        self.member.save(update_fields=["platform_role"])
+        self.ws = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WSAv",
+            workspace_description="",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws, role="user")
+        self.client = Client()
+        self.client.force_login(self.member)
+        s = self.client.session
+        s[SESSION_MEMBER_WORKSPACE_KEY] = self.ws.pk
+        s.save()
+
+    def _png_upload(self) -> SimpleUploadedFile:
+        from PIL import Image
+
+        buf = BytesIO()
+        Image.new("RGB", (8, 8), color=(20, 60, 140)).save(buf, format="PNG")
+        buf.seek(0)
+        return SimpleUploadedFile("perfil.png", buf.read(), content_type="image/png")
+
+    def test_post_avatar_saves_image_field(self):
+        media = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(media, ignore_errors=True))
+        with self.settings(MEDIA_ROOT=str(media)):
+            up = self._png_upload()
+            r = self.client.post(
+                reverse("user-account"),
+                {"action": "update_avatar", "avatar": up},
+                follow=True,
+            )
+        self.assertEqual(r.status_code, 200)
+        self.member.refresh_from_db()
+        self.assertTrue(self.member.avatar.name)
+
+    def test_post_avatar_rejects_non_image_content_type(self):
+        media = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(media, ignore_errors=True))
+        with self.settings(MEDIA_ROOT=str(media)):
+            bad = SimpleUploadedFile("x.bin", b"not an image", content_type="application/octet-stream")
+            self.client.post(reverse("user-account"), {"action": "update_avatar", "avatar": bad})
+        self.member.refresh_from_db()
+        self.assertFalse(self.member.avatar.name)
+
+
+class AdminAccountAvatarHttpTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="adminav@example.com",
+            password="x",
+            first_name="Ad",
+            last_name="Min",
+        )
+        self.admin.platform_role = User.PlatformRole.ADMIN
+        self.admin.save(update_fields=["platform_role"])
+        self.ws = Workspace.objects.create(
+            owner=self.admin,
+            workspace_name="WSAdminAv",
+            workspace_description="",
+        )
+        self.client = Client()
+        self.client.force_login(self.admin)
+        s = self.client.session
+        s[SESSION_ADMIN_WORKSPACE_KEY] = self.ws.pk
+        s.save()
+
+    def _png_upload(self) -> SimpleUploadedFile:
+        from PIL import Image
+
+        buf = BytesIO()
+        Image.new("RGB", (8, 8), color=(40, 80, 120)).save(buf, format="PNG")
+        buf.seek(0)
+        return SimpleUploadedFile("gestor.png", buf.read(), content_type="image/png")
+
+    def test_admin_post_avatar_saves_image_field(self):
+        media = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(media, ignore_errors=True))
+        with self.settings(MEDIA_ROOT=str(media)):
+            up = self._png_upload()
+            r = self.client.post(
+                reverse("admin-account"),
+                {"action": "update_avatar", "avatar": up},
+                follow=True,
+            )
+        self.assertEqual(r.status_code, 200)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.avatar.name)

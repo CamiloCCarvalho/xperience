@@ -22,7 +22,6 @@
     var btnPrepare = document.getElementById("q1-btn-prepare");
     var statusEl = document.getElementById("q3-calendar-status");
     var hoursInput = document.getElementById("horas-gastas");
-    var hintEl = document.getElementById("q1-pre-entry-hint");
 
     if (!form || !apiEl) {
         return;
@@ -34,6 +33,7 @@
     var timerStartUrl = apiEl.getAttribute("data-timer-start-url") || "";
     var timerStopUrl = apiEl.getAttribute("data-timer-stop-url") || "";
     var timerCompleteUrl = apiEl.getAttribute("data-timer-complete-url") || "";
+    var timerDiscardUrl = apiEl.getAttribute("data-timer-discard-url") || "";
     var workspaceId = apiEl.getAttribute("data-workspace-id") || "";
     var configured = form.getAttribute("data-configured") === "true";
 
@@ -84,12 +84,21 @@
         });
     }
 
+    function setTimerRunningUi(isRunning) {
+        var block = document.getElementById("q1-block-timer");
+        if (block) {
+            block.classList.toggle("q1-block-timer--running", !!isRunning);
+        }
+    }
+
     function syncModeBlocks() {
         var mode = getSelectedMode();
         var bd = document.getElementById("q1-block-duration");
         var br = document.getElementById("q1-block-range");
         var bt = document.getElementById("q1-block-timer");
         var calWrap = document.getElementById("q3-calendar-section-wrap");
+        var btnMem = document.getElementById("q1-btn-memorize");
+        var actionsRow = form.querySelector(".q1-actions");
         if (bd) {
             bd.classList.toggle("q1-hidden", mode !== "duration");
         }
@@ -102,31 +111,28 @@
         if (btnPrepare) {
             btnPrepare.classList.toggle("q1-hidden", mode === "timer");
         }
+        if (btnMem) {
+            btnMem.classList.toggle("q1-hidden", mode === "timer");
+        }
         if (calWrap) {
             calWrap.classList.toggle("q1-hidden", mode === "timer");
         }
-        if (hintEl) {
-            if (mode === "timer") {
-                hintEl.innerHTML =
-                    "Use <strong>Iniciar cronômetro</strong> e <strong>Parar</strong> quando terminar. " +
-                    "Depois, se o template exigir, complete os campos e clique em <strong>Salvar dados do apontamento</strong>.";
-            } else if (mode === "time_range") {
-                hintEl.innerHTML =
-                    "Informe <strong>início e fim</strong>, os demais campos do template e clique em <strong>Preparar apontamento</strong>. " +
-                    "Em seguida clique no dia no calendário para salvar.";
-            } else {
-                hintEl.innerHTML =
-                    "Informe as <strong>horas</strong> e os campos do template e clique em <strong>Preparar apontamento</strong>. " +
-                    "Depois clique no dia no calendário para salvar.";
-            }
+        if (actionsRow) {
+            actionsRow.classList.toggle("q1-hidden", mode === "timer");
         }
-        lockModeRadios(!!draftEntryId);
+        applyLaunchModeLock();
     }
 
-    function lockModeRadios(lock) {
+    function applyLaunchModeLock() {
+        var postWrap = document.getElementById("q1-post-timer-wrap");
+        var pendingFinalize = postWrap && !postWrap.classList.contains("q1-hidden");
         form.querySelectorAll('input[name="launch_mode"]').forEach(function (el) {
-            if (el.value !== "timer") {
-                el.disabled = !!lock;
+            if (pendingFinalize) {
+                el.disabled = true;
+            } else if (draftEntryId) {
+                el.disabled = el.value !== "timer";
+            } else {
+                el.disabled = false;
             }
         });
     }
@@ -175,6 +181,7 @@
     function collectFormPayload() {
         var fd = new FormData(form);
         var mode = getSelectedMode();
+        var otEl = document.getElementById("q1-is-overtime");
         var o = {
             workspace_id: workspaceId ? Number(workspaceId) : null,
             entry_mode: mode,
@@ -183,6 +190,7 @@
             task_id: fd.get("task_id") != null ? String(fd.get("task_id")) : "",
             description: fd.get("description") != null ? String(fd.get("description")) : "",
             entry_type: fd.get("entry_type") != null ? String(fd.get("entry_type")) : "",
+            is_overtime: !!(otEl && otEl.checked),
             prepared_at: new Date().toISOString(),
         };
         if (mode === "duration") {
@@ -223,14 +231,38 @@
         delete countsCache[monthCountsCacheKey(viewYear, viewMonth)];
     }
 
+    function emptyMonthCalendarPayload() {
+        return { counts: {}, hours: {}, expected: null };
+    }
+
+    function normalizeMonthCalendarPayload(body) {
+        var counts = {};
+        var hours = {};
+        var expected = null;
+        if (body && typeof body.by_date === "object" && body.by_date !== null) {
+            counts = body.by_date;
+        }
+        if (body && typeof body.by_date_hours === "object" && body.by_date_hours !== null) {
+            hours = body.by_date_hours;
+        }
+        if (body && body.expected_hours_per_day != null && body.expected_hours_per_day !== "") {
+            var ex = parseFloat(String(body.expected_hours_per_day), 10);
+            if (!isNaN(ex) && ex > 0) {
+                expected = ex;
+            }
+        }
+        return { counts: counts, hours: hours, expected: expected };
+    }
+
     function fetchMonthCounts(y, m) {
         var key = monthCountsCacheKey(y, m);
         if (Object.prototype.hasOwnProperty.call(countsCache, key)) {
             return Promise.resolve(countsCache[key]);
         }
         if (!monthCountsUrl) {
-            countsCache[key] = {};
-            return Promise.resolve({});
+            var empty = emptyMonthCalendarPayload();
+            countsCache[key] = empty;
+            return Promise.resolve(empty);
         }
         var sep = monthCountsUrl.indexOf("?") >= 0 ? "&" : "?";
         var url =
@@ -241,15 +273,16 @@
             "&month=" +
             encodeURIComponent(m);
         return jsonFetch(url, { method: "GET" }).then(function (out) {
-            var map = {};
-            if (out.res.ok && out.body && out.body.by_date && typeof out.body.by_date === "object") {
-                map = out.body.by_date;
+            var payload = emptyMonthCalendarPayload();
+            if (out.res.ok && out.body) {
+                payload = normalizeMonthCalendarPayload(out.body);
             }
-            countsCache[key] = map;
-            return map;
+            countsCache[key] = payload;
+            return payload;
         }).catch(function () {
-            countsCache[key] = {};
-            return {};
+            var fallback = emptyMonthCalendarPayload();
+            countsCache[key] = fallback;
+            return fallback;
         });
     }
 
@@ -259,11 +292,17 @@
         }
     }
 
-    function renderCalendar(byDate) {
+    function renderCalendar(calendarPayload) {
         if (!calendarBody || !calendarCard) {
             return;
         }
-        var map = byDate && typeof byDate === "object" ? byDate : {};
+        var payload =
+            calendarPayload && typeof calendarPayload === "object"
+                ? calendarPayload
+                : emptyMonthCalendarPayload();
+        var map = payload.counts || {};
+        var hoursMap = payload.hours || {};
+        var expectedDaily = payload.expected;
         var prepared = isPreparedForWorkspace();
         var weeks = monthWeeks(viewYear, viewMonth);
         var now = new Date();
@@ -303,6 +342,41 @@
                         if (isNaN(n) || n < 0) {
                             n = 0;
                         }
+                    }
+                    if (expectedDaily != null && expectedDaily > 0) {
+                        var rawH = hoursMap[iso];
+                        var hoursDay = 0;
+                        if (rawH != null) {
+                            hoursDay =
+                                typeof rawH === "number"
+                                    ? rawH
+                                    : parseFloat(String(rawH).replace(",", "."));
+                            if (isNaN(hoursDay) || hoursDay < 0) {
+                                hoursDay = 0;
+                            }
+                        }
+                        var ratio = Math.min(Math.max(hoursDay / expectedDaily, 0), 1);
+                        var track = document.createElement("div");
+                        track.className = "q3-calendar-day-progress";
+                        track.setAttribute("role", "progressbar");
+                        track.setAttribute("aria-valuemin", "0");
+                        track.setAttribute("aria-valuemax", "100");
+                        track.setAttribute("aria-valuenow", String(Math.round(ratio * 100)));
+                        track.setAttribute(
+                            "aria-label",
+                            "Horas apontadas em relação à meta diária: " +
+                                Math.round(ratio * 100) +
+                                " por cento (" +
+                                (Math.round(hoursDay * 100) / 100) +
+                                " de " +
+                                expectedDaily +
+                                " horas)"
+                        );
+                        var fill = document.createElement("div");
+                        fill.className = "q3-calendar-day-progress__fill";
+                        fill.style.width = (ratio * 100).toFixed(2) + "%";
+                        track.appendChild(fill);
+                        content.appendChild(track);
                     }
                     var meta = document.createElement("div");
                     meta.className = "q3-calendar-day-apontamentos";
@@ -384,8 +458,8 @@
         if (!calendarBody || !calendarCard) {
             return;
         }
-        fetchMonthCounts(viewYear, viewMonth).then(function (byDate) {
-            renderCalendar(byDate || {});
+        fetchMonthCounts(viewYear, viewMonth).then(function (cal) {
+            renderCalendar(cal || emptyMonthCalendarPayload());
             attachDayClicks();
         });
     }
@@ -483,6 +557,7 @@
         if (hid) {
             hid.value = entryId != null ? String(entryId) : "";
         }
+        syncModeBlocks();
     }
 
     function refreshTimerDraft() {
@@ -496,8 +571,12 @@
             if (out.body && out.body.active && out.body.entry) {
                 draftEntryId = out.body.entry.id;
                 var started = out.body.entry.timer_started_at || "";
+                var otCb = document.getElementById("q1-is-overtime");
+                if (otCb) {
+                    otCb.checked = !!out.body.entry.is_overtime;
+                }
                 setTimerStatusLine(
-                    "Cronômetro em andamento" + (started ? " (início: " + started + ")." : ".")
+                    "Cronômetro em andamento"
                 );
                 if (btnStart) {
                     btnStart.disabled = true;
@@ -505,16 +584,25 @@
                 if (btnStop) {
                     btnStop.disabled = false;
                 }
-                lockModeRadios(true);
+                setTimerRunningUi(true);
             } else {
-                setTimerStatusLine("");
+                var postWrapClear = document.getElementById("q1-post-timer-wrap");
+                var keepStatusForPendingSave =
+                    postWrapClear && !postWrapClear.classList.contains("q1-hidden");
+                if (!keepStatusForPendingSave) {
+                    setTimerStatusLine("");
+                }
+                var otCb2 = document.getElementById("q1-is-overtime");
+                if (otCb2) {
+                    otCb2.checked = false;
+                }
                 if (btnStart) {
                     btnStart.disabled = false;
                 }
                 if (btnStop) {
                     btnStop.disabled = true;
                 }
-                lockModeRadios(false);
+                setTimerRunningUi(false);
             }
             syncModeBlocks();
             return out;
@@ -530,7 +618,9 @@
             rt.checked = true;
             syncModeBlocks();
         }
-        jsonFetch(timerStartUrl, { method: "POST", body: "{}" }).then(function (out) {
+        var otEl = document.getElementById("q1-is-overtime");
+        var startBody = JSON.stringify({ is_overtime: !!(otEl && otEl.checked) });
+        jsonFetch(timerStartUrl, { method: "POST", body: startBody }).then(function (out) {
             if (!out.res.ok) {
                 setTimerStatusLine((out.body && out.body.error) || "Não foi possível iniciar.");
                 return;
@@ -572,6 +662,7 @@
             return;
         }
         var fd = new FormData(form);
+        var otEl = document.getElementById("q1-is-overtime");
         var body = {
             entry_id: eid,
             client_id: fd.get("client_id"),
@@ -579,6 +670,7 @@
             task_id: fd.get("task_id"),
             description: fd.get("description") != null ? String(fd.get("description")) : "",
             entry_type: fd.get("entry_type") != null ? String(fd.get("entry_type")) : "",
+            is_overtime: !!(otEl && otEl.checked),
         };
         jsonFetch(timerCompleteUrl, { method: "POST", body: JSON.stringify(body) }).then(function (out) {
             if (!out.res.ok) {
@@ -591,6 +683,32 @@
             if (calendarBody && calendarCard && headingEl) {
                 fullCalendarRender();
             }
+            refreshTimerDraft();
+        });
+    }
+
+    function onTimerDiscardPending() {
+        if (!timerDiscardUrl) {
+            return;
+        }
+        var hid = document.getElementById("q1-timer-stopped-entry-id");
+        var eid = hid && hid.value ? parseInt(hid.value, 10) : 0;
+        if (!eid) {
+            setTimerStatusLine("Nenhum apontamento para descartar.");
+            return;
+        }
+        jsonFetch(timerDiscardUrl, { method: "POST", body: JSON.stringify({ entry_id: eid }) }).then(function (out) {
+            if (!out.res.ok) {
+                setTimerStatusLine((out.body && out.body.error) || "Não foi possível descartar.");
+                return;
+            }
+            setPostTimerVisible(false, null);
+            setTimerStatusLine("");
+            invalidateViewMonthCountsCache();
+            if (calendarBody && calendarCard && headingEl) {
+                fullCalendarRender();
+            }
+            refreshTimerDraft();
         });
     }
 
@@ -638,6 +756,7 @@
         var btnTs = document.getElementById("q1-timer-start");
         var btnTsp = document.getElementById("q1-timer-stop");
         var btnTsave = document.getElementById("q1-timer-save-template");
+        var btnTdiscard = document.getElementById("q1-timer-discard-pending");
         if (btnTs) {
             btnTs.addEventListener("click", onTimerStart);
         }
@@ -646,6 +765,28 @@
         }
         if (btnTsave) {
             btnTsave.addEventListener("click", onTimerSaveTemplate);
+        }
+        if (btnTdiscard) {
+            btnTdiscard.addEventListener("click", onTimerDiscardPending);
+        }
+
+        var infoDialog = document.getElementById("q1-pre-entry-info-dialog");
+        var infoOpen = document.getElementById("q1-pre-entry-info-open");
+        var infoClose = document.getElementById("q1-pre-entry-info-close");
+        if (infoDialog && infoOpen && typeof infoDialog.showModal === "function") {
+            infoOpen.addEventListener("click", function () {
+                infoDialog.showModal();
+            });
+            if (infoClose) {
+                infoClose.addEventListener("click", function () {
+                    infoDialog.close();
+                });
+            }
+            infoDialog.addEventListener("click", function (ev) {
+                if (ev.target === infoDialog) {
+                    infoDialog.close();
+                }
+            });
         }
 
         wireHoursSteppers();

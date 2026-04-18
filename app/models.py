@@ -7,6 +7,19 @@ from typing import ClassVar
 from django.contrib.auth.models import BaseUserManager
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+
+
+def _check_constraint(*, predicate, name: str) -> models.CheckConstraint:
+    """
+    Compatibilidade entre versões de Django:
+    - antigas: CheckConstraint(check=...)
+    - novas:   CheckConstraint(condition=...)
+    """
+    try:
+        return models.CheckConstraint(condition=predicate, name=name)
+    except TypeError:
+        return models.CheckConstraint(check=predicate, name=name)
 
 
 class CustomUserManager(BaseUserManager):
@@ -51,6 +64,15 @@ class User(AbstractUser):
     is_inactive = models.BooleanField(default=False)
 
     avatar = models.ImageField(upload_to=PATH_TO_USER_IMAGE, blank=True, null=True)
+    birth_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Data de nascimento global da pessoa (não depende de workspace).",
+    )
+    platform_join_date = models.DateField(
+        default=timezone.localdate,
+        help_text="Data de entrada na plataforma (diferente de created_at técnico).",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -67,6 +89,17 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.first_name + " - " + self.email
+
+    @property
+    def age(self):
+        """Idade calculada em tempo real a partir de birth_date (não persistida)."""
+        if not self.birth_date:
+            return None
+        today = timezone.localdate()
+        years = today.year - self.birth_date.year
+        if (today.month, today.day) < (self.birth_date.month, self.birth_date.day):
+            years -= 1
+        return years
 
 
 class Workspace(models.Model):
@@ -139,6 +172,195 @@ class Membership(models.Model):
 
     class Meta:
         unique_together = ("user", "workspace")
+
+
+class EmployeeProfile(models.Model):
+    """Vínculo empregatício atual de um usuário em um workspace."""
+
+    class EmploymentStatus(models.TextChoices):
+        ACTIVE = "active", "Ativo"
+        ON_LEAVE = "on_leave", "Afastado"
+        TERMINATED = "terminated", "Desligado"
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="employee_profiles",
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="employee_profiles",
+    )
+    employment_status = models.CharField(
+        max_length=20,
+        choices=EmploymentStatus.choices,
+        default=EmploymentStatus.ACTIVE,
+    )
+    hire_date = models.DateField()
+    termination_date = models.DateField(null=True, blank=True)
+    current_job_title = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Cargo atual para leitura rápida sem depender apenas de histórico.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                name="app_employeeprofile_user_workspace_uniq",
+            ),
+            _check_constraint(
+                predicate=Q(termination_date__isnull=True) | Q(termination_date__gte=models.F("hire_date")),
+                name="app_employeeprofile_termination_after_hire",
+            ),
+        ]
+        verbose_name = "Vínculo do colaborador"
+        verbose_name_plural = "Vínculos dos colaboradores"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        if self.termination_date and self.termination_date < self.hire_date:
+            errors["termination_date"] = "A data de desligamento não pode ser menor que a data de admissão."
+        if self.employment_status == self.EmploymentStatus.TERMINATED and not self.termination_date:
+            errors["termination_date"] = "Informe a data de desligamento para status desligado."
+        if self.termination_date and self.employment_status != self.EmploymentStatus.TERMINATED:
+            errors["employment_status"] = "Use status desligado quando houver data de desligamento."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.email} @ {self.workspace.workspace_name}"
+
+
+class JobHistory(models.Model):
+    """Histórico de cargos de um vínculo (separado da remuneração)."""
+
+    employee_profile = models.ForeignKey(
+        EmployeeProfile,
+        on_delete=models.CASCADE,
+        related_name="job_history_entries",
+    )
+    job_title = models.CharField(max_length=255)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-start_date", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("employee_profile",),
+                condition=Q(end_date__isnull=True),
+                name="app_jobhistory_single_current_job_per_profile",
+            ),
+            _check_constraint(
+                predicate=Q(end_date__isnull=True) | Q(end_date__gte=models.F("start_date")),
+                name="app_jobhistory_end_after_start",
+            ),
+        ]
+        verbose_name = "Histórico de cargo"
+        verbose_name_plural = "Históricos de cargo"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.end_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "A data final não pode ser anterior à data inicial."})
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.employee_profile.user.email} - {self.job_title}"
+
+
+class CompensationHistory(models.Model):
+    """Histórico de remuneração mensal/horista por vínculo."""
+
+    class CompensationType(models.TextChoices):
+        MONTHLY = "monthly", "Mensal"
+        HOURLY = "hourly", "Por hora"
+
+    employee_profile = models.ForeignKey(
+        EmployeeProfile,
+        on_delete=models.CASCADE,
+        related_name="compensation_history_entries",
+    )
+    compensation_type = models.CharField(max_length=20, choices=CompensationType.choices)
+    monthly_salary = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    hourly_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-start_date", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("employee_profile",),
+                condition=Q(end_date__isnull=True),
+                name="app_compensationhistory_single_current_compensation_per_profile",
+            ),
+            _check_constraint(
+                predicate=Q(end_date__isnull=True) | Q(end_date__gte=models.F("start_date")),
+                name="app_compensationhistory_end_after_start",
+            ),
+            _check_constraint(
+                predicate=(
+                    (Q(compensation_type="monthly") & Q(monthly_salary__isnull=False) & Q(hourly_rate__isnull=True))
+                    | (Q(compensation_type="hourly") & Q(hourly_rate__isnull=False) & Q(monthly_salary__isnull=True))
+                ),
+                name="app_compensationhistory_fields_by_type",
+            ),
+        ]
+        verbose_name = "Histórico de remuneração"
+        verbose_name_plural = "Históricos de remuneração"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        if self.end_date and self.end_date < self.start_date:
+            errors["end_date"] = "A data final não pode ser anterior à data inicial."
+        if self.compensation_type == self.CompensationType.MONTHLY:
+            if self.monthly_salary is None:
+                errors["monthly_salary"] = "Informe o salário mensal para remuneração mensal."
+            if self.hourly_rate is not None:
+                errors["hourly_rate"] = "Não informe valor por hora para remuneração mensal."
+        elif self.compensation_type == self.CompensationType.HOURLY:
+            if self.hourly_rate is None:
+                errors["hourly_rate"] = "Informe o valor por hora para remuneração por hora."
+            if self.monthly_salary is not None:
+                errors["monthly_salary"] = "Não informe salário mensal para remuneração por hora."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.employee_profile.user.email} - {self.get_compensation_type_display()}"
 
 
 class WorkSchedule(models.Model):
@@ -598,6 +820,17 @@ class TimeEntry(models.Model):
         blank=True,
     )
     description = models.TextField(blank=True)
+    is_overtime = models.BooleanField(
+        default=False,
+        help_text="Indica se o apontamento é hora extra (opcional no lançamento).",
+    )
+    timer_pending_template_completion = models.BooleanField(
+        default=False,
+        help_text=(
+            "Após parar o cronômetro: indica que o registro salvo ainda aguarda "
+            "'Salvar dados do apontamento' ou descarte explícito."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

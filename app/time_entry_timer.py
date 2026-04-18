@@ -14,6 +14,14 @@ from django.utils import timezone
 from app.models import Department, TimeEntry, User, UserDepartment, Workspace
 
 
+def _json_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None or value == "":
+        return False
+    return str(value).lower() in ("1", "true", "yes", "on")
+
+
 def _active_user_departments_qs(user: User, workspace: Workspace):
     return (
         UserDepartment.objects.filter(
@@ -77,6 +85,8 @@ def time_entry_timer_payload(entry: TimeEntry) -> dict[str, Any]:
         "end_time": entry.end_time.isoformat() if entry.end_time else None,
         "duration_minutes": entry.duration_minutes,
         "hours": str(entry.hours) if entry.hours is not None else None,
+        "is_overtime": entry.is_overtime,
+        "timer_pending_template_completion": entry.timer_pending_template_completion,
     }
 
 
@@ -85,6 +95,7 @@ def start_timer(
     workspace: Workspace,
     *,
     started_at: dt.datetime | None = None,
+    is_overtime: bool = False,
 ) -> TimeEntry:
     """
     Cria ``TimeEntry`` em rascunho (modo cronômetro).
@@ -123,6 +134,7 @@ def start_timer(
         entry_mode=TimeEntry.EntryMode.TIMER,
         timer_started_at=started_at,
         start_time=start_t,
+        is_overtime=is_overtime,
     )
     try:
         with transaction.atomic():
@@ -197,6 +209,28 @@ def stop_timer(
         entry.date = start_local.date()
         entry.status = TimeEntry.Status.SAVED
         entry.hours = None
+        entry.timer_pending_template_completion = True
         entry.save()
 
     return entry
+
+
+def discard_pending_timer_saved_entry(user: User, workspace: Workspace, entry_id: int) -> None:
+    """
+    Remove apontamento salvo pelo fluxo parar-cronômetro enquanto ainda aguarda
+    conclusão dos campos do template (``timer_pending_template_completion``).
+    """
+    with transaction.atomic():
+        entry = (
+            TimeEntry.objects.filter(pk=entry_id, user=user, workspace=workspace)
+            .select_for_update()
+            .first()
+        )
+        if entry is None:
+            raise ValidationError("Apontamento não encontrado.")
+        if entry.entry_mode != TimeEntry.EntryMode.TIMER or entry.status != TimeEntry.Status.SAVED:
+            raise ValidationError("Somente registros do cronômetro neste estado podem ser descartados.")
+        if not entry.timer_pending_template_completion:
+            raise ValidationError("Este apontamento já foi concluído ou não pode ser descartado por aqui.")
+        assert_user_may_delete_time_entry(user, entry)
+        entry.delete()

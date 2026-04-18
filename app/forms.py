@@ -2,11 +2,15 @@ from decimal import Decimal, InvalidOperation
 
 from django import forms
 from django.contrib.auth.password_validation import validate_password
+from django.db.models import Q
 from typing import cast
 
 from app.models import (
     Client,
+    CompensationHistory,
     Department,
+    EmployeeProfile,
+    JobHistory,
     Membership,
     Project,
     Task,
@@ -490,6 +494,159 @@ class UserDepartmentAssignForm(forms.ModelForm):
             )
 
 
+class UserBirthDateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ("birth_date",)
+        labels = {"birth_date": "Data de nascimento"}
+        widgets = {
+            "birth_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+        }
+
+
+class WorkspaceUserDatesForm(forms.Form):
+    user = forms.ModelChoiceField(
+        label="Colaborador",
+        queryset=User.objects.none(),
+        widget=forms.Select(attrs=_config_field_attrs),
+    )
+    birth_date = forms.DateField(
+        label="Data de nascimento",
+        required=False,
+        widget=forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+    )
+    platform_join_date = forms.DateField(
+        label="Entrada na plataforma",
+        widget=forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+    )
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if workspace is not None:
+            user_field = cast(forms.ModelChoiceField, self.fields["user"])
+            user_field.queryset = User.objects.filter(
+                Q(memberships__workspace=workspace) | Q(pk=workspace.owner_id)
+            ).order_by("email").distinct()
+
+
+class EmployeeProfileForm(forms.ModelForm):
+    user = forms.ModelChoiceField(
+        label="Colaborador",
+        queryset=User.objects.none(),
+        widget=forms.Select(attrs=_config_field_attrs),
+    )
+
+    class Meta:
+        model = EmployeeProfile
+        fields = (
+            "user",
+            "employment_status",
+            "hire_date",
+            "termination_date",
+            "current_job_title",
+        )
+        labels = {
+            "employment_status": "Status do vínculo",
+            "hire_date": "Admissão",
+            "termination_date": "Desligamento",
+            "current_job_title": "Cargo atual",
+        }
+        widgets = {
+            "employment_status": forms.Select(attrs=_config_field_attrs),
+            "hire_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "termination_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "current_job_title": forms.TextInput(attrs=_config_field_attrs),
+        }
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        self._workspace = workspace
+        super().__init__(*args, **kwargs)
+        user_field = cast(forms.ModelChoiceField, self.fields["user"])
+        if workspace is not None:
+            user_field.queryset = User.objects.filter(
+                Q(memberships__workspace=workspace) | Q(pk=workspace.owner_id)
+            ).order_by("email").distinct()
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        if self._workspace is not None:
+            obj.workspace = self._workspace
+        if commit:
+            obj.save()
+        return obj
+
+
+class JobHistoryForm(forms.ModelForm):
+    employee_profile = forms.ModelChoiceField(
+        label="Vínculo do colaborador",
+        queryset=EmployeeProfile.objects.none(),
+        widget=forms.Select(attrs=_config_field_attrs),
+    )
+
+    class Meta:
+        model = JobHistory
+        fields = ("employee_profile", "job_title", "start_date", "end_date")
+        labels = {
+            "job_title": "Cargo",
+            "start_date": "Início",
+            "end_date": "Fim",
+        }
+        widgets = {
+            "job_title": forms.TextInput(attrs=_config_field_attrs),
+            "start_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "end_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+        }
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        profile_field = cast(forms.ModelChoiceField, self.fields["employee_profile"])
+        if workspace is not None:
+            profile_field.queryset = EmployeeProfile.objects.filter(
+                workspace=workspace
+            ).select_related("user").order_by("user__email")
+
+
+class CompensationHistoryForm(forms.ModelForm):
+    employee_profile = forms.ModelChoiceField(
+        label="Vínculo do colaborador",
+        queryset=EmployeeProfile.objects.none(),
+        widget=forms.Select(attrs=_config_field_attrs),
+    )
+
+    class Meta:
+        model = CompensationHistory
+        fields = (
+            "employee_profile",
+            "compensation_type",
+            "monthly_salary",
+            "hourly_rate",
+            "start_date",
+            "end_date",
+        )
+        labels = {
+            "compensation_type": "Tipo de remuneração",
+            "monthly_salary": "Salário mensal",
+            "hourly_rate": "Valor por hora",
+            "start_date": "Início",
+            "end_date": "Fim",
+        }
+        widgets = {
+            "compensation_type": forms.Select(attrs=_config_field_attrs),
+            "monthly_salary": forms.NumberInput(attrs={**_config_field_attrs, "step": "0.01", "min": "0"}),
+            "hourly_rate": forms.NumberInput(attrs={**_config_field_attrs, "step": "0.01", "min": "0"}),
+            "start_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "end_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+        }
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        profile_field = cast(forms.ModelChoiceField, self.fields["employee_profile"])
+        if workspace is not None:
+            profile_field.queryset = EmployeeProfile.objects.filter(
+                workspace=workspace
+            ).select_related("user").order_by("user__email")
+
+
 class ManualTimeEntryForm(forms.ModelForm):
     """
     Criação/edição de apontamento manual: apenas ``duration`` ou ``time_range`` (não cronômetro).
@@ -509,6 +666,7 @@ class ManualTimeEntryForm(forms.ModelForm):
             "task",
             "entry_type",
             "description",
+            "is_overtime",
         )
         labels = {
             "entry_mode": "Modo",
@@ -521,10 +679,12 @@ class ManualTimeEntryForm(forms.ModelForm):
             "task": "Tarefa",
             "entry_type": "Tipo",
             "description": "Descrição",
+            "is_overtime": "Hora extra",
         }
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}),
             "description": forms.Textarea(attrs={"rows": 3}),
+            "is_overtime": forms.CheckboxInput(attrs={"class": "q1-checkbox"}),
         }
 
     def __init__(self, *args, user: User, workspace: Workspace, **kwargs):
@@ -558,6 +718,7 @@ class ManualTimeEntryForm(forms.ModelForm):
         self.fields["hours"].required = False
         self.fields["start_time"].required = False
         self.fields["end_time"].required = False
+        self.fields["is_overtime"].required = False
         self.fields["start_time"].input_formats = ["%H:%M", "%H:%M:%S"]
         self.fields["end_time"].input_formats = ["%H:%M", "%H:%M:%S"]
 

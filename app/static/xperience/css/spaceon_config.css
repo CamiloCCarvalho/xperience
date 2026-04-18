@@ -651,3 +651,8 @@
         font-size: 0.8125rem;
     }
 }
+
+.spaceon-config-page .config-list-inline {
+    margin: 0;
+    padding-left: 1rem;
+}

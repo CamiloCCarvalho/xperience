@@ -49,7 +49,7 @@
                 id="tab-admin-config-ws-fornecedores"
                 aria-controls="admin-config-ws-fornecedores"
                 aria-selected="false"
-            >Fornecedores</a>
+            >Vinculo Empregatício</a>
         </nav>
 
         <section class="main-container admin-config-ws-panel admin-config-ws-panel--active" id="admin-config-ws-empresa" role="tabpanel" aria-labelledby="tab-admin-config-ws-empresa" aria-hidden="false">
@@ -554,15 +554,154 @@
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
-                        <i class="fas fa-truck" aria-hidden="true"></i>
-                        <h2>Gerenciar fornecedores</h2>
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Vinculo Empregatício</h2>
                     </div>
                     <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
                     </button>
                 </header>
                 <div class="config-form">
-                    <p class="config-empty-hint">Em breve: cadastro de fornecedores por workspace.</p>
+                    <h3 class="config-subheading">Dados globais do colaborador</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_user_dates">
+                        <div class="config-grid config-grid-two">
+                            {% for field in user_dates_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Salvar dados globais</button>
+                        </div>
+                    </form>
+
+                    <h3 class="config-subheading">Vínculo empregatício no workspace</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="upsert_employee_profile">
+                        <div class="config-grid config-grid-two">
+                            {% for field in employee_profile_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Salvar vínculo</button>
+                        </div>
+                    </form>
+
+                    {% if employee_profiles %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Colaborador</th>
+                                    <th>Status</th>
+                                    <th>Admissão</th>
+                                    <th>Desligamento</th>
+                                    <th>Cargo atual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ep in employee_profiles %}
+                                <tr>
+                                    <td>{{ ep.user.email }}</td>
+                                    <td>{{ ep.get_employment_status_display }}</td>
+                                    <td>{{ ep.hire_date|date:"d/m/Y" }}</td>
+                                    <td>{{ ep.termination_date|date:"d/m/Y"|default:"—" }}</td>
+                                    <td>{{ ep.current_job_title|default:"—" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <h3 class="config-subheading">Histórico de cargo</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_job_history">
+                        <div class="config-grid config-grid-two">
+                            {% for field in job_history_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Adicionar cargo</button>
+                        </div>
+                    </form>
+
+                    <h3 class="config-subheading">Histórico de remuneração (sensível)</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_compensation_history">
+                        <div class="config-grid config-grid-two">
+                            {% for field in compensation_history_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Adicionar remuneração</button>
+                        </div>
+                    </form>
+
+                    {% if compensation_history %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Colaborador</th>
+                                    <th>Tipo</th>
+                                    <th>Mensal</th>
+                                    <th>Hora</th>
+                                    <th>Início</th>
+                                    <th>Fim</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ch in compensation_history %}
+                                <tr>
+                                    <td>{{ ch.employee_profile.user.email }}</td>
+                                    <td>{{ ch.get_compensation_type_display }}</td>
+                                    <td>{{ ch.monthly_salary|default:"—" }}</td>
+                                    <td>{{ ch.hourly_rate|default:"—" }}</td>
+                                    <td>{{ ch.start_date|date:"d/m/Y" }}</td>
+                                    <td>{{ ch.end_date|date:"d/m/Y"|default:"Vigente" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum histórico de remuneração cadastrado.</p>
+                    {% endif %}
+
+                    {% if birthdays_preview %}
+                    <h3 class="config-subheading">Próximos aniversários (prévia)</h3>
+                    <ul class="config-list-inline">
+                        {% for item in birthdays_preview %}
+                        <li>
+                            {{ item.user.email }} — {{ item.next_birthday|date:"d/m" }} (em {{ item.days_until }} dias)
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                 </div>
             </article>
             </div>

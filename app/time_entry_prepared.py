@@ -11,7 +11,7 @@ from typing import Any
 from django.core.exceptions import ValidationError
 
 from app.models import TimeEntry, User, UserDepartment, Workspace
-from app.time_entry_timer import get_member_primary_department
+from app.time_entry_timer import _json_bool, get_member_primary_department
 
 
 def get_member_template_flags(user: User, workspace: Workspace) -> dict[str, Any]:
@@ -126,6 +126,7 @@ def create_duration_entry_from_calendar_payload(
         task_id=task_id,
         description=description,
         entry_type=entry_type,
+        is_overtime=_json_bool(payload.get("is_overtime")),
     )
     entry.save()
     return entry
@@ -137,4 +138,5 @@ def duration_entry_created_payload(entry: TimeEntry) -> dict[str, Any]:
         "date": entry.date.isoformat(),
         "hours": str(entry.hours) if entry.hours is not None else None,
         "duration_minutes": entry.duration_minutes,
+        "is_overtime": entry.is_overtime,
     }

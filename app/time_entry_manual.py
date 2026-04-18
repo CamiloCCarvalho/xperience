@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 
 from app.models import TimeEntry, User, Workspace
 from app.time_entry_prepared import get_member_template_flags
+from app.time_entry_timer import _json_bool
 
 
 def get_member_time_entry(user: User, workspace: Workspace, pk: int) -> TimeEntry | None:
@@ -46,6 +47,7 @@ def manual_time_entry_json(entry: TimeEntry) -> dict[str, Any]:
         "task_id": entry.task_id,
         "entry_type": entry.entry_type or "",
         "description": entry.description or "",
+        "is_overtime": entry.is_overtime,
     }
 
 
@@ -70,6 +72,8 @@ def json_payload_to_manual_form_data(body: dict[str, Any]) -> dict[str, Any]:
         if key in body:
             v = body[key]
             data[field] = "" if v is None or v == "" else v
+    if "is_overtime" in body:
+        data["is_overtime"] = _json_bool(body.get("is_overtime"))
     return data
 
 
@@ -112,6 +116,8 @@ def complete_saved_timer_template_fields(
         entry.description = (data.get("description") or "").strip()
     if "entry_type" in data:
         entry.entry_type = (data.get("entry_type") or "").strip()
+    if "is_overtime" in data:
+        entry.is_overtime = _json_bool(data.get("is_overtime"))
 
     if flags["use_client"] and entry.client_id is None:
         raise ValidationError("Selecione um cliente.")
@@ -124,5 +130,6 @@ def complete_saved_timer_template_fields(
         if et not in (TimeEntry.EntryType.INTERNAL, TimeEntry.EntryType.EXTERNAL):
             raise ValidationError("Selecione o tipo de apontamento.")
 
+    entry.timer_pending_template_completion = False
     entry.save()
     return entry

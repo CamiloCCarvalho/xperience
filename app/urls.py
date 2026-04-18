@@ -42,6 +42,11 @@ urlpatterns = [
         name="user-time-entry-timer-complete",
     ),
     path(
+        "user/spaceon/time-entry/timer/discard-pending/",
+        time_entry.timer_discard_pending,
+        name="user-time-entry-timer-discard-pending",
+    ),
+    path(
         "user/spaceon/time-entry/prepared-submit/",
         time_entry.prepared_entry_submit,
         name="user-time-entry-prepared-submit",
