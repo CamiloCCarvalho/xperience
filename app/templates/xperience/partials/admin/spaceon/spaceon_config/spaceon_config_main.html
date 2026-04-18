@@ -575,96 +575,147 @@
                 </header>
 
                 <div class="config-form">
-                    <p class="config-empty-hint config-empty-hint--top">Usuários com membership neste workspace. Vincule clientes e projetos que cada um pode usar nos apontamentos.</p>
+                    <p class="config-empty-hint config-empty-hint--top">Membros do workspace, departamento e permissões de clientes e projetos nos apontamentos. Alterações são salvas automaticamente ao escolher ou remover um vínculo.</p>
 
                     {% if member_rows %}
-                    {% for row in member_rows %}
-                    <div class="config-member-card">
-                        <div class="config-member-head">
-                            <div>
-                                <strong class="config-member-email">{{ row.user.email }}</strong>
-                                {% if row.user.get_full_name %}
-                                <span class="config-member-name">{{ row.user.get_full_name }}</span>
-                                {% endif %}
-                            </div>
-                            {% if row.department %}
-                            <span class="config-member-dept">Dept.: {{ row.department.name }}</span>
-                            {% endif %}
+                    <div
+                        id="admin-config-members-access"
+                        class="acf-members"
+                        data-acf-members-access
+                        data-csrf-token="{{ csrf_token }}"
+                        data-url-link-client="{% url 'admin-config-member-link-client' %}"
+                        data-url-unlink-client="{% url 'admin-config-member-unlink-client' %}"
+                        data-url-link-project="{% url 'admin-config-member-link-project' %}"
+                        data-url-unlink-project="{% url 'admin-config-member-unlink-project' %}"
+                        data-url-remove-member="{% url 'admin-config-member-remove-membership' %}"
+                        data-page-size="8"
+                    >
+                        <div class="acf-members__table-scroll">
+                            <table class="acf-members__table" role="grid" aria-label="Membros e acessos">
+                                <thead data-acf-members-thead>
+                                    <tr>
+                                        <th scope="col" class="acf-members__th acf-members__th--member">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="member">
+                                                Membro
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--dept">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="department">
+                                                Departamento
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--clients">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="clients">
+                                                Clientes com acesso
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--projects">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="projects">
+                                                Projetos com acesso
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--actions">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="row">
+                                                Ações
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody data-acf-members-tbody>
+                                    {% for row in member_rows %}
+                                    <tr
+                                        class="acf-members__row"
+                                        data-user-id="{{ row.user.pk }}"
+                                        data-original-index="{{ forloop.counter0 }}"
+                                        data-sort-member="{{ row.user.get_full_name|default:row.user.email|lower }}"
+                                        data-sort-department="{% if row.department %}{{ row.department.name|lower }}{% else %}zzzz{% endif %}"
+                                        data-sort-clients="{% for uc in row.client_links %}{{ uc.client.name|lower }}{% if not forloop.last %},{% endif %}{% empty %}zzzz{% endfor %}"
+                                        data-sort-projects="{% for up in row.project_links %}{{ up.project.client.name|lower }} {{ up.project.name|lower }}{% if not forloop.last %},{% endif %}{% empty %}zzzz{% endfor %}"
+                                        data-sort-row="{{ forloop.counter0 }}"
+                                    >
+                                        <td class="acf-members__td acf-members__td--member">
+                                            <div class="acf-members__member-cell">
+                                                <img class="acf-members__avatar" src="{{ row.avatar_url }}" alt="" width="36" height="36" loading="lazy">
+                                                <div class="acf-members__member-text">
+                                                    <span class="acf-members__member-name" title="{{ row.user.get_full_name|default:row.user.email }}">{{ row.user.get_full_name|default:row.user.email }}</span>
+                                                    <span class="acf-members__member-email" title="{{ row.user.email }}">{{ row.user.email }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--dept">
+                                            {% if row.department %}
+                                            <span class="acf-members__tag acf-members__tag--dept" title="{{ row.department.name }}">{{ row.department.name }}</span>
+                                            {% else %}
+                                            <span class="acf-members__tag acf-members__tag--dept acf-members__tag--empty">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--tags" data-acf-cell-clients>
+                                            <div class="acf-members__tags-wrap" data-acf-tags-clients>
+                                                {% for uc in row.client_links %}
+                                                <span class="acf-members__tag acf-members__tag--client" data-uc-id="{{ uc.pk }}" data-client-id="{{ uc.client_id }}" title="{{ uc.client.name|escape }}">
+                                                    <span class="acf-members__tag-text">{{ uc.client.name }}</span>
+                                                    <button type="button" class="acf-members__tag-x" aria-label="Remover cliente">
+                                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                                    </button>
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                            {% if active_clients %}
+                                            <select class="acf-members__inline-select acf-members__client-select" aria-label="Adicionar cliente" {% if not active_clients %}disabled{% endif %}>
+                                                <option value="">+ Adicionar cliente</option>
+                                                {% for c in active_clients %}
+                                                <option value="{{ c.pk }}" {% if c.pk in row.linked_client_ids %}disabled hidden class="acf-members__opt--linked"{% endif %}>{{ c.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <span class="acf-members__add-placeholder">Sem clientes ativos</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--tags" data-acf-cell-projects>
+                                            <div class="acf-members__tags-wrap" data-acf-tags-projects>
+                                                {% for up in row.project_links %}
+                                                <span class="acf-members__tag acf-members__tag--project" data-up-id="{{ up.pk }}" data-project-id="{{ up.project_id }}" title="{{ up.project.client.name|escape }} — {{ up.project.name|escape }}">
+                                                    <span class="acf-members__tag-text">{{ up.project.client.name }} — {{ up.project.name }}</span>
+                                                    <button type="button" class="acf-members__tag-x" aria-label="Remover projeto">
+                                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                                    </button>
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                            {% if active_projects %}
+                                            <select class="acf-members__inline-select acf-members__project-select" aria-label="Adicionar projeto" {% if not active_projects %}disabled{% endif %}>
+                                                <option value="">+ Adicionar projeto</option>
+                                                {% for p in active_projects %}
+                                                <option value="{{ p.pk }}" {% if p.pk in row.linked_project_ids %}disabled hidden class="acf-members__opt--linked"{% endif %}>{{ p.client.name }} — {{ p.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <span class="acf-members__add-placeholder">Sem projetos ativos</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--actions">
+                                            <button
+                                                type="button"
+                                                class="acf-members__row-remove admin-tt-icon-btn admin-tt-icon-btn--danger"
+                                                title="Remover membro do workspace"
+                                                aria-label="Remover membro do workspace"
+                                                {% if row.user.pk == config_workspace.owner_id %}disabled{% endif %}
+                                            >
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-
-                        <div class="config-access-block">
-                            <span class="config-access-label">Clientes permitidos</span>
-                            <div class="config-chip-row">
-                                {% for uc in row.client_links %}
-                                <span class="config-chip">
-                                    {{ uc.client.name }}
-                                    <form method="post" action="{% url 'admin-config' %}" class="config-chip-unlink">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="unlink_user_client">
-                                        <input type="hidden" name="uc_id" value="{{ uc.pk }}">
-                                        <button type="submit" class="config-chip-remove" title="Remover vínculo" aria-label="Remover {{ uc.client.name }}">&times;</button>
-                                    </form>
-                                </span>
-                                {% empty %}
-                                <span class="config-chip config-chip--muted">Nenhum cliente vinculado</span>
-                                {% endfor %}
-                            </div>
-                            {% if active_clients %}
-                            <form method="post" action="{% url 'admin-config' %}" class="config-inline-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="link_user_client">
-                                <input type="hidden" name="user_id" value="{{ row.user.pk }}">
-                                <div class="config-field config-field-inline">
-                                    <label class="sr-only" for="client-pick-{{ row.user.pk }}">Cliente</label>
-                                    <select name="client_id" id="client-pick-{{ row.user.pk }}" required>
-                                        <option value="">Selecionar cliente…</option>
-                                        {% for c in active_clients %}
-                                        <option value="{{ c.pk }}">{{ c.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <button type="submit" class="config-btn-secondary">Vincular cliente</button>
-                            </form>
-                            {% endif %}
-                        </div>
-
-                        <div class="config-access-block">
-                            <span class="config-access-label">Projetos permitidos</span>
-                            <div class="config-chip-row">
-                                {% for up in row.project_links %}
-                                <span class="config-chip">
-                                    {{ up.project.name }} · {{ up.project.client.name }}
-                                    <form method="post" action="{% url 'admin-config' %}" class="config-chip-unlink">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="unlink_user_project">
-                                        <input type="hidden" name="up_id" value="{{ up.pk }}">
-                                        <button type="submit" class="config-chip-remove" title="Remover vínculo" aria-label="Remover {{ up.project.name }}">&times;</button>
-                                    </form>
-                                </span>
-                                {% empty %}
-                                <span class="config-chip config-chip--muted">Nenhum projeto vinculado</span>
-                                {% endfor %}
-                            </div>
-                            {% if active_projects %}
-                            <form method="post" action="{% url 'admin-config' %}" class="config-inline-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="link_user_project">
-                                <input type="hidden" name="user_id" value="{{ row.user.pk }}">
-                                <div class="config-field config-field-inline">
-                                    <label class="sr-only" for="project-pick-{{ row.user.pk }}">Projeto</label>
-                                    <select name="project_id" id="project-pick-{{ row.user.pk }}" required>
-                                        <option value="">Selecionar projeto…</option>
-                                        {% for p in active_projects %}
-                                        <option value="{{ p.pk }}">{{ p.client.name }} — {{ p.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <button type="submit" class="config-btn-secondary">Vincular projeto</button>
-                            </form>
-                            {% endif %}
-                        </div>
+                        <div class="acf-members__pager" data-acf-members-pager aria-label="Paginação"></div>
                     </div>
-                    {% endfor %}
                     {% else %}
                     <p class="config-empty-hint">Nenhum membro neste workspace. Use <a href="{% url 'admin-members-add' %}">adicionar membros</a>.</p>
                     {% endif %}

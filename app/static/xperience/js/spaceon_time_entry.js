@@ -789,6 +789,25 @@
             });
         }
 
+        var historyInfoDialog = document.getElementById("q4-history-info-dialog");
+        var historyInfoOpen = document.getElementById("q4-history-info-open");
+        var historyInfoClose = document.getElementById("q4-history-info-close");
+        if (historyInfoDialog && historyInfoOpen && typeof historyInfoDialog.showModal === "function") {
+            historyInfoOpen.addEventListener("click", function () {
+                historyInfoDialog.showModal();
+            });
+            if (historyInfoClose) {
+                historyInfoClose.addEventListener("click", function () {
+                    historyInfoDialog.close();
+                });
+            }
+            historyInfoDialog.addEventListener("click", function (ev) {
+                if (ev.target === historyInfoDialog) {
+                    historyInfoDialog.close();
+                }
+            });
+        }
+
         wireHoursSteppers();
         form.addEventListener("submit", function (ev) {
             ev.preventDefault();

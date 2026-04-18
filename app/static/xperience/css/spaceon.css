@@ -60,7 +60,8 @@
     margin: 0;
 }
 
-.q1-card-header__info {
+.q1-card-header__info,
+.q4-history-header__info {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
@@ -77,13 +78,15 @@
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.q1-card-header__info:hover {
+.q1-card-header__info:hover,
+.q4-history-header__info:hover {
     background: rgba(255, 255, 255, 0.22);
     color: #fff;
     border-color: rgba(255, 255, 255, 0.55);
 }
 
-.q1-card-header__info:focus-visible {
+.q1-card-header__info:focus-visible,
+.q4-history-header__info:focus-visible {
     outline: 2px solid rgba(255, 255, 255, 0.95);
     outline-offset: 2px;
 }
@@ -901,12 +904,20 @@
 }
 
 .q4-history-title h3 {
+    margin: 0;
     color: #fff;
     font-size: 18px;
     font-weight: 700;
 }
 
-.q4-history-header button {
+.q4-history-header__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.q4-history-header__toggle {
     width: 30px;
     height: 30px;
     border-radius: 6px;
@@ -914,6 +925,10 @@
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 
 .q4-history-content {

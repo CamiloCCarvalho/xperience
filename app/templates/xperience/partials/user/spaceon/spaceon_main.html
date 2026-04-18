@@ -315,10 +315,57 @@
                         <i class="fas fa-list-ul" aria-hidden="true"></i>
                         <h3>Histórico de Apontamentos</h3>
                     </div>
-                    <button type="button" aria-label="Expandir ou recolher histórico">
-                        <i class="fas fa-chevron-up" aria-hidden="true"></i>
-                    </button>
+                    <div class="q4-history-header__actions">
+                        <button type="button" class="q4-history-header__toggle" aria-label="Expandir ou recolher histórico">
+                            <i class="fas fa-chevron-up" aria-hidden="true"></i>
+                        </button>
+                        <button
+                            type="button"
+                            class="q4-history-header__info"
+                            id="q4-history-info-open"
+                            aria-haspopup="dialog"
+                            aria-controls="q4-history-info-dialog"
+                            aria-label="Informações sobre o histórico de apontamentos"
+                        >
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </header>
+
+                <dialog id="q4-history-info-dialog" class="q1-pre-entry-dialog" aria-labelledby="q4-history-info-title">
+                    <div class="q1-pre-entry-dialog__panel">
+                        <div class="q1-pre-entry-dialog__head">
+                            <h3 id="q4-history-info-title">Sobre o histórico de apontamentos</h3>
+                            <button type="button" class="q1-pre-entry-dialog__close" id="q4-history-info-close" aria-label="Fechar">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="q1-pre-entry-dialog__body">
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Registro completo</h4>
+                                <p>
+                                    Esta lista é o <strong>registro completo</strong> dos seus apontamentos salvos na plataforma,
+                                    <strong>desde a sua entrada</strong> no SpaceOn — ou seja, todo o histórico disponível para consulta neste workspace.
+                                </p>
+                            </section>
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Filtros</h4>
+                                <p>
+                                    Use os filtros acima para <strong>encontrar com facilidade</strong> os apontamentos desejados e para
+                                    <strong>exibir apenas o que for conveniente</strong> no momento, sem alterar os dados salvos.
+                                </p>
+                            </section>
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Exportar Excel</h4>
+                                <p>
+                                    O conteúdo mostrado na tabela — <strong>já com os filtros aplicados</strong> — poderá ser exportado para Excel
+                                    automaticamente pelo botão <strong>Exportar Excel</strong>. Essa exportação <strong>ainda não está ativa</strong>;
+                                    quando estiver disponível, o mesmo botão disparará o download do arquivo.
+                                </p>
+                            </section>
+                        </div>
+                    </div>
+                </dialog>
 
                 <div class="q4-history-content">
                     <section class="q4-panel q4-filters-panel" aria-label="Filtros do histórico">

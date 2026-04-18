@@ -79,5 +79,30 @@ urlpatterns = [
     path("user_admin/spaceon/home/", admin.admin_home, name="admin-home"),
     path("user_admin/spaceon/dashboard/", admin.admin_dashboard, name="admin-dashboard"),
     path("user_admin/spaceon/config/", admin.admin_config, name="admin-config"),
+    path(
+        "user_admin/spaceon/config/members/access/link-client/",
+        admin.admin_config_member_link_client,
+        name="admin-config-member-link-client",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/unlink-client/",
+        admin.admin_config_member_unlink_client,
+        name="admin-config-member-unlink-client",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/link-project/",
+        admin.admin_config_member_link_project,
+        name="admin-config-member-link-project",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/unlink-project/",
+        admin.admin_config_member_unlink_project,
+        name="admin-config-member-unlink-project",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/remove-membership/",
+        admin.admin_config_member_remove_membership,
+        name="admin-config-member-remove-membership",
+    ),
     path("user_admin/spaceon/account/", admin.admin_account, name="admin-account"),
 ]

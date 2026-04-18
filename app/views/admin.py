@@ -3,7 +3,9 @@ from typing import cast
 
 from django.contrib import messages
 from django.db import IntegrityError, transaction
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
 
 from app.avatar import handle_user_avatar_upload, user_avatar_url, workspace_avatar_url
 from app.decorators import admin_active_workspace_required, platform_admin_required
@@ -497,6 +499,126 @@ def _upcoming_birthdays(ws: Workspace, days_ahead: int = 60):
 
 @platform_admin_required
 @admin_active_workspace_required
+@require_POST
+def admin_config_member_link_client(request):
+    ws = getattr(request, "active_admin_workspace", None)
+    if ws is None:
+        return JsonResponse({"ok": False, "error": "Workspace inválido."}, status=400)
+    try:
+        uid = int(request.POST.get("user_id", ""))
+        cid = int(request.POST.get("client_id", ""))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Dados inválidos."}, status=400)
+    user_obj = User.objects.filter(pk=uid).first()
+    client_obj = Client.objects.filter(pk=cid, workspace=ws, is_active=True).first()
+    if (
+        user_obj is None
+        or client_obj is None
+        or not _user_in_workspace_admin_context(user_obj, ws)
+    ):
+        return JsonResponse({"ok": False, "error": "Não foi possível vincular."}, status=400)
+    uc, _ = UserClient.objects.get_or_create(
+        user=user_obj, client=client_obj, workspace=ws
+    )
+    return JsonResponse(
+        {"ok": True, "uc_id": uc.pk, "client_id": client_obj.pk, "label": client_obj.name}
+    )
+
+
+@platform_admin_required
+@admin_active_workspace_required
+@require_POST
+def admin_config_member_unlink_client(request):
+    ws = getattr(request, "active_admin_workspace", None)
+    if ws is None:
+        return JsonResponse({"ok": False, "error": "Workspace inválido."}, status=400)
+    try:
+        ucid = int(request.POST.get("uc_id", ""))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Vínculo inválido."}, status=400)
+    deleted, _ = UserClient.objects.filter(pk=ucid, workspace=ws).delete()
+    if not deleted:
+        return JsonResponse({"ok": False, "error": "Vínculo não encontrado."}, status=404)
+    return JsonResponse({"ok": True})
+
+
+@platform_admin_required
+@admin_active_workspace_required
+@require_POST
+def admin_config_member_link_project(request):
+    ws = getattr(request, "active_admin_workspace", None)
+    if ws is None:
+        return JsonResponse({"ok": False, "error": "Workspace inválido."}, status=400)
+    try:
+        uid = int(request.POST.get("user_id", ""))
+        pid = int(request.POST.get("project_id", ""))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Dados inválidos."}, status=400)
+    user_obj = User.objects.filter(pk=uid).first()
+    project_obj = Project.objects.filter(pk=pid, workspace=ws, is_active=True).first()
+    if (
+        user_obj is None
+        or project_obj is None
+        or not _user_in_workspace_admin_context(user_obj, ws)
+    ):
+        return JsonResponse({"ok": False, "error": "Não foi possível vincular."}, status=400)
+    up, _ = UserProject.objects.get_or_create(
+        user=user_obj, project=project_obj, workspace=ws
+    )
+    label = f"{project_obj.client.name} — {project_obj.name}"
+    return JsonResponse(
+        {
+            "ok": True,
+            "up_id": up.pk,
+            "project_id": project_obj.pk,
+            "label": label,
+        }
+    )
+
+
+@platform_admin_required
+@admin_active_workspace_required
+@require_POST
+def admin_config_member_unlink_project(request):
+    ws = getattr(request, "active_admin_workspace", None)
+    if ws is None:
+        return JsonResponse({"ok": False, "error": "Workspace inválido."}, status=400)
+    try:
+        upid = int(request.POST.get("up_id", ""))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Vínculo inválido."}, status=400)
+    deleted, _ = UserProject.objects.filter(pk=upid, workspace=ws).delete()
+    if not deleted:
+        return JsonResponse({"ok": False, "error": "Vínculo não encontrado."}, status=404)
+    return JsonResponse({"ok": True})
+
+
+@platform_admin_required
+@admin_active_workspace_required
+@require_POST
+def admin_config_member_remove_membership(request):
+    ws = getattr(request, "active_admin_workspace", None)
+    if ws is None:
+        return JsonResponse({"ok": False, "error": "Workspace inválido."}, status=400)
+    try:
+        uid = int(request.POST.get("user_id", ""))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Usuário inválido."}, status=400)
+    if ws.owner_id == uid:
+        return JsonResponse(
+            {"ok": False, "error": "Não é possível remover o dono do workspace."},
+            status=400,
+        )
+    UserClient.objects.filter(user_id=uid, workspace=ws).delete()
+    UserProject.objects.filter(user_id=uid, workspace=ws).delete()
+    deleted, _ = Membership.objects.filter(user_id=uid, workspace=ws).delete()
+    if not deleted:
+        return JsonResponse({"ok": False, "error": "Membro não encontrado."}, status=404)
+    return JsonResponse({"ok": True})
+
+
+@platform_admin_required
+@admin_active_workspace_required
 def admin_config(request):
     ws = getattr(request, "active_admin_workspace", None)
     ctx = _admin_context(request)
@@ -643,65 +765,6 @@ def admin_config(request):
                 request, "Tarefa não encontrada."
             )
             return redirect("admin-config")
-        elif action == "link_user_client":
-            try:
-                uid = int(request.POST.get("user_id", ""))
-                cid = int(request.POST.get("client_id", ""))
-            except (TypeError, ValueError):
-                messages.error(request, "Dados inválidos para vínculo com cliente.")
-            else:
-                user_obj = User.objects.filter(pk=uid).first()
-                client_obj = Client.objects.filter(pk=cid, workspace=ws).first()
-                if user_obj and client_obj and _user_in_workspace_admin_context(user_obj, ws):
-                    UserClient.objects.get_or_create(
-                        user=user_obj, client=client_obj, workspace=ws
-                    )
-                    messages.success(request, "Cliente vinculado ao membro.")
-                else:
-                    messages.error(request, "Não foi possível vincular o cliente.")
-            return redirect("admin-config")
-        elif action == "unlink_user_client":
-            try:
-                ucid = int(request.POST.get("uc_id", ""))
-            except (TypeError, ValueError):
-                messages.error(request, "Vínculo inválido.")
-            else:
-                deleted, _ = UserClient.objects.filter(pk=ucid, workspace=ws).delete()
-                if deleted:
-                    messages.success(request, "Vínculo com cliente removido.")
-                else:
-                    messages.error(request, "Vínculo não encontrado.")
-            return redirect("admin-config")
-        elif action == "link_user_project":
-            try:
-                uid = int(request.POST.get("user_id", ""))
-                pid = int(request.POST.get("project_id", ""))
-            except (TypeError, ValueError):
-                messages.error(request, "Dados inválidos para vínculo com projeto.")
-            else:
-                user_obj = User.objects.filter(pk=uid).first()
-                project_obj = Project.objects.filter(pk=pid, workspace=ws).first()
-                if user_obj and project_obj and _user_in_workspace_admin_context(user_obj, ws):
-                    UserProject.objects.get_or_create(
-                        user=user_obj, project=project_obj, workspace=ws
-                    )
-                    messages.success(request, "Projeto vinculado ao membro.")
-                else:
-                    messages.error(request, "Não foi possível vincular o projeto.")
-            return redirect("admin-config")
-        elif action == "unlink_user_project":
-            try:
-                upid = int(request.POST.get("up_id", ""))
-            except (TypeError, ValueError):
-                messages.error(request, "Vínculo inválido.")
-            else:
-                deleted, _ = UserProject.objects.filter(pk=upid, workspace=ws).delete()
-                if deleted:
-                    messages.success(request, "Vínculo com projeto removido.")
-                else:
-                    messages.error(request, "Vínculo não encontrado.")
-            return redirect("admin-config")
-
     clients = Client.objects.filter(workspace=ws).order_by("name")
     projects = Project.objects.filter(workspace=ws).select_related("client").order_by("name")
     tasks = (
@@ -716,6 +779,13 @@ def admin_config(request):
         .order_by("name")
     )
     member_rows = _admin_config_member_rows(ws)
+    for row in member_rows:
+        user = row["user"]
+        row["avatar_url"] = user_avatar_url(user)
+        linked_cids = {uc.client_id for uc in row["client_links"]}
+        row["linked_client_ids"] = linked_cids
+        linked_pids = {up.project_id for up in row["project_links"]}
+        row["linked_project_ids"] = linked_pids
     employee_profiles = (
         EmployeeProfile.objects.filter(workspace=ws)
         .select_related("user")
