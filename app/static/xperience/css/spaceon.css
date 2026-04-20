@@ -1,11 +1,12 @@
 .spaceon-page .main {
     min-height: calc(100vh - 72px);
     justify-content: flex-start;
-    padding: 20px 0 28px;
+    padding: 24px 20px 32px;
+    box-sizing: border-box;
 }
 
 .spaceon-page .main-container {
-    width: min(1380px, 96%);
+    width: min(1380px, calc(100% - 8px));
     justify-content: flex-start;
     gap: 14px;
 }
@@ -37,21 +38,385 @@
 .q1-card-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 12px;
     padding: 10px 16px;
     border-radius: 10px 10px 0 0;
     color: #fff;
     background: linear-gradient(90deg, var(--green-dark), var(--green-light) 55%, var(--green-dark) 100%);
 }
 
+.q1-card-header__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
 .q1-card-header h2 {
     font-size: 18px;
     font-weight: 700;
     color: #fff;
+    margin: 0;
+}
+
+.q1-card-header__info,
+.q4-history-header__info {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.q1-card-header__info:hover,
+.q4-history-header__info:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.55);
+}
+
+.q1-card-header__info:focus-visible,
+.q4-history-header__info:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.95);
+    outline-offset: 2px;
+}
+
+.q1-pre-entry-dialog {
+    position: fixed;
+    inset: 0;
+    width: min(520px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
+    max-height: min(85vh, 520px);
+    height: fit-content;
+    margin: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-sizing: border-box;
+}
+
+.q1-pre-entry-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.48);
+}
+
+.q1-pre-entry-dialog__panel {
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+}
+
+.q1-pre-entry-dialog__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 65%, var(--color-bg-secondary));
+}
+
+.q1-pre-entry-dialog__head h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--color-title);
+}
+
+.q1-pre-entry-dialog__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.q1-pre-entry-dialog__close:hover {
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
+}
+
+.q1-pre-entry-dialog__body {
+    padding: 14px 18px 18px;
+    max-height: min(70vh, 420px);
+    overflow-y: auto;
+}
+
+.q1-pre-entry-dialog__section {
+    margin: 0 0 14px;
+}
+
+.q1-pre-entry-dialog__section:last-child {
+    margin-bottom: 0;
+}
+
+.q1-pre-entry-dialog__section h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--green-light);
+}
+
+.q1-pre-entry-dialog__section p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+.q1-template-meta {
+    margin: 0;
+    padding: 10px 20px 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.q1-hidden {
+    display: none !important;
+}
+
+.spaceon-page .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.q1-api-endpoints {
+    display: none !important;
+}
+
+.q1-mode-fieldset {
+    border: 0;
+    margin: 0 0 12px;
+    padding: 0;
+}
+
+.q1-mode-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    align-items: center;
+}
+
+.q1-mode-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.q1-mode-option input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--green-light);
+}
+
+.q1-overtime-row {
+    margin: 0 0 12px;
+}
+
+.q1-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.q1-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--green-light);
+}
+
+.q1-timer-status-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 10px;
+    min-height: 1.45em;
+}
+
+.q1-timer-pulse {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--green-light);
+    opacity: 0;
+    transform: scale(0.85);
+    pointer-events: none;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--green-light) 55%, transparent);
+}
+
+.q1-block-timer--running .q1-timer-pulse {
+    opacity: 1;
+    animation: q1-timer-pulse 1.25s ease-out infinite;
+}
+
+@keyframes q1-timer-pulse {
+    0% {
+        transform: scale(0.92);
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--green-light) 45%, transparent);
+    }
+    55% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px transparent;
+    }
+    100% {
+        transform: scale(0.92);
+        box-shadow: 0 0 0 0 transparent;
+    }
+}
+
+.q1-block-timer--running .q1-timer-status {
+    animation: q1-timer-status-soft 2s ease-in-out infinite;
+}
+
+@keyframes q1-timer-status-soft {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.72;
+    }
+}
+
+.q1-timer-status {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+.q1-timer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.q1-btn-timer {
+    width: auto;
+    min-width: unset;
+    flex: 0 0 auto;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    gap: 6px;
+    color: var(--color-text);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+}
+
+.q1-btn-timer:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--green-light) 55%, var(--color-border));
+    color: var(--color-title);
+    background: color-mix(in srgb, var(--green-light) 10%, var(--color-bg-primary));
+}
+
+.q1-btn-timer:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.q1-btn-timer i {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.q1-post-timer-wrap {
+    margin: 10px 0 4px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px dashed color-mix(in srgb, var(--green-light) 45%, var(--color-border));
+    background: color-mix(in srgb, var(--green-light) 8%, var(--color-bg-secondary));
+}
+
+.q1-post-timer-hint {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+}
+
+.q1-post-timer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.q1-post-timer-actions .q1-btn {
+    flex: 1 1 200px;
+    min-width: min(100%, 180px);
+    max-width: 100%;
+}
+
+.q1-btn-post-timer-discard {
+    height: 40px;
+    border-radius: 7px;
+    border: 1px solid var(--color-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--color-text);
+    background: var(--color-bg-primary);
+}
+
+.q1-btn-post-timer-discard:hover {
+    border-color: color-mix(in srgb, var(--color-text-muted) 40%, var(--color-border));
+    background: color-mix(in srgb, var(--color-text) 6%, var(--color-bg-primary));
+}
+
+[data-theme="dark"] .q1-btn-post-timer-discard {
+    background: #2b2f35;
+    color: #e8eaed;
+    border-color: color-mix(in srgb, var(--color-border) 80%, #fff 20%);
 }
 
 .q1-form {
-    padding: 14px 14px 12px;
+    padding: 18px 20px 16px;
 }
 
 .q1-row {
@@ -113,6 +478,24 @@
 .q1-field textarea:focus {
     border-color: var(--green-light);
     box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
+}
+
+.q1-notice {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+    padding: 8px 20px;
+}
+
+.q1-access-empty {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+    padding: 8px 10px;
+    border: 1px dashed var(--color-border);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
 }
 
 .q1-hours-control {
@@ -244,6 +627,27 @@
     margin-right: 4px;
 }
 
+.q3-calendar-month-label {
+    min-width: 9.5rem;
+    text-align: right;
+}
+
+.q3-calendar-status {
+    margin: 0;
+    padding: 8px 14px 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+}
+
+.q3-calendar-status--ok {
+    color: var(--green-light);
+}
+
+.q3-calendar-status--warn {
+    color: #f59e0b;
+}
+
 .q3-calendar-controls button {
     width: 30px;
     height: 30px;
@@ -361,14 +765,62 @@
     line-height: 1;
 }
 
-.q3-calendar-table .day-load-line {
+/* Contagem de apontamentos por dia (ícone lápis + número; 0 quando não há registros salvos) */
+.q3-calendar-table .q3-calendar-day-apontamentos {
     position: absolute;
-    left: 8px;
-    right: 8px;
-    bottom: 2px;
-    height: 2px;
-    background: color-mix(in srgb, var(--green-light) 78%, transparent);
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 2.5rem;
+    padding: 3px 8px;
     border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 82%, transparent);
+    line-height: 1;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+.q3-calendar-table .q3-calendar-day-apontamentos__icon {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.q3-calendar-table .q3-calendar-day-apontamentos__count {
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-title);
+    line-height: 1;
+}
+
+/* Meta diária: horas apontadas / horas previstas (expediente do departamento) */
+.q3-calendar-table .q3-calendar-day-progress {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-border) 55%, transparent);
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.q3-calendar-table .q3-calendar-day-progress__fill {
+    height: 100%;
+    min-width: 0;
+    border-radius: inherit;
+    background: var(--green-light);
+    width: 0%;
+    transition: width 0.2s ease;
 }
 
 .q3-calendar-table .day-note {
@@ -394,6 +846,42 @@
     background: color-mix(in srgb, var(--color-bg-primary) 75%, transparent);
 }
 
+.q3-calendar-card--prepared {
+    border-color: color-mix(in srgb, var(--green-light) 55%, var(--color-border));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--green-light) 35%, transparent), 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.q3-calendar-card--prepared .q3-calendar-header {
+    background: linear-gradient(90deg, var(--green-dark), #1fa463 45%, var(--green-light) 100%);
+}
+
+.q3-calendar-card--saving {
+    opacity: 0.88;
+    pointer-events: none;
+}
+
+.q3-calendar-table .calendar-day--locked:not(.muted-day) {
+    cursor: default;
+    opacity: 0.72;
+}
+
+.q3-calendar-table .calendar-day--selectable {
+    cursor: pointer;
+    background: color-mix(in srgb, var(--green-light) 12%, var(--color-bg-secondary));
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.q3-calendar-table .calendar-day--selectable:hover {
+    background: color-mix(in srgb, var(--green-light) 22%, var(--color-bg-secondary));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green-light) 45%, transparent);
+}
+
+.q3-calendar-table .calendar-day--today .day-number {
+    color: var(--green-light);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 /* Q4 - Historico */
 .q4-history-card {
     overflow: hidden;
@@ -416,12 +904,20 @@
 }
 
 .q4-history-title h3 {
+    margin: 0;
     color: #fff;
     font-size: 18px;
     font-weight: 700;
 }
 
-.q4-history-header button {
+.q4-history-header__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.q4-history-header__toggle {
     width: 30px;
     height: 30px;
     border-radius: 6px;
@@ -429,6 +925,10 @@
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 
 .q4-history-content {
@@ -466,7 +966,7 @@
 
 .q4-filters-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 10px;
 }
 
@@ -482,7 +982,8 @@
     color: var(--color-text);
 }
 
-.q4-filter-field select {
+.q4-filter-field select,
+.q4-filter-field .q4-filter-text {
     width: 100%;
     height: 38px;
     border: 1px solid var(--color-border);
@@ -491,6 +992,18 @@
     color: var(--color-text);
     padding: 7px 10px;
     font-size: 14px;
+    box-sizing: border-box;
+}
+
+.q4-filter-field--wide {
+    grid-column: span 2;
+    min-width: 0;
+}
+
+@media (max-width: 640px) {
+    .q4-filter-field--wide {
+        grid-column: span 1;
+    }
 }
 
 .q4-filter-actions {
@@ -538,7 +1051,7 @@
 
 .q4-history-table {
     width: 100%;
-    min-width: 980px;
+    min-width: min(100%, 720px);
     border-collapse: collapse;
 }
 
@@ -581,8 +1094,55 @@
     background: var(--green-dark);
 }
 
+.q4-pill--yes {
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+}
+
+.q4-pill--muted {
+    background: color-mix(in srgb, var(--color-text-muted) 55%, var(--color-border) 45%);
+    color: var(--color-bg-primary);
+}
+
+.q4-history-cap-note {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 40%, var(--color-bg-secondary));
+}
+
+.q4-history-empty {
+    text-align: center;
+    padding: 20px 12px !important;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.q4-history-cell-desc {
+    max-width: 280px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.q4-filter-actions a.q4-btn {
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
 [data-theme="dark"] .spaceon-card {
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .q1-btn-timer {
+    background: #2b2f35;
+    color: #e8eaed;
+    border-color: color-mix(in srgb, var(--color-border) 80%, #fff 20%);
+}
+
+[data-theme="dark"] .q1-btn-timer:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--green-light) 14%, #2b2f35);
+    border-color: color-mix(in srgb, var(--green-light) 50%, var(--color-border));
 }
 
 [data-theme="dark"] .q1-field input,
@@ -608,8 +1168,13 @@
     background: #232a33;
 }
 
-[data-theme="dark"] .q3-calendar-table .day-load-line {
-    background: color-mix(in srgb, var(--green-light) 85%, transparent);
+[data-theme="dark"] .q3-calendar-table .q3-calendar-day-apontamentos {
+    background: color-mix(in srgb, #171c22 72%, transparent);
+    border-color: color-mix(in srgb, var(--color-border) 90%, #fff 10%);
+}
+
+[data-theme="dark"] .q3-calendar-table .q3-calendar-day-progress {
+    background: color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
 [data-theme="dark"] .q3-calendar-table .muted-day {
@@ -620,7 +1185,8 @@
     background: #2a313b;
 }
 
-[data-theme="dark"] .q4-filter-field select {
+[data-theme="dark"] .q4-filter-field select,
+[data-theme="dark"] .q4-filter-field .q4-filter-text {
     background: #232a33;
 }
 
@@ -635,6 +1201,16 @@
 
 [data-theme="dark"] .q4-history-table tbody tr:nth-child(even) td {
     background: #232a33;
+}
+
+[data-theme="dark"] .q4-history-cap-note {
+    background: color-mix(in srgb, #171c22 55%, #2a313b);
+    border-bottom-color: color-mix(in srgb, var(--color-border) 85%, #fff 15%);
+}
+
+[data-theme="dark"] .q4-pill--muted {
+    background: #4a5566;
+    color: #e8eaed;
 }
 
 
@@ -672,9 +1248,6 @@
         height: 64px;
     }
 
-    .q4-filters-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
 }
 
 @media (max-width: 760px) {
@@ -723,10 +1296,6 @@
         min-width: 760px;
     }
 
-    .q4-filters-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .q4-filter-actions {
         justify-content: stretch;
     }
@@ -734,11 +1303,5 @@
     .q4-btn {
         flex: 1 1 100%;
         width: 100%;
-    }
-}
-
-@media (max-width: 520px) {
-    .q4-filters-grid {
-        grid-template-columns: 1fr;
     }
 }
