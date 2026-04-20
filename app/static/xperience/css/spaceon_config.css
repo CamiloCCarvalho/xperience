@@ -250,3 +250,1036 @@
         font-size: 18px;
     }
 }
+
+.spaceon-config-page .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.spaceon-config-page .config-form-readonly {
+    padding-bottom: 16px;
+}
+
+.spaceon-config-page .config-readonly-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-title);
+    margin-bottom: 6px;
+}
+
+.spaceon-config-page .config-readonly-desc {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin-bottom: 14px;
+    line-height: 1.45;
+}
+
+.spaceon-config-page .config-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.spaceon-config-page .config-stat-box {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+    background: var(--color-bg-secondary);
+}
+
+.spaceon-config-page .config-stat-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--green-light);
+}
+
+.spaceon-config-page .config-stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.spaceon-config-page .config-subheading {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-title);
+    margin: 18px 0 10px;
+}
+
+.spaceon-config-page .config-empty-hint {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin-bottom: 10px;
+}
+
+.spaceon-config-page .config-empty-hint--top {
+    margin-bottom: 16px;
+}
+
+.spaceon-config-page .config-empty-hint a {
+    color: var(--green-light);
+    font-weight: 600;
+}
+
+.spaceon-config-page .config-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+.spaceon-config-page .config-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.spaceon-config-page .config-data-table th,
+.spaceon-config-page .config-data-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.spaceon-config-page .config-data-table th {
+    font-weight: 700;
+    color: var(--color-title);
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, transparent);
+}
+
+.spaceon-config-page .config-data-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.spaceon-config-page .config-field textarea,
+.spaceon-config-page .config-field .config-widget-input {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 7px 10px;
+    font-size: 15px;
+    font-family: inherit;
+}
+
+.spaceon-config-page .config-field textarea {
+    min-height: 64px;
+    resize: vertical;
+}
+
+.spaceon-config-page .config-field-full {
+    grid-column: 1 / -1;
+}
+
+.spaceon-config-page .config-field-checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.spaceon-config-page .config-field-checkbox label {
+    order: 2;
+    margin: 0;
+}
+
+.spaceon-config-page .config-field-checkbox input {
+    width: auto;
+    height: auto;
+    order: 1;
+}
+
+.spaceon-config-page .config-btn-save:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.spaceon-config-page .config-member-card {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: color-mix(in srgb, var(--color-bg-secondary) 65%, transparent);
+}
+
+.spaceon-config-page .config-member-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.spaceon-config-page .config-member-email {
+    display: block;
+    color: var(--color-title);
+    font-size: 15px;
+}
+
+.spaceon-config-page .config-member-name {
+    display: block;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+.spaceon-config-page .config-member-dept {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green-dark);
+    align-self: center;
+}
+
+.spaceon-config-page .config-access-block {
+    margin-bottom: 14px;
+}
+
+.spaceon-config-page .config-access-block:last-child {
+    margin-bottom: 0;
+}
+
+.spaceon-config-page .config-access-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 6px;
+}
+
+.spaceon-config-page .config-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.spaceon-config-page .config-chip {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px 5px 10px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--green-light) 14%, var(--color-bg-primary));
+    border: 1px solid color-mix(in srgb, var(--green-light) 35%, var(--color-border));
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-title);
+}
+
+.spaceon-config-page .config-chip--muted {
+    background: var(--color-bg-primary);
+    border-style: dashed;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+.spaceon-config-page .config-chip-sub {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    width: 100%;
+    flex-basis: 100%;
+    margin: -2px 0 0;
+}
+
+.spaceon-config-page .config-chip-unlink {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+
+.spaceon-config-page .config-chip-remove {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    border-radius: 4px;
+}
+
+.spaceon-config-page .config-chip-remove:hover {
+    color: #cb2f49;
+    background: rgba(203, 47, 73, 0.12);
+}
+
+.spaceon-config-page .config-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.spaceon-config-page .config-field-inline {
+    flex: 1 1 200px;
+    margin: 0;
+}
+
+.spaceon-config-page .config-field-inline select {
+    width: 100%;
+    height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 7px 10px;
+    font-size: 15px;
+}
+
+.spaceon-config-page .config-btn-secondary {
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--green-light) 45%, var(--color-border));
+    padding: 0 14px;
+    background: var(--color-bg-secondary);
+    color: var(--green-dark);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.spaceon-config-page .config-btn-secondary:hover {
+    background: color-mix(in srgb, var(--green-light) 12%, var(--color-bg-secondary));
+}
+
+[data-theme="dark"] .spaceon-config-page .config-field textarea,
+[data-theme="dark"] .spaceon-config-page .config-field .config-widget-input,
+[data-theme="dark"] .spaceon-config-page .config-field-inline select {
+    background: #2b2f35;
+}
+
+/* Workspace gestor — sub-menu em abas (mesmo padrão admin-tt: cartão + faixa verde) */
+.spaceon-config-page .admin-config-ws-main .admin-tt-stack {
+    width: 100%;
+    max-width: min(960px, 100%);
+    margin: 0 auto;
+    padding: 0 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tabbed-shell.admin-config-tabbed-shell {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tabs-strip {
+    padding: 0 8px;
+    margin: 0;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    border-radius: 11px 11px 0 0;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0;
+    padding: 0;
+    margin: 0;
+    border-bottom: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 1rem;
+    margin: 0 2px 0 0;
+    border-radius: 10px 10px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.78);
+    background: transparent;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tab:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tab--active {
+    color: var(--green-dark);
+    background: var(--color-bg-secondary);
+    border-color: rgba(255, 255, 255, 0.4);
+    border-bottom-color: var(--color-bg-secondary);
+    margin-bottom: -1px;
+    padding-bottom: calc(0.65rem + 1px);
+    font-weight: 700;
+    box-shadow: 0 -3px 14px rgba(0, 0, 0, 0.1);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-panel:not(.admin-tt-panel--active) {
+    display: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-panel.admin-tt-panel--active {
+    display: block;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-tabbed-shell .admin-tt-panel {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-body {
+    padding: 14px 16px 16px;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-body > .spaceon-grid:first-child {
+    margin-top: 0;
+}
+
+/* Aba Empresa: três cards (Workspace, Fluxo de caixa, Metas) em coluna */
+.spaceon-config-page .admin-config-ws-main #admin-config-ws-empresa .spaceon-grid {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 1.25rem;
+    min-height: unset;
+    width: 100%;
+}
+
+.spaceon-config-page .admin-config-ws-main #admin-config-ws-empresa .spaceon-grid > .config-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-tab--active {
+    color: var(--green-dark);
+    background: #2a313b;
+    border-color: rgba(255, 255, 255, 0.35);
+    border-bottom-color: #2a313b;
+    box-shadow: 0 -3px 14px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 720px) {
+    .spaceon-config-page .admin-config-ws-main .admin-tt-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        gap: 0;
+        padding-bottom: 2px;
+    }
+
+    .spaceon-config-page .admin-config-ws-main .admin-tt-tab {
+        flex: 0 0 auto;
+        padding: 0.55rem 0.75rem;
+        font-size: 0.8125rem;
+    }
+}
+
+/* Lista + modais (padrão admin-entity-list-modal) na config workspace */
+.spaceon-config-page .admin-config-ws-main .admin-tt-body dialog:not([open]) {
+    display: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-template-list {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-template-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 55%, var(--color-bg-secondary));
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-template-row__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-template-row__name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-title);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-template-row__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--green-light) 16%, transparent);
+    color: var(--green-dark);
+    border: 1px solid color-mix(in srgb, var(--green-light) 32%, transparent);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-pill--muted {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    font-size: 0.75rem;
+    background: var(--color-bg-primary);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-pill--hours,
+.spaceon-config-page .admin-config-ws-main .admin-tt-pill--weekday {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-pill--hours {
+    background: color-mix(in srgb, var(--green-light) 22%, transparent);
+    border-color: color-mix(in srgb, var(--green-light) 42%, transparent);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-template-row__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-template-del-form {
+    margin: 0;
+    display: inline-flex;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg-primary);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, filter 0.15s ease;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn:hover {
+    color: var(--color-title);
+    border-color: color-mix(in srgb, var(--green-light) 40%, var(--color-border));
+    filter: brightness(1.02);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn--edit:hover {
+    color: var(--green-dark);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn--danger:hover {
+    color: #c0392b;
+    border-color: rgba(192, 57, 43, 0.35);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: 2px;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-entity-meta {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-create-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.1rem;
+    padding-top: 0.25rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-create-actions .admin-tt-create-open-btn {
+    min-width: 10.5rem;
+    padding-left: 1.85rem;
+    padding-right: 1.85rem;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-sch-create-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    padding-top: 0.25rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-create-dialog-form .config-field {
+    margin-bottom: 0.75rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog {
+    border: none;
+    padding: 0;
+    margin: auto;
+    max-width: calc(100vw - 2rem);
+    width: min(440px, 100%);
+    background: transparent;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog.admin-config-entity-dialog--project {
+    width: min(560px, 100%);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog::backdrop {
+    background: rgba(15, 18, 24, 0.55);
+    backdrop-filter: blur(4px);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__panel {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+    max-height: min(85vh, 720px);
+    display: flex;
+    flex-direction: column;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid color-mix(in srgb, #fff 18%, transparent);
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    color: #fff;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__head h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.15s ease;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__close:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__close:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__body {
+    padding: 14px 16px 16px;
+    overflow-y: auto;
+}
+
+.spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__form {
+    margin-top: 0;
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-template-row {
+    background: color-mix(in srgb, #232a33 65%, #2a313b);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-pill {
+    background: rgba(74, 222, 128, 0.12);
+    color: #86efac;
+    border-color: rgba(74, 222, 128, 0.28);
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-pill--muted {
+    background: #232a33;
+    color: rgba(255, 255, 255, 0.55);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn {
+    background: #232a33;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-icon-btn:hover {
+    color: #fff;
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.68);
+}
+
+[data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-edit-dialog__panel {
+    background: #2a313b;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 480px) {
+    .spaceon-config-page .admin-config-ws-main .admin-tt-template-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .spaceon-config-page .admin-config-ws-main .admin-tt-template-row__actions {
+        justify-content: flex-end;
+    }
+}
+
+/* Membros e acessos — tabela + tags + fetch (escopo config workspace) */
+.spaceon-config-page .admin-config-ws-main .acf-members {
+    width: 100%;
+    margin-top: 0.25rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg-secondary);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    color: var(--color-text);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th {
+    text-align: left;
+    font-weight: 700;
+    color: var(--color-title);
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 40%, var(--color-bg-secondary));
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.55rem 0.65rem;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-weight: 700;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th-btn:hover {
+    color: var(--green-light);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th-btn:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: -2px;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__sort-icon {
+    font-size: 0.72rem;
+    opacity: 0.55;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__td {
+    padding: 0.45rem 0.55rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__row {
+    transition: background-color 0.15s ease;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__row:hover {
+    background: color-mix(in srgb, var(--green-light) 6%, var(--color-bg-primary));
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__row:last-child .acf-members__td {
+    border-bottom: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__member-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__member-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__member-name {
+    font-weight: 600;
+    color: var(--color-title);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__member-email {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tags-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+    min-height: 1.5rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 100%;
+    padding: 0.15rem 0.45rem 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.35;
+    border: 1px solid var(--color-border);
+    transition: opacity 0.15s ease, transform 0.12s ease;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 11rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag--client {
+    background: color-mix(in srgb, var(--green-light) 18%, var(--color-bg-primary));
+    color: var(--color-title);
+    border-color: color-mix(in srgb, var(--green-light) 35%, var(--color-border));
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag--project {
+    background: linear-gradient(
+        120deg,
+        color-mix(in srgb, var(--green-dark) 55%, var(--color-bg-primary)),
+        color-mix(in srgb, var(--green-light) 40%, var(--color-bg-primary))
+    );
+    color: #fff;
+    border-color: color-mix(in srgb, var(--green-light) 45%, transparent);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag--dept {
+    background: color-mix(in srgb, var(--color-text-muted) 12%, var(--color-bg-primary));
+    color: var(--color-title);
+    max-width: 10rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag--dept.acf-members__tag--empty {
+    opacity: 0.55;
+    font-weight: 500;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    opacity: 0.65;
+    cursor: pointer;
+    font-size: 0.65rem;
+    line-height: 1;
+    border-radius: 4px;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag-x:hover {
+    opacity: 1;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tag-x:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: 1px;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__inline-select {
+    max-width: 100%;
+    width: min(14rem, 100%);
+    height: 32px;
+    margin-top: 0.1rem;
+    padding: 0 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px dashed color-mix(in srgb, var(--green-light) 40%, var(--color-border));
+    background: var(--color-bg-primary);
+    color: var(--color-text-muted);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__inline-select:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--green-light) 65%, var(--color-border));
+    color: var(--color-title);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__add-placeholder {
+    display: inline-block;
+    margin-top: 0.25rem;
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__td--actions {
+    text-align: center;
+    width: 3.25rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__row-remove.admin-tt-icon-btn {
+    width: 34px;
+    height: 34px;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__pager {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.85rem;
+    padding-bottom: 0.15rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__pager-btn {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__pager-btn--active {
+    border-color: color-mix(in srgb, var(--green-light) 55%, var(--color-border));
+    background: color-mix(in srgb, var(--green-light) 14%, var(--color-bg-primary));
+    color: var(--green-light);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__pager-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.spaceon-config-page .config-list-inline {
+    margin: 0;
+    padding-left: 1rem;
+}

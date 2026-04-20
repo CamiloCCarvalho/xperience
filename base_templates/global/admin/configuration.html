@@ -7,14 +7,10 @@
     <title>{% block title %}{% endblock title %} | Xperience</title>
     <!-- user spaceon configuration styles -->
     <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_config.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/button_logout.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_config.css' %}?v=8">
     <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=4">
 </head>
-</head>
-
-
 
 <!-- body -->
 <body data-theme="dark" class="home-page spaceon-page spaceon-config-page">
@@ -28,5 +24,32 @@
 
     <!-- scripts -->
     <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
+    <script src="{% static 'xperience/js/header_user_menu.js' %}?v=1" defer></script>
+    <script src="{% static 'xperience/js/admin_config_workspace_tabs.js' %}?v=3" defer></script>
+    <script src="{% static 'xperience/js/admin_config_workspace_entity_modals.js' %}?v=1" defer></script>
+    <script src="{% static 'xperience/js/admin_config_members_access.js' %}?v=2" defer></script>
+    <script>
+        document.querySelectorAll("[data-config-toggle]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var card = btn.closest(".config-card");
+                if (!card) return;
+                var body = card.querySelector(".config-form");
+                if (!body) return;
+                var hidden = body.getAttribute("data-collapsed") === "1";
+                if (hidden) {
+                    body.style.display = "";
+                    body.removeAttribute("data-collapsed");
+                } else {
+                    body.style.display = "none";
+                    body.setAttribute("data-collapsed", "1");
+                }
+                var icon = btn.querySelector("i");
+                if (icon) {
+                    icon.classList.toggle("fa-eye-slash", hidden);
+                    icon.classList.toggle("fa-eye", !hidden);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
