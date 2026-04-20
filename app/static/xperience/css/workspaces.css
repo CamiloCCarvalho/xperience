@@ -95,6 +95,131 @@
     min-height: 240px;
 }
 
+/* Admin: área principal do card (dentro do article, acompanha o hover do .workspace-card) */
+.workspaces-page .workspace-card-main-btn {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Gestão: card com menu ⋯ (admin) */
+.workspaces-page .workspace-card.workspace-card--admin {
+    position: relative;
+    align-items: stretch;
+}
+
+.workspaces-page .workspace-card-menu {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+}
+
+.workspaces-page .workspace-card-menu-trigger {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(111, 139, 177, 0.35);
+    border-radius: 8px;
+    background: rgba(13, 28, 48, 0.45);
+    color: rgba(208, 218, 236, 0.75);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.workspaces-page .workspace-card-menu-trigger::-webkit-details-marker {
+    display: none;
+}
+
+.workspaces-page .workspace-card-menu-trigger:hover {
+    border-color: rgba(39, 174, 96, 0.45);
+    color: rgba(240, 245, 255, 0.95);
+    background: rgba(39, 174, 96, 0.12);
+}
+
+.workspaces-page .workspace-card-menu-trigger:focus-visible {
+    outline: 2px solid var(--green-light, #27ae60);
+    outline-offset: 2px;
+}
+
+.workspaces-page .workspace-card-menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 11.5rem;
+    padding: 6px 0;
+    border-radius: 10px;
+    border: 1px solid rgba(60, 170, 110, 0.28);
+    background: rgba(22, 34, 50, 0.98);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.workspaces-page .workspace-card-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 10px 14px;
+    border: 0;
+    background: transparent;
+    color: rgba(240, 245, 255, 0.92);
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.workspaces-page .workspace-card-menu__item i {
+    width: 1.1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
+
+.workspaces-page .workspace-card-menu__item:hover {
+    background: rgba(39, 174, 96, 0.14);
+    color: #fff;
+}
+
+.workspaces-page .workspace-card-menu__item--danger {
+    color: rgba(235, 180, 180, 0.95);
+}
+
+.workspaces-page .workspace-card-menu__item--danger:hover {
+    background: rgba(200, 50, 50, 0.18);
+    color: #ffb4b4;
+}
+
 .workspaces-page .workspace-card {
     width: 100%;
     min-height: 240px;
@@ -261,6 +386,41 @@
 
 .workspaces-page:not([data-theme="dark"]) .workspace-card p.workspace-owner-hint {
     color: rgba(55, 65, 81, 0.68);
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-card-menu-trigger {
+    border-color: rgba(17, 24, 39, 0.14);
+    background: rgba(255, 255, 255, 0.75);
+    color: rgba(55, 65, 81, 0.72);
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-card-menu-trigger:hover {
+    border-color: rgba(39, 174, 96, 0.45);
+    color: #1f2937;
+    background: rgba(39, 174, 96, 0.1);
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-card-menu-panel {
+    border-color: rgba(17, 24, 39, 0.1);
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(17, 24, 39, 0.14);
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-card-menu__item {
+    color: #1f2937;
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-card-menu__item:hover {
+    background: rgba(39, 174, 96, 0.1);
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-card-menu__item--danger {
+    color: #b91c1c;
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-card-menu__item--danger:hover {
+    background: rgba(185, 28, 28, 0.08);
+    color: #991b1b;
 }
 
 @media (max-width: 990px) {

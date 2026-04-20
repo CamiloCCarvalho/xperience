@@ -1,9 +1,25 @@
-from django.db import models
+from decimal import Decimal, ROUND_HALF_UP
+
+from django.db import models, transaction
+from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from typing import ClassVar
 from django.contrib.auth.models import BaseUserManager
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+
+
+def _check_constraint(*, predicate, name: str) -> models.CheckConstraint:
+    """
+    Compatibilidade entre versões de Django:
+    - antigas: CheckConstraint(check=...)
+    - novas:   CheckConstraint(condition=...)
+    """
+    try:
+        return models.CheckConstraint(condition=predicate, name=name)
+    except TypeError:
+        return models.CheckConstraint(check=predicate, name=name)
 
 
 class CustomUserManager(BaseUserManager):
@@ -48,6 +64,15 @@ class User(AbstractUser):
     is_inactive = models.BooleanField(default=False)
 
     avatar = models.ImageField(upload_to=PATH_TO_USER_IMAGE, blank=True, null=True)
+    birth_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Data de nascimento global da pessoa (não depende de workspace).",
+    )
+    platform_join_date = models.DateField(
+        default=timezone.localdate,
+        help_text="Data de entrada na plataforma (diferente de created_at técnico).",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -65,6 +90,17 @@ class User(AbstractUser):
     def __str__(self):
         return self.first_name + " - " + self.email
 
+    @property
+    def age(self):
+        """Idade calculada em tempo real a partir de birth_date (não persistida)."""
+        if not self.birth_date:
+            return None
+        today = timezone.localdate()
+        years = today.year - self.birth_date.year
+        if (today.month, today.day) < (self.birth_date.month, self.birth_date.day):
+            years -= 1
+        return years
+
 
 class Workspace(models.Model):
     """
@@ -76,6 +112,20 @@ class Workspace(models.Model):
     owner = models.ForeignKey('User', on_delete=models.CASCADE)
     workspace_name = models.CharField(max_length=255)
     workspace_description = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_workspaces",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_workspaces",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     workspace_avatar = models.ImageField(
@@ -118,6 +168,449 @@ class Membership(models.Model):
         unique_together = ("user", "workspace")
 
 
+class EmployeeProfile(models.Model):
+    """Vínculo empregatício atual de um usuário em um workspace."""
+
+    class EmploymentStatus(models.TextChoices):
+        ACTIVE = "active", "Ativo"
+        ON_LEAVE = "on_leave", "Afastado"
+        TERMINATED = "terminated", "Desligado"
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="employee_profiles",
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="employee_profiles",
+    )
+    employment_status = models.CharField(
+        max_length=20,
+        choices=EmploymentStatus.choices,
+        default=EmploymentStatus.ACTIVE,
+    )
+    hire_date = models.DateField()
+    termination_date = models.DateField(null=True, blank=True)
+    current_job_title = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Cargo atual para leitura rápida sem depender apenas de histórico.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                name="app_employeeprofile_user_workspace_uniq",
+            ),
+            _check_constraint(
+                predicate=Q(termination_date__isnull=True) | Q(termination_date__gte=models.F("hire_date")),
+                name="app_employeeprofile_termination_after_hire",
+            ),
+        ]
+        verbose_name = "Vínculo do colaborador"
+        verbose_name_plural = "Vínculos dos colaboradores"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        if self.termination_date and self.termination_date < self.hire_date:
+            errors["termination_date"] = "A data de desligamento não pode ser menor que a data de admissão."
+        if self.employment_status == self.EmploymentStatus.TERMINATED and not self.termination_date:
+            errors["termination_date"] = "Informe a data de desligamento para status desligado."
+        if self.termination_date and self.employment_status != self.EmploymentStatus.TERMINATED:
+            errors["employment_status"] = "Use status desligado quando houver data de desligamento."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.email} @ {self.workspace.workspace_name}"
+
+
+class JobHistory(models.Model):
+    """Histórico de cargos de um vínculo (separado da remuneração)."""
+
+    employee_profile = models.ForeignKey(
+        EmployeeProfile,
+        on_delete=models.CASCADE,
+        related_name="job_history_entries",
+    )
+    job_title = models.CharField(max_length=255)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-start_date", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("employee_profile",),
+                condition=Q(end_date__isnull=True),
+                name="app_jobhistory_single_current_job_per_profile",
+            ),
+            _check_constraint(
+                predicate=Q(end_date__isnull=True) | Q(end_date__gte=models.F("start_date")),
+                name="app_jobhistory_end_after_start",
+            ),
+        ]
+        verbose_name = "Histórico de cargo"
+        verbose_name_plural = "Históricos de cargo"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.end_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "A data final não pode ser anterior à data inicial."})
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.employee_profile.user.email} - {self.job_title}"
+
+
+class CompensationHistory(models.Model):
+    """Histórico de remuneração mensal/horista por vínculo."""
+
+    class CompensationType(models.TextChoices):
+        MONTHLY = "monthly", "Mensal"
+        HOURLY = "hourly", "Por hora"
+
+    employee_profile = models.ForeignKey(
+        EmployeeProfile,
+        on_delete=models.CASCADE,
+        related_name="compensation_history_entries",
+    )
+    compensation_type = models.CharField(max_length=20, choices=CompensationType.choices)
+    monthly_salary = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    hourly_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-start_date", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("employee_profile",),
+                condition=Q(end_date__isnull=True),
+                name="app_compensationhistory_single_current_compensation_per_profile",
+            ),
+            _check_constraint(
+                predicate=Q(end_date__isnull=True) | Q(end_date__gte=models.F("start_date")),
+                name="app_compensationhistory_end_after_start",
+            ),
+            _check_constraint(
+                predicate=(
+                    (Q(compensation_type="monthly") & Q(monthly_salary__isnull=False) & Q(hourly_rate__isnull=True))
+                    | (Q(compensation_type="hourly") & Q(hourly_rate__isnull=False) & Q(monthly_salary__isnull=True))
+                ),
+                name="app_compensationhistory_fields_by_type",
+            ),
+        ]
+        verbose_name = "Histórico de remuneração"
+        verbose_name_plural = "Históricos de remuneração"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        if self.end_date and self.end_date < self.start_date:
+            errors["end_date"] = "A data final não pode ser anterior à data inicial."
+        if self.compensation_type == self.CompensationType.MONTHLY:
+            if self.monthly_salary is None:
+                errors["monthly_salary"] = "Informe o salário mensal para remuneração mensal."
+            if self.hourly_rate is not None:
+                errors["hourly_rate"] = "Não informe valor por hora para remuneração mensal."
+        elif self.compensation_type == self.CompensationType.HOURLY:
+            if self.hourly_rate is None:
+                errors["hourly_rate"] = "Informe o valor por hora para remuneração por hora."
+            if self.monthly_salary is not None:
+                errors["monthly_salary"] = "Não informe salário mensal para remuneração por hora."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.employee_profile.user.email} - {self.get_compensation_type_display()}"
+
+
+class FinancialEntryQuerySet(models.QuerySet):
+    def inflows(self):
+        return self.filter(flow_type=FinancialEntry.FlowType.INFLOW)
+
+    def outflows(self):
+        return self.filter(flow_type=FinancialEntry.FlowType.OUTFLOW)
+
+
+class FinancialEntry(models.Model):
+    class EntryKind(models.TextChoices):
+        MANUAL = "manual", "Manual"
+        TIME_ENTRY_COST = "time_entry_cost", "Custo de apontamento"
+        REVERSAL = "reversal", "Estorno"
+
+    class FlowType(models.TextChoices):
+        INFLOW = "inflow", "Entrada"
+        OUTFLOW = "outflow", "Saída"
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="financial_entries",
+    )
+    entry_kind = models.CharField(max_length=24, choices=EntryKind.choices)
+    flow_type = models.CharField(max_length=16, choices=FlowType.choices)
+    occurred_on = models.DateField(default=timezone.localdate)
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    description = models.TextField()
+    client = models.ForeignKey(
+        "Client",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    project = models.ForeignKey(
+        "Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    time_entry = models.ForeignKey(
+        "TimeEntry",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    source_time_entry_id = models.PositiveBigIntegerField(null=True, blank=True)
+    reversal_of = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reversal_entries",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_financial_entries",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_financial_entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = FinancialEntryQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["-occurred_on", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("time_entry", "entry_kind"),
+                condition=Q(time_entry__isnull=False),
+                name="app_financialentry_unique_kind_per_time_entry",
+            ),
+            models.UniqueConstraint(
+                fields=("reversal_of",),
+                condition=Q(reversal_of__isnull=False),
+                name="app_financialentry_single_reversal_per_entry",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["workspace", "occurred_on"]),
+            models.Index(fields=["workspace", "flow_type"]),
+            models.Index(fields=["workspace", "entry_kind"]),
+        ]
+        verbose_name = "Lançamento financeiro"
+        verbose_name_plural = "Lançamentos financeiros"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+
+        if self.client_id and self.workspace_id and self.client.workspace_id != self.workspace_id:
+            errors["client"] = "O cliente deve pertencer ao mesmo workspace do lançamento."
+
+        if self.project_id and self.workspace_id and self.project.workspace_id != self.workspace_id:
+            errors["project"] = "O projeto deve pertencer ao mesmo workspace do lançamento."
+
+        if self.client_id and self.project_id and self.project.client_id != self.client_id:
+            errors["project"] = "O projeto deve pertencer ao cliente informado."
+
+        if self.entry_kind == self.EntryKind.TIME_ENTRY_COST:
+            if self.flow_type != self.FlowType.OUTFLOW:
+                errors["flow_type"] = "Custo de apontamento deve ser uma saída."
+            if not self.time_entry_id:
+                errors["time_entry"] = "Informe o apontamento de origem para custo automático."
+            if self.reversal_of_id:
+                errors["reversal_of"] = "Custo automático não pode apontar para um estorno."
+
+        if self.entry_kind == self.EntryKind.REVERSAL:
+            if not self.reversal_of_id:
+                errors["reversal_of"] = "Informe o lançamento original para gerar estorno."
+            elif self.reversal_of_id == self.pk:
+                errors["reversal_of"] = "Um lançamento não pode estornar a si mesmo."
+
+        if self.entry_kind == self.EntryKind.MANUAL and self.reversal_of_id:
+            errors["reversal_of"] = "Lançamento manual não pode apontar para estorno."
+
+        if self.reversal_of_id:
+            original = self.reversal_of
+            if original is not None and self.flow_type == original.flow_type:
+                errors["flow_type"] = "O estorno deve ter fluxo oposto ao lançamento original."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        if self.time_entry_id and self.source_time_entry_id is None:
+            self.source_time_entry_id = self.time_entry_id
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_flow_type_display()} {self.amount} em {self.occurred_on}"
+
+
+class BudgetGoal(models.Model):
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="budget_goals",
+    )
+    client = models.ForeignKey(
+        "Client",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="budget_goals",
+    )
+    project = models.ForeignKey(
+        "Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="budget_goals",
+    )
+    minimum_target_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    minimum_target_date = models.DateField()
+    desired_target_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    desired_target_date = models.DateField()
+    description = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_budget_goals",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_budget_goals",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [
+            models.Index(fields=["workspace", "minimum_target_date"]),
+            models.Index(fields=["workspace", "desired_target_date"]),
+        ]
+        verbose_name = "Meta de budget"
+        verbose_name_plural = "Metas de budget"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+
+        if self.client_id and self.workspace_id and self.client.workspace_id != self.workspace_id:
+            errors["client"] = "O cliente deve pertencer ao mesmo workspace da meta."
+
+        if self.project_id and self.workspace_id and self.project.workspace_id != self.workspace_id:
+            errors["project"] = "O projeto deve pertencer ao mesmo workspace da meta."
+
+        if self.client_id and self.project_id and self.project.client_id != self.client_id:
+            errors["project"] = "O projeto deve pertencer ao cliente informado."
+
+        if self.desired_target_amount < self.minimum_target_amount:
+            errors["desired_target_amount"] = "A meta desejada não pode ser menor que a meta mínima."
+
+        if self.desired_target_date < self.minimum_target_date:
+            errors["desired_target_date"] = (
+                "A data da meta desejada não pode ser anterior à data da meta mínima."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        if self.project_id:
+            scope = self.project.name
+        elif self.client_id:
+            scope = self.client.name
+        else:
+            scope = self.workspace.workspace_name
+        return f"Meta {scope}"
+
+
 class WorkSchedule(models.Model):
     """Regras de expediente por workspace."""
 
@@ -135,7 +628,11 @@ class WorkSchedule(models.Model):
         default=8,
         validators=[MinValueValidator(1), MaxValueValidator(24)],
     )
-    has_fixed_days = models.BooleanField(default=True)
+    has_fixed_days = models.BooleanField(
+        default=True,
+        verbose_name="Folga Fixa",
+        help_text="Se ativado, o expediente usa os dias da semana escolhidos de forma fixa.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -177,6 +674,11 @@ class TimeEntryTemplate(models.Model):
 
 
 class Department(models.Model):
+    class TimeTrackingMode(models.TextChoices):
+        DURATION = "duration", "Duração"
+        TIME_RANGE = "time_range", "Intervalo"
+        TIMER = "timer", "Cronômetro"
+
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
@@ -197,6 +699,19 @@ class Department(models.Model):
         blank=True,
         related_name="departments",
     )
+    time_tracking_mode = models.CharField(
+        max_length=20,
+        choices=TimeTrackingMode.choices,
+        default=TimeTrackingMode.DURATION,
+    )
+    can_edit_time_entries = models.BooleanField(
+        default=True,
+        help_text="Se falso, membros não devem editar apontamentos salvos (regra de aplicação na view).",
+    )
+    can_delete_time_entries = models.BooleanField(
+        default=True,
+        help_text="Se falso, membros não devem excluir apontamentos (regra de aplicação na view).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -211,7 +726,7 @@ class Department(models.Model):
 
 
 class UserDepartment(models.Model):
-    """Um departamento por usuário em cada workspace."""
+    """Permite histórico de realocação e departamento principal por workspace."""
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_departments")
     workspace = models.ForeignKey(
@@ -224,13 +739,36 @@ class UserDepartment(models.Model):
         on_delete=models.CASCADE,
         related_name="user_assignments",
     )
+    is_primary = models.BooleanField(default=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("user", "workspace")
+        constraints = [
+            # Garante um único departamento principal por usuário/workspace.
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                condition=Q(is_primary=True),
+                name="app_userdepartment_primary_per_workspace",
+            ),
+            # Histórico: só pode existir um vínculo "ativo" (sem end_date) por usuário/workspace.
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                condition=Q(end_date__isnull=True),
+                name="app_userdepartment_single_active_per_workspace",
+            ),
+        ]
         verbose_name = "Departamento do usuário"
         verbose_name_plural = "Departamentos dos usuários"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError(
+                {"end_date": "A data final não pode ser anterior à data inicial."}
+            )
 
     def __str__(self):
         return f"{self.user.email} → {self.department.name}"
@@ -248,6 +786,12 @@ class Client(models.Model):
     document = models.CharField(max_length=64, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=64, blank=True)
+    budget = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         User,
@@ -255,6 +799,13 @@ class Client(models.Model):
         null=True,
         blank=True,
         related_name="created_clients",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_clients",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -282,6 +833,19 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    budget = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    deadline = models.DateField(null=True, blank=True)
+    estimated_hours = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         User,
@@ -289,6 +853,13 @@ class Project(models.Model):
         null=True,
         blank=True,
         related_name="created_projects",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_projects",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -420,10 +991,28 @@ class UserProject(models.Model):
         return f"{self.user.email} → {self.project.name}"
 
 
+class TimeEntryQuerySet(models.QuerySet):
+    """Consultas de apontamentos; use ``saved_only()`` em agregações (rascunhos ficam de fora)."""
+
+    def saved_only(self):
+        return self.filter(status=self.model.Status.SAVED)
+
+
 class TimeEntry(models.Model):
     class EntryType(models.TextChoices):
         INTERNAL = "internal", "Interno"
         EXTERNAL = "external", "Externo"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Rascunho"
+        SAVED = "saved", "Salvo"
+
+    class EntryMode(models.TextChoices):
+        DURATION = "duration", "Duração"
+        TIME_RANGE = "time_range", "Intervalo"
+        TIMER = "timer", "Cronômetro"
+
+    _MAX_MINUTES_PER_DAY = 24 * 60
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="time_entries")
     workspace = models.ForeignKey(
@@ -436,8 +1025,26 @@ class TimeEntry(models.Model):
         on_delete=models.CASCADE,
         related_name="time_entries",
     )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.SAVED,
+    )
+    entry_mode = models.CharField(
+        max_length=20,
+        choices=EntryMode.choices,
+        default=EntryMode.DURATION,
+    )
+    timer_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Início do cronômetro (rascunho em andamento ou referência ao salvar).",
+    )
     date = models.DateField()
-    hours = models.DecimalField(max_digits=6, decimal_places=2)
+    hours = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
     client = models.ForeignKey(
         Client,
         null=True,
@@ -465,11 +1072,37 @@ class TimeEntry(models.Model):
         blank=True,
     )
     description = models.TextField(blank=True)
+    is_overtime = models.BooleanField(
+        default=False,
+        help_text="Indica se o apontamento é hora extra (opcional no lançamento).",
+    )
+    timer_pending_template_completion = models.BooleanField(
+        default=False,
+        help_text=(
+            "Após parar o cronômetro: indica que o registro salvo ainda aguarda "
+            "'Salvar dados do apontamento' ou descarte explícito."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = TimeEntryQuerySet.as_manager()
+
     class Meta:
         ordering = ["-date", "-pk"]
+        indexes = [
+            models.Index(fields=["workspace", "date"]),
+            models.Index(fields=["user", "date"]),
+            models.Index(fields=["project"]),
+            models.Index(fields=["user", "workspace", "status"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "workspace"),
+                condition=Q(status="draft"),
+                name="app_timeentry_one_draft_per_user_workspace",
+            ),
+        ]
         verbose_name = "Apontamento"
         verbose_name_plural = "Apontamentos"
 
@@ -492,11 +1125,79 @@ class TimeEntry(models.Model):
             elif self.task.project_id != self.project_id:
                 errors["task"] = "A tarefa não pertence ao projeto selecionado."
 
+        if self.department_id and self.workspace_id and self.department.workspace_id != self.workspace_id:
+            errors["department"] = "O departamento não pertence a este workspace."
+
+        is_draft = self.status == self.Status.DRAFT
+        has_hours = self.hours is not None
+        has_start = self.start_time is not None
+        has_end = self.end_time is not None
+        has_time_range = has_start and has_end
+
+        if not is_draft and has_start != has_end:
+            errors["end_time"] = "Informe início e fim para usar o modo por intervalo."
+
+        if (
+            not is_draft
+            and has_time_range
+            and self.entry_mode in (self.EntryMode.TIME_RANGE, self.EntryMode.TIMER)
+        ):
+            if self.end_time <= self.start_time:
+                errors["end_time"] = (
+                    "O horário de fim deve ser maior que o de início no mesmo dia "
+                    "(apontamento não pode atravessar meia-noite)."
+                )
+            else:
+                start_total_minutes = self.start_time.hour * 60 + self.start_time.minute
+                end_total_minutes = self.end_time.hour * 60 + self.end_time.minute
+                self.duration_minutes = end_total_minutes - start_total_minutes
+
+        if has_hours and self.duration_minutes is None:
+            minutes_decimal = (self.hours * Decimal("60")).quantize(
+                Decimal("1"),
+                rounding=ROUND_HALF_UP,
+            )
+            self.duration_minutes = int(minutes_decimal)
+
+        if is_draft:
+            if errors:
+                raise ValidationError(errors)
+            return
+
+        # --- salvo: validação por modo de entrada ---
+        mode = self.entry_mode
+        if mode == self.EntryMode.DURATION:
+            if not has_hours and not (self.duration_minutes is not None and self.duration_minutes > 0):
+                errors["hours"] = "Informe horas ou duração em minutos."
+        elif mode == self.EntryMode.TIME_RANGE:
+            if not has_time_range:
+                errors["start_time"] = "Informe início e fim no mesmo dia."
+        elif mode == self.EntryMode.TIMER:
+            measurable = (
+                has_hours
+                or (self.duration_minutes is not None and self.duration_minutes > 0)
+                or has_time_range
+            )
+            if not measurable:
+                errors["hours"] = "Finalize o cronômetro com duração ou intervalo de horários."
+            if self.timer_started_at and self.timer_started_at.date() != self.date:
+                errors["date"] = "A data do apontamento deve ser a mesma do início do cronômetro."
+        else:
+            errors["entry_mode"] = "Modo de entrada inválido."
+
+        if self.duration_minutes is not None and self.duration_minutes > self._MAX_MINUTES_PER_DAY:
+            errors["duration_minutes"] = "Duração não pode exceder 24 horas no mesmo dia (MVP)."
+
+        if has_hours and self.hours is not None and self.hours > Decimal("24"):
+            errors["hours"] = "Horas não podem exceder 24 por apontamento (MVP)."
+
         if errors:
             raise ValidationError(errors)
 
     def _assert_user_access(self) -> None:
         """Garante que o usuário do apontamento tem vínculos UserClient / UserProject."""
+        if self.status == self.Status.DRAFT and not self.client_id and not self.project_id:
+            return
         ws_id = self.workspace_id
         if self.client_id:
             has_client = UserClient.objects.filter(
@@ -515,11 +1216,39 @@ class TimeEntry(models.Model):
             if not has_project:
                 raise PermissionDenied("Usuário sem permissão para este projeto neste workspace.")
 
-    def save(self, *args, skip_access_check: bool = False, **kwargs) -> None:
+    def save(
+        self,
+        *args,
+        skip_access_check: bool = False,
+        financial_actor: User | None = None,
+        sync_financial: bool = True,
+        **kwargs,
+    ) -> None:
         self.full_clean()
         if not skip_access_check:
             self._assert_user_access()
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if sync_financial and self.status == self.Status.SAVED:
+                from app.financial import sync_time_entry_financial_entry
+
+                sync_time_entry_financial_entry(self, actor=financial_actor or self.user)
+
+    def delete(
+        self,
+        *args,
+        financial_actor: User | None = None,
+        sync_financial: bool = True,
+        **kwargs,
+    ) -> tuple[int, dict[str, int]]:
+        with transaction.atomic():
+            if sync_financial and self.status == self.Status.SAVED:
+                from app.financial import reverse_time_entry_financial_entry
+
+                reverse_time_entry_financial_entry(self, actor=financial_actor or self.user)
+            return super().delete(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.email} {self.date} {self.hours}h"
+        if self.hours is not None:
+            return f"{self.user.email} {self.date} {self.hours}h"
+        return f"{self.user.email} {self.date} {self.duration_minutes}min"

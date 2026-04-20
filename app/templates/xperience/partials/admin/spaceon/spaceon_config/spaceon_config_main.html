@@ -1,8 +1,66 @@
 <!-- main content -->
-<main class="main">
+<main class="main admin-config-ws-main">
+    <div
+        class="admin-tt-stack"
+        {% if task_create_dialog_open or task_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-tarefas"{% elif project_create_dialog_open or project_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-projetos"{% elif client_create_dialog_open or client_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-clientes"{% endif %}
+    >
+        <div class="admin-tt-tabbed-shell spaceon-card admin-config-tabbed-shell">
+            <header class="admin-tt-tabs-strip">
+                <nav class="admin-tt-tabs" role="tablist" aria-label="Seções do workspace">
+                    <a
+                        href="#admin-config-ws-empresa"
+                        class="admin-tt-tab admin-tt-tab--active"
+                        role="tab"
+                        id="tab-admin-config-ws-empresa"
+                        aria-controls="admin-config-ws-empresa"
+                        aria-selected="true"
+                    >Empresa</a>
+                    <a
+                        href="#admin-config-ws-clientes"
+                        class="admin-tt-tab"
+                        role="tab"
+                        id="tab-admin-config-ws-clientes"
+                        aria-controls="admin-config-ws-clientes"
+                        aria-selected="false"
+                    >Clientes</a>
+                    <a
+                        href="#admin-config-ws-projetos"
+                        class="admin-tt-tab"
+                        role="tab"
+                        id="tab-admin-config-ws-projetos"
+                        aria-controls="admin-config-ws-projetos"
+                        aria-selected="false"
+                    >Projetos</a>
+                    <a
+                        href="#admin-config-ws-tarefas"
+                        class="admin-tt-tab"
+                        role="tab"
+                        id="tab-admin-config-ws-tarefas"
+                        aria-controls="admin-config-ws-tarefas"
+                        aria-selected="false"
+                    >Tarefas</a>
+                    <a
+                        href="#admin-config-ws-membros"
+                        class="admin-tt-tab"
+                        role="tab"
+                        id="tab-admin-config-ws-membros"
+                        aria-controls="admin-config-ws-membros"
+                        aria-selected="false"
+                    >Membros</a>
+                    <a
+                        href="#admin-config-ws-fornecedores"
+                        class="admin-tt-tab"
+                        role="tab"
+                        id="tab-admin-config-ws-fornecedores"
+                        aria-controls="admin-config-ws-fornecedores"
+                        aria-selected="false"
+                    >Vinculo Empregatício</a>
+                </nav>
+            </header>
 
-    <section class="main-container">
-        <div class="spaceon-grid">
+        <article class="admin-tt-panel admin-tt-panel--active" id="admin-config-ws-empresa" role="tabpanel" aria-labelledby="tab-admin-config-ws-empresa" aria-hidden="false">
+            <div class="admin-tt-body">
+            <div class="spaceon-grid">
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
@@ -37,17 +95,163 @@
                             <span class="config-stat-label">Tarefas</span>
                         </div>
                         <div class="config-stat-box">
-                            <span class="config-stat-value">—</span>
-                            <span class="config-stat-label">Fornecedores</span>
+                            <span class="config-stat-value">{{ workspace_cash_balance }}</span>
+                            <span class="config-stat-label">Saldo em caixa</span>
+                        </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ workspace_cash_inflows }}</span>
+                            <span class="config-stat-label">Entradas</span>
+                        </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ workspace_cash_outflows }}</span>
+                            <span class="config-stat-label">Saídas</span>
                         </div>
                     </div>
                 </div>
             </article>
-        </div>
-    </section>
 
-    <section class="main-container">
-        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-wallet" aria-hidden="true"></i>
+                        <h2>Fluxo de caixa</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <div class="config-form">
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_financial_entry">
+                        <div class="config-grid config-grid-two">
+                            {% for field in financial_entry_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Adicionar lançamento</button>
+                        </div>
+                    </form>
+
+                    {% if financial_entries %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Fluxo</th>
+                                    <th>Valor</th>
+                                    <th>Descrição</th>
+                                    <th>Cliente</th>
+                                    <th>Projeto</th>
+                                    <th>Colaborador</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in financial_entries %}
+                                <tr>
+                                    <td>{{ item.occurred_on|date:"d/m/Y" }}</td>
+                                    <td>{{ item.get_entry_kind_display }}</td>
+                                    <td>{{ item.get_flow_type_display }}</td>
+                                    <td>{{ item.amount }}</td>
+                                    <td>{{ item.description }}</td>
+                                    <td>{% if item.client %}{{ item.client.name }}{% else %}—{% endif %}</td>
+                                    <td>{% if item.project %}{{ item.project.name }}{% else %}—{% endif %}</td>
+                                    <td>{% if item.user %}{{ item.user.email }}{% else %}—{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum lançamento financeiro cadastrado ainda.</p>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-bullseye" aria-hidden="true"></i>
+                        <h2>Metas financeiras</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <div class="config-form">
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_budget_goal">
+                        <div class="config-grid config-grid-two">
+                            {% for field in budget_goal_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Adicionar meta</button>
+                        </div>
+                    </form>
+
+                    {% if budget_goals %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Escopo</th>
+                                    <th>Meta mínima</th>
+                                    <th>Data da meta mínima</th>
+                                    <th>Meta desejada</th>
+                                    <th>Data da meta desejada</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for goal in budget_goals %}
+                                <tr>
+                                    <td>
+                                        {% if goal.project %}
+                                            Projeto: {{ goal.project.name }}
+                                        {% elif goal.client %}
+                                            Cliente: {{ goal.client.name }}
+                                        {% else %}
+                                            Workspace
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ goal.minimum_target_amount }}</td>
+                                    <td>{{ goal.minimum_target_date|date:"d/m/Y" }}</td>
+                                    <td>{{ goal.desired_target_amount }}</td>
+                                    <td>{{ goal.desired_target_date|date:"d/m/Y" }}</td>
+                                    <td>{{ goal.description|default:"—" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhuma meta financeira cadastrada ainda.</p>
+                    {% endif %}
+                </div>
+            </article>
+            </div>
+            </div>
+        </article>
+
+        <article class="admin-tt-panel" id="admin-config-ws-clientes" role="tabpanel" aria-labelledby="tab-admin-config-ws-clientes" aria-hidden="true">
+            <div class="admin-tt-body">
+            <div class="spaceon-grid">
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
@@ -60,60 +264,141 @@
                 </header>
 
                 <div class="config-form">
+                    <p class="config-empty-hint config-empty-hint--top">Cadastre clientes do workspace; use <span class="admin-tt-pill">Ativo</span> para liberar em projetos.</p>
                     {% if clients %}
-                    <div class="config-table-wrap">
-                        <table class="config-data-table">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Documento</th>
-                                    <th>Email</th>
-                                    <th>Ativo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for c in clients %}
-                                <tr>
-                                    <td>{{ c.name }}</td>
-                                    <td>{{ c.document|default:"—" }}</td>
-                                    <td>{{ c.email|default:"—" }}</td>
-                                    <td>{% if c.is_active %}Sim{% else %}Não{% endif %}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ul class="admin-tt-template-list" role="list">
+                        {% for c in clients %}
+                        <li class="admin-tt-template-row">
+                            <div class="admin-tt-template-row__main">
+                                <span class="admin-tt-template-row__name">{{ c.name }}</span>
+                                <p class="admin-tt-entity-meta">
+                                    {% if c.document %}Doc.: {{ c.document }}{% else %}Sem documento{% endif %}
+                                    · {% if c.email %}{{ c.email }}{% else %}Sem email{% endif %}
+                                    {% if c.phone %} · {{ c.phone }}{% endif %}
+                                </p>
+                                <div class="admin-tt-template-row__badges" aria-label="Resumo">
+                                    {% if c.budget != None %}<span class="admin-tt-pill admin-tt-pill--hours">Budget {{ c.budget }}</span>{% endif %}
+                                    {% if c.is_active %}<span class="admin-tt-pill">Ativo</span>{% else %}<span class="admin-tt-pill admin-tt-pill--muted">Inativo</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="admin-tt-template-row__actions">
+                                <button
+                                    type="button"
+                                    class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                                    title="Editar cliente"
+                                    aria-label="Editar cliente"
+                                    data-admin-config-client-edit
+                                    data-client-id="{{ c.pk }}"
+                                    data-name="{{ c.name|escape }}"
+                                    data-document="{{ c.document|default:''|escape }}"
+                                    data-email="{{ c.email|default:''|escape }}"
+                                    data-phone="{{ c.phone|default:''|escape }}"
+                                    data-budget="{% if c.budget != None %}{{ c.budget }}{% endif %}"
+                                    data-is-active="{% if c.is_active %}1{% else %}0{% endif %}"
+                                >
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </button>
+                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_client">
+                                    <input type="hidden" name="client_id" value="{{ c.pk }}">
+                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir cliente" aria-label="Excluir cliente">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
                     {% else %}
                     <p class="config-empty-hint">Nenhum cliente cadastrado ainda.</p>
                     {% endif %}
 
-                    <h3 class="config-subheading">Adicionar cliente</h3>
-                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="create_client">
-                        <div class="config-grid config-grid-two">
-                            {% for field in client_form %}
-                            <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
-                                {{ field.errors }}
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {{ field }}
+                    <div class="admin-tt-create-actions">
+                        <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-config-cli-create-open" aria-haspopup="dialog" aria-controls="admin-config-cli-create-dialog">
+                            Criar
+                        </button>
+                    </div>
+
+                    <dialog
+                        id="admin-config-cli-create-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-cli-create-title"
+                        data-auto-open="{% if client_create_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-cli-create-title">Novo cliente</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-cli-create-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
                             </div>
-                            {% endfor %}
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="create_client">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in client_form %}
+                                        <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="admin-tt-sch-create-form__actions">
+                                        <button type="submit" class="config-btn-save">Criar cliente</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <div class="config-actions">
-                            <button type="submit" class="config-btn-save">
-                                <i class="fas fa-plus" aria-hidden="true"></i>
-                                Adicionar cliente
-                            </button>
+                    </dialog>
+
+                    {% if clients %}
+                    <dialog
+                        id="admin-config-cli-edit-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-cli-edit-title"
+                        data-auto-open="{% if client_edit_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-cli-edit-title">Editar cliente</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-cli-edit-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_client">
+                                    <input type="hidden" name="client_id" id="admin-config-cli-edit-id" value="{{ client_edit_target_id }}">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in client_edit_form %}
+                                        <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="admin-tt-sch-create-form__actions">
+                                        <button type="submit" class="config-btn-save">Salvar cliente</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </form>
+                    </dialog>
+                    {% endif %}
                 </div>
             </article>
-        </div>
-    </section>
+            </div>
+            </div>
+        </article>
 
-    <section class="main-container">
-        <div class="spaceon-grid">
+        <article class="admin-tt-panel" id="admin-config-ws-projetos" role="tabpanel" aria-labelledby="tab-admin-config-ws-projetos" aria-hidden="true">
+            <div class="admin-tt-body">
+            <div class="spaceon-grid">
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
@@ -126,61 +411,142 @@
                 </header>
 
                 <div class="config-form">
+                    {% if not active_clients %}
+                    <p class="config-empty-hint config-empty-hint--top">Cadastre ao menos um cliente ativo antes de criar projetos.</p>
+                    {% endif %}
                     {% if projects %}
-                    <div class="config-table-wrap">
-                        <table class="config-data-table">
-                            <thead>
-                                <tr>
-                                    <th>Projeto</th>
-                                    <th>Cliente</th>
-                                    <th>Ativo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for p in projects %}
-                                <tr>
-                                    <td>{{ p.name }}</td>
-                                    <td>{{ p.client.name }}</td>
-                                    <td>{% if p.is_active %}Sim{% else %}Não{% endif %}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ul class="admin-tt-template-list" role="list">
+                        {% for p in projects %}
+                        <li class="admin-tt-template-row">
+                            <div class="admin-tt-template-row__main">
+                                <span class="admin-tt-template-row__name">{{ p.name }}</span>
+                                <p class="admin-tt-entity-meta">{{ p.client.name }}</p>
+                                <div class="admin-tt-template-row__badges" aria-label="Resumo">
+                                    {% if p.budget != None %}<span class="admin-tt-pill admin-tt-pill--hours">Budget {{ p.budget }}</span>{% endif %}
+                                    {% if p.deadline %}<span class="admin-tt-pill admin-tt-pill--weekday">Prazo {{ p.deadline|date:"d/m/Y" }}</span>{% endif %}
+                                    {% if p.estimated_hours != None %}<span class="admin-tt-pill admin-tt-pill--weekday">{{ p.estimated_hours }} h est.</span>{% endif %}
+                                    {% if p.is_active %}<span class="admin-tt-pill">Ativo</span>{% else %}<span class="admin-tt-pill admin-tt-pill--muted">Inativo</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="admin-tt-template-row__actions">
+                                <button
+                                    type="button"
+                                    class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                                    title="Editar projeto"
+                                    aria-label="Editar projeto"
+                                    data-admin-config-project-edit
+                                    data-project-id="{{ p.pk }}"
+                                    data-client-id="{{ p.client_id }}"
+                                    data-name="{{ p.name|escape }}"
+                                    data-description-raw="{{ p.description|default:''|escape }}"
+                                    data-budget="{% if p.budget != None %}{{ p.budget }}{% endif %}"
+                                    data-deadline="{% if p.deadline %}{{ p.deadline|date:'Y-m-d' }}{% endif %}"
+                                    data-estimated-hours="{% if p.estimated_hours != None %}{{ p.estimated_hours }}{% endif %}"
+                                    data-is-active="{% if p.is_active %}1{% else %}0{% endif %}"
+                                >
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </button>
+                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_project">
+                                    <input type="hidden" name="project_id" value="{{ p.pk }}">
+                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir projeto" aria-label="Excluir projeto">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
                     {% else %}
                     <p class="config-empty-hint">Nenhum projeto cadastrado ainda.</p>
                     {% endif %}
 
-                    <h3 class="config-subheading">Adicionar projeto</h3>
-                    {% if not active_clients %}
-                    <p class="config-empty-hint">Cadastre ao menos um cliente ativo antes de criar projetos.</p>
-                    {% endif %}
-                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="create_project">
-                        <div class="config-grid config-grid-two">
-                            {% for field in project_form %}
-                            <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}{% if field.name == 'description' %} config-field-full{% endif %}">
-                                {{ field.errors }}
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {{ field }}
+                    <div class="admin-tt-create-actions">
+                        <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-config-prj-create-open" aria-haspopup="dialog" aria-controls="admin-config-prj-create-dialog" {% if not active_clients %}disabled{% endif %}>
+                            Criar
+                        </button>
+                    </div>
+
+                    <dialog
+                        id="admin-config-prj-create-dialog"
+                        class="admin-tt-edit-dialog admin-config-entity-dialog--project"
+                        aria-labelledby="admin-config-prj-create-title"
+                        data-auto-open="{% if project_create_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-prj-create-title">Novo projeto</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-prj-create-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
                             </div>
-                            {% endfor %}
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="create_project">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in project_form %}
+                                        <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}{% if field.name == 'description' %} config-field-full{% endif %}">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="admin-tt-sch-create-form__actions">
+                                        <button type="submit" class="config-btn-save" {% if not active_clients %}disabled{% endif %}>Criar projeto</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <div class="config-actions">
-                            <button type="submit" class="config-btn-save" {% if not active_clients %}disabled{% endif %}>
-                                <i class="fas fa-plus" aria-hidden="true"></i>
-                                Adicionar projeto
-                            </button>
+                    </dialog>
+
+                    {% if projects %}
+                    <dialog
+                        id="admin-config-prj-edit-dialog"
+                        class="admin-tt-edit-dialog admin-config-entity-dialog--project"
+                        aria-labelledby="admin-config-prj-edit-title"
+                        data-auto-open="{% if project_edit_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-prj-edit-title">Editar projeto</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-prj-edit-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_project">
+                                    <input type="hidden" name="project_id" id="admin-config-prj-edit-id" value="{{ project_edit_target_id }}">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in project_edit_form %}
+                                        <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}{% if field.name == 'description' %} config-field-full{% endif %}">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="admin-tt-sch-create-form__actions">
+                                        <button type="submit" class="config-btn-save">Salvar projeto</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </form>
+                    </dialog>
+                    {% endif %}
                 </div>
             </article>
-        </div>
-    </section>
+            </div>
+            </div>
+        </article>
 
-    <section class="main-container">
-        <div class="spaceon-grid">
+        <article class="admin-tt-panel" id="admin-config-ws-tarefas" role="tabpanel" aria-labelledby="tab-admin-config-ws-tarefas" aria-hidden="true">
+            <div class="admin-tt-body">
+            <div class="spaceon-grid">
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
@@ -193,63 +559,135 @@
                 </header>
 
                 <div class="config-form">
+                    {% if not active_projects %}
+                    <p class="config-empty-hint config-empty-hint--top">Cadastre ao menos um projeto ativo antes de criar tarefas.</p>
+                    {% endif %}
                     {% if tasks %}
-                    <div class="config-table-wrap">
-                        <table class="config-data-table">
-                            <thead>
-                                <tr>
-                                    <th>Tarefa</th>
-                                    <th>Projeto</th>
-                                    <th>Cliente</th>
-                                    <th>Ativa</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for t in tasks %}
-                                <tr>
-                                    <td>{{ t.name }}</td>
-                                    <td>{{ t.project.name }}</td>
-                                    <td>{{ t.project.client.name }}</td>
-                                    <td>{% if t.is_active %}Sim{% else %}Não{% endif %}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ul class="admin-tt-template-list" role="list">
+                        {% for t in tasks %}
+                        <li class="admin-tt-template-row">
+                            <div class="admin-tt-template-row__main">
+                                <span class="admin-tt-template-row__name">{{ t.name }}</span>
+                                <p class="admin-tt-entity-meta">{{ t.project.client.name }} · {{ t.project.name }}</p>
+                                <div class="admin-tt-template-row__badges" aria-label="Status">
+                                    {% if t.is_active %}<span class="admin-tt-pill">Ativa</span>{% else %}<span class="admin-tt-pill admin-tt-pill--muted">Inativa</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="admin-tt-template-row__actions">
+                                <button
+                                    type="button"
+                                    class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                                    title="Editar tarefa"
+                                    aria-label="Editar tarefa"
+                                    data-admin-config-task-edit
+                                    data-task-id="{{ t.pk }}"
+                                    data-project-id="{{ t.project_id }}"
+                                    data-name="{{ t.name|escape }}"
+                                    data-is-active="{% if t.is_active %}1{% else %}0{% endif %}"
+                                >
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </button>
+                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_task">
+                                    <input type="hidden" name="task_id" value="{{ t.pk }}">
+                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir tarefa" aria-label="Excluir tarefa">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
                     {% else %}
                     <p class="config-empty-hint">Nenhuma tarefa cadastrada ainda.</p>
                     {% endif %}
 
-                    <h3 class="config-subheading">Adicionar tarefa</h3>
-                    {% if not active_projects %}
-                    <p class="config-empty-hint">Cadastre ao menos um projeto ativo antes de criar tarefas.</p>
-                    {% endif %}
-                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="create_task">
-                        <div class="config-grid config-grid-two">
-                            {% for field in task_form %}
-                            <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
-                                {{ field.errors }}
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {{ field }}
+                    <div class="admin-tt-create-actions">
+                        <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-config-tsk-create-open" aria-haspopup="dialog" aria-controls="admin-config-tsk-create-dialog" {% if not active_projects %}disabled{% endif %}>
+                            Criar
+                        </button>
+                    </div>
+
+                    <dialog
+                        id="admin-config-tsk-create-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-tsk-create-title"
+                        data-auto-open="{% if task_create_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-tsk-create-title">Nova tarefa</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-tsk-create-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
                             </div>
-                            {% endfor %}
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="create_task">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in task_form %}
+                                        <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="admin-tt-sch-create-form__actions">
+                                        <button type="submit" class="config-btn-save" {% if not active_projects %}disabled{% endif %}>Criar tarefa</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <div class="config-actions">
-                            <button type="submit" class="config-btn-save" {% if not active_projects %}disabled{% endif %}>
-                                <i class="fas fa-plus" aria-hidden="true"></i>
-                                Adicionar tarefa
-                            </button>
+                    </dialog>
+
+                    {% if tasks %}
+                    <dialog
+                        id="admin-config-tsk-edit-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-tsk-edit-title"
+                        data-auto-open="{% if task_edit_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-tsk-edit-title">Editar tarefa</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-tsk-edit-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_task">
+                                    <input type="hidden" name="task_id" id="admin-config-tsk-edit-id" value="{{ task_edit_target_id }}">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in task_edit_form %}
+                                        <div class="config-field{% if field.name == 'is_active' %} config-field-checkbox{% endif %}">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="admin-tt-sch-create-form__actions">
+                                        <button type="submit" class="config-btn-save">Salvar tarefa</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </form>
+                    </dialog>
+                    {% endif %}
                 </div>
             </article>
-        </div>
-    </section>
+            </div>
+            </div>
+        </article>
 
-    <section class="main-container">
-        <div class="spaceon-grid">
+        <article class="admin-tt-panel" id="admin-config-ws-membros" role="tabpanel" aria-labelledby="tab-admin-config-ws-membros" aria-hidden="true">
+            <div class="admin-tt-body">
+            <div class="spaceon-grid">
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
@@ -262,120 +700,297 @@
                 </header>
 
                 <div class="config-form">
-                    <p class="config-empty-hint config-empty-hint--top">Usuários com membership neste workspace. Vincule clientes e projetos que cada um pode usar nos apontamentos.</p>
+                    <p class="config-empty-hint config-empty-hint--top">Membros do workspace, departamento e permissões de clientes e projetos nos apontamentos. Alterações são salvas automaticamente ao escolher ou remover um vínculo.</p>
 
                     {% if member_rows %}
-                    {% for row in member_rows %}
-                    <div class="config-member-card">
-                        <div class="config-member-head">
-                            <div>
-                                <strong class="config-member-email">{{ row.user.email }}</strong>
-                                {% if row.user.get_full_name %}
-                                <span class="config-member-name">{{ row.user.get_full_name }}</span>
-                                {% endif %}
-                            </div>
-                            {% if row.department %}
-                            <span class="config-member-dept">Dept.: {{ row.department.name }}</span>
-                            {% endif %}
+                    <div
+                        id="admin-config-members-access"
+                        class="acf-members"
+                        data-acf-members-access
+                        data-csrf-token="{{ csrf_token }}"
+                        data-url-link-client="{% url 'admin-config-member-link-client' %}"
+                        data-url-unlink-client="{% url 'admin-config-member-unlink-client' %}"
+                        data-url-link-project="{% url 'admin-config-member-link-project' %}"
+                        data-url-unlink-project="{% url 'admin-config-member-unlink-project' %}"
+                        data-url-remove-member="{% url 'admin-config-member-remove-membership' %}"
+                        data-page-size="8"
+                    >
+                        <div class="acf-members__table-scroll">
+                            <table class="acf-members__table" role="grid" aria-label="Membros e acessos">
+                                <thead data-acf-members-thead>
+                                    <tr>
+                                        <th scope="col" class="acf-members__th acf-members__th--member">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="member">
+                                                Membro
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--dept">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="department">
+                                                Departamento
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--clients">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="clients">
+                                                Clientes com acesso
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--projects">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="projects">
+                                                Projetos com acesso
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                        <th scope="col" class="acf-members__th acf-members__th--actions">
+                                            <button type="button" class="acf-members__th-btn" data-sort-key="row">
+                                                Ações
+                                                <span class="acf-members__sort-icon fas fa-sort" aria-hidden="true"></span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody data-acf-members-tbody>
+                                    {% for row in member_rows %}
+                                    <tr
+                                        class="acf-members__row"
+                                        data-user-id="{{ row.user.pk }}"
+                                        data-original-index="{{ forloop.counter0 }}"
+                                        data-sort-member="{{ row.user.get_full_name|default:row.user.email|lower }}"
+                                        data-sort-department="{% if row.department %}{{ row.department.name|lower }}{% else %}zzzz{% endif %}"
+                                        data-sort-clients="{% for uc in row.client_links %}{{ uc.client.name|lower }}{% if not forloop.last %},{% endif %}{% empty %}zzzz{% endfor %}"
+                                        data-sort-projects="{% for up in row.project_links %}{{ up.project.client.name|lower }} {{ up.project.name|lower }}{% if not forloop.last %},{% endif %}{% empty %}zzzz{% endfor %}"
+                                        data-sort-row="{{ forloop.counter0 }}"
+                                    >
+                                        <td class="acf-members__td acf-members__td--member">
+                                            <div class="acf-members__member-cell">
+                                                <img class="acf-members__avatar" src="{{ row.avatar_url }}" alt="" width="36" height="36" loading="lazy">
+                                                <div class="acf-members__member-text">
+                                                    <span class="acf-members__member-name" title="{{ row.user.get_full_name|default:row.user.email }}">{{ row.user.get_full_name|default:row.user.email }}</span>
+                                                    <span class="acf-members__member-email" title="{{ row.user.email }}">{{ row.user.email }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--dept">
+                                            {% if row.department %}
+                                            <span class="acf-members__tag acf-members__tag--dept" title="{{ row.department.name }}">{{ row.department.name }}</span>
+                                            {% else %}
+                                            <span class="acf-members__tag acf-members__tag--dept acf-members__tag--empty">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--tags" data-acf-cell-clients>
+                                            <div class="acf-members__tags-wrap" data-acf-tags-clients>
+                                                {% for uc in row.client_links %}
+                                                <span class="acf-members__tag acf-members__tag--client" data-uc-id="{{ uc.pk }}" data-client-id="{{ uc.client_id }}" title="{{ uc.client.name|escape }}">
+                                                    <span class="acf-members__tag-text">{{ uc.client.name }}</span>
+                                                    <button type="button" class="acf-members__tag-x" aria-label="Remover cliente">
+                                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                                    </button>
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                            {% if active_clients %}
+                                            <select class="acf-members__inline-select acf-members__client-select" aria-label="Adicionar cliente" {% if not active_clients %}disabled{% endif %}>
+                                                <option value="">+ Adicionar cliente</option>
+                                                {% for c in active_clients %}
+                                                <option value="{{ c.pk }}" {% if c.pk in row.linked_client_ids %}disabled hidden class="acf-members__opt--linked"{% endif %}>{{ c.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <span class="acf-members__add-placeholder">Sem clientes ativos</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--tags" data-acf-cell-projects>
+                                            <div class="acf-members__tags-wrap" data-acf-tags-projects>
+                                                {% for up in row.project_links %}
+                                                <span class="acf-members__tag acf-members__tag--project" data-up-id="{{ up.pk }}" data-project-id="{{ up.project_id }}" title="{{ up.project.client.name|escape }} — {{ up.project.name|escape }}">
+                                                    <span class="acf-members__tag-text">{{ up.project.client.name }} — {{ up.project.name }}</span>
+                                                    <button type="button" class="acf-members__tag-x" aria-label="Remover projeto">
+                                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                                    </button>
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                            {% if active_projects %}
+                                            <select class="acf-members__inline-select acf-members__project-select" aria-label="Adicionar projeto" {% if not active_projects %}disabled{% endif %}>
+                                                <option value="">+ Adicionar projeto</option>
+                                                {% for p in active_projects %}
+                                                <option value="{{ p.pk }}" {% if p.pk in row.linked_project_ids %}disabled hidden class="acf-members__opt--linked"{% endif %}>{{ p.client.name }} — {{ p.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <span class="acf-members__add-placeholder">Sem projetos ativos</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acf-members__td acf-members__td--actions">
+                                            <button
+                                                type="button"
+                                                class="acf-members__row-remove admin-tt-icon-btn admin-tt-icon-btn--danger"
+                                                title="Remover membro do workspace"
+                                                aria-label="Remover membro do workspace"
+                                                {% if row.user.pk == config_workspace.owner_id %}disabled{% endif %}
+                                            >
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-
-                        <div class="config-access-block">
-                            <span class="config-access-label">Clientes permitidos</span>
-                            <div class="config-chip-row">
-                                {% for uc in row.client_links %}
-                                <span class="config-chip">
-                                    {{ uc.client.name }}
-                                    <form method="post" action="{% url 'admin-config' %}" class="config-chip-unlink">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="unlink_user_client">
-                                        <input type="hidden" name="uc_id" value="{{ uc.pk }}">
-                                        <button type="submit" class="config-chip-remove" title="Remover vínculo" aria-label="Remover {{ uc.client.name }}">&times;</button>
-                                    </form>
-                                </span>
-                                {% empty %}
-                                <span class="config-chip config-chip--muted">Nenhum cliente vinculado</span>
-                                {% endfor %}
-                            </div>
-                            {% if active_clients %}
-                            <form method="post" action="{% url 'admin-config' %}" class="config-inline-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="link_user_client">
-                                <input type="hidden" name="user_id" value="{{ row.user.pk }}">
-                                <div class="config-field config-field-inline">
-                                    <label class="sr-only" for="client-pick-{{ row.user.pk }}">Cliente</label>
-                                    <select name="client_id" id="client-pick-{{ row.user.pk }}" required>
-                                        <option value="">Selecionar cliente…</option>
-                                        {% for c in active_clients %}
-                                        <option value="{{ c.pk }}">{{ c.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <button type="submit" class="config-btn-secondary">Vincular cliente</button>
-                            </form>
-                            {% endif %}
-                        </div>
-
-                        <div class="config-access-block">
-                            <span class="config-access-label">Projetos permitidos</span>
-                            <div class="config-chip-row">
-                                {% for up in row.project_links %}
-                                <span class="config-chip">
-                                    {{ up.project.name }} · {{ up.project.client.name }}
-                                    <form method="post" action="{% url 'admin-config' %}" class="config-chip-unlink">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="unlink_user_project">
-                                        <input type="hidden" name="up_id" value="{{ up.pk }}">
-                                        <button type="submit" class="config-chip-remove" title="Remover vínculo" aria-label="Remover {{ up.project.name }}">&times;</button>
-                                    </form>
-                                </span>
-                                {% empty %}
-                                <span class="config-chip config-chip--muted">Nenhum projeto vinculado</span>
-                                {% endfor %}
-                            </div>
-                            {% if active_projects %}
-                            <form method="post" action="{% url 'admin-config' %}" class="config-inline-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="link_user_project">
-                                <input type="hidden" name="user_id" value="{{ row.user.pk }}">
-                                <div class="config-field config-field-inline">
-                                    <label class="sr-only" for="project-pick-{{ row.user.pk }}">Projeto</label>
-                                    <select name="project_id" id="project-pick-{{ row.user.pk }}" required>
-                                        <option value="">Selecionar projeto…</option>
-                                        {% for p in active_projects %}
-                                        <option value="{{ p.pk }}">{{ p.client.name }} — {{ p.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <button type="submit" class="config-btn-secondary">Vincular projeto</button>
-                            </form>
-                            {% endif %}
-                        </div>
+                        <div class="acf-members__pager" data-acf-members-pager aria-label="Paginação"></div>
                     </div>
-                    {% endfor %}
                     {% else %}
                     <p class="config-empty-hint">Nenhum membro neste workspace. Use <a href="{% url 'admin-members-add' %}">adicionar membros</a>.</p>
                     {% endif %}
                 </div>
             </article>
-        </div>
-    </section>
+            </div>
+            </div>
+        </article>
 
-    <section class="main-container">
-        <div class="spaceon-grid">
+        <article class="admin-tt-panel" id="admin-config-ws-fornecedores" role="tabpanel" aria-labelledby="tab-admin-config-ws-fornecedores" aria-hidden="true">
+            <div class="admin-tt-body">
+            <div class="spaceon-grid">
             <article class="spaceon-card config-card">
                 <header class="config-card-header">
                     <div class="config-card-title">
-                        <i class="fas fa-truck" aria-hidden="true"></i>
-                        <h2>Gerenciar fornecedores</h2>
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Vinculo Empregatício</h2>
                     </div>
                     <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
                         <i class="fas fa-eye-slash" aria-hidden="true"></i>
                     </button>
                 </header>
                 <div class="config-form">
-                    <p class="config-empty-hint">Em breve: cadastro de fornecedores por workspace.</p>
+                    <h3 class="config-subheading">Vínculo empregatício no workspace</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="upsert_employee_profile">
+                        <div class="config-grid config-grid-two">
+                            {% for field in employee_profile_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Salvar vínculo</button>
+                        </div>
+                    </form>
+
+                    {% if employee_profiles %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Colaborador</th>
+                                    <th>Status</th>
+                                    <th>Admissão</th>
+                                    <th>Desligamento</th>
+                                    <th>Cargo atual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ep in employee_profiles %}
+                                <tr>
+                                    <td>{{ ep.user.email }}</td>
+                                    <td>{{ ep.get_employment_status_display }}</td>
+                                    <td>{{ ep.hire_date|date:"d/m/Y" }}</td>
+                                    <td>{{ ep.termination_date|date:"d/m/Y"|default:"—" }}</td>
+                                    <td>{{ ep.current_job_title|default:"—" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <h3 class="config-subheading">Histórico de cargo</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_job_history">
+                        <div class="config-grid config-grid-two">
+                            {% for field in job_history_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Adicionar cargo</button>
+                        </div>
+                    </form>
+
+                    <h3 class="config-subheading">Histórico de remuneração (sensível)</h3>
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_compensation_history">
+                        <div class="config-grid config-grid-two">
+                            {% for field in compensation_history_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Adicionar remuneração</button>
+                        </div>
+                    </form>
+
+                    {% if compensation_history %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Colaborador</th>
+                                    <th>Tipo</th>
+                                    <th>Mensal</th>
+                                    <th>Hora</th>
+                                    <th>Início</th>
+                                    <th>Fim</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ch in compensation_history %}
+                                <tr>
+                                    <td>{{ ch.employee_profile.user.email }}</td>
+                                    <td>{{ ch.get_compensation_type_display }}</td>
+                                    <td>{{ ch.monthly_salary|default:"—" }}</td>
+                                    <td>{{ ch.hourly_rate|default:"—" }}</td>
+                                    <td>{{ ch.start_date|date:"d/m/Y" }}</td>
+                                    <td>{{ ch.end_date|date:"d/m/Y"|default:"Vigente" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum histórico de remuneração cadastrado.</p>
+                    {% endif %}
+
+                    {% if birthdays_preview %}
+                    <h3 class="config-subheading">Próximos aniversários (prévia)</h3>
+                    <ul class="config-list-inline">
+                        {% for item in birthdays_preview %}
+                        <li>
+                            {{ item.user.email }} — {{ item.next_birthday|date:"d/m" }} (em {{ item.days_until }} dias)
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                 </div>
             </article>
+            </div>
+            </div>
+        </article>
         </div>
-    </section>
+    </div>
 </main>

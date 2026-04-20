@@ -6,97 +6,142 @@
                 <header class="acc-header">
                     <div class="acc-title-wrap">
                         <i class="fas fa-id-badge" aria-hidden="true"></i>
-                        <h2>Dados da Conta</h2>
+                        <h2>Dados do Colaborador</h2>
                     </div>
                 </header>
 
-                <form class="acc-form" action="#" method="post">
-                    <section class="acc-profile">
-                        <div class="acc-photo-box" aria-label="Foto do funcionário">
-                            <div class="acc-photo-circle">
-                                <i class="fas fa-user" aria-hidden="true"></i>
-                            </div>
-                            <button type="button" class="acc-photo-btn">Alterar foto</button>
+                <div class="acc-profile" aria-label="Foto e identificação">
+                    <div class="acc-photo-box">
+                        <div class="acc-photo-circle{% if request.user.avatar and request.user.avatar.name %} acc-photo-circle--image{% endif %}">
+                            {% if request.user.avatar and request.user.avatar.name %}
+                            <img
+                                class="acc-photo-img"
+                                src="{{ request.user.avatar.url }}"
+                                alt="Foto de perfil"
+                                width="84"
+                                height="84"
+                            >
+                            {% else %}
+                            <i class="fas fa-user acc-photo-placeholder-icon" aria-hidden="true"></i>
+                            <span class="sr-only">Sem foto de perfil</span>
+                            {% endif %}
                         </div>
-
-                        <div class="acc-identity">
-                            <div class="acc-field">
-                                <label for="acc-fullname">Nome completo</label>
-                                <input id="acc-fullname" type="text" value="Camilo Carvalho">
-                            </div>
-                            <div class="acc-field">
-                                <label for="acc-role">Cargo</label>
-                                <input id="acc-role" type="text" value="Desenvolvedor Python RPA">
-                            </div>
-                            <div class="acc-field">
-                                <label for="acc-team">Equipe / Área</label>
-                                <input id="acc-team" type="text" value="Automação e Time Tracking">
-                            </div>
+                        <form
+                            class="acc-photo-form"
+                            method="post"
+                            action="{% url 'user-account' %}"
+                            enctype="multipart/form-data"
+                        >
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_avatar">
+                            <input
+                                type="file"
+                                id="acc-avatar-input"
+                                name="avatar"
+                                class="sr-only"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                onchange="if (this.files.length) { this.form.submit(); }"
+                            >
+                            <label for="acc-avatar-input" class="acc-photo-btn">Editar</label>
+                        </form>
+                    </div>
+                    <div class="acc-identity acc-identity--profile">
+                        <div class="acc-field">
+                            <label for="acc-readonly-name">Nome</label>
+                            <input
+                                id="acc-readonly-name"
+                                type="text"
+                                value="{{ request.user.get_full_name|default:request.user.email }}"
+                                readonly
+                            >
                         </div>
-                    </section>
+                        <div class="acc-field">
+                            <label for="acc-readonly-email">E-mail</label>
+                            <input id="acc-readonly-email" type="text" value="{{ request.user.email }}" readonly>
+                        </div>
+                    </div>
+                </div>
 
+                <form class="acc-form" method="post" action="{% url 'user-account' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_birth_date">
                     <section class="acc-grid">
                         <div class="acc-field">
-                            <label for="acc-phone">Telefone</label>
-                            <input id="acc-phone" type="text" value="+55 (11) 99999-9999">
+                            <label for="{{ birth_form.birth_date.id_for_label }}">Data de nascimento</label>
+                            {{ birth_form.birth_date }}
+                            {{ birth_form.birth_date.errors }}
                         </div>
                         <div class="acc-field">
-                            <label for="acc-email">E-mail de acesso</label>
-                            <input id="acc-email" type="email" value="camilo@empresa.com">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-address">Endereço</label>
-                            <input id="acc-address" type="text" value="Rua Exemplo, 123 - São Paulo/SP">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-project-main">Projeto principal</label>
-                            <input id="acc-project-main" type="text" value="Projeto Time Tracker">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-projects">Projetos ativos</label>
-                            <input id="acc-projects" type="text" value="4 projetos ativos">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-permission">Nível de acesso</label>
-                            <input id="acc-permission" type="text" value="Funcionário">
-                        </div>
-                    </section>
-
-                    <section class="acc-security">
-                        <h3>Segurança e acesso</h3>
-                        <div class="acc-security-actions">
-                            <button type="button" class="acc-btn acc-btn-outline">Ver/Trocar senha</button>
-                            <button type="button" class="acc-btn acc-btn-outline">Solicitar troca de e-mail</button>
-                            <button type="button" class="acc-btn acc-btn-outline">Ativar autenticação em 2 fatores</button>
+                            <label>Idade (calculada)</label>
+                            <input type="text" value="{{ request.user.age|default:'—' }}" readonly>
                         </div>
                     </section>
 
                     <section class="acc-summary">
-                        <h3>Resumo de atuação</h3>
+                        <h3>Vínculo atual no workspace</h3>
+                        {% if employee_profile %}
                         <div class="acc-summary-grid">
                             <div class="acc-summary-item">
-                                <span>Horas no mês</span>
-                                <strong>160h</strong>
+                                <span>Status</span>
+                                <strong>{{ employee_profile.get_employment_status_display }}</strong>
                             </div>
                             <div class="acc-summary-item">
-                                <span>Horas esta semana</span>
-                                <strong>38h</strong>
+                                <span>Admissão</span>
+                                <strong>{{ employee_profile.hire_date|date:"d/m/Y" }}</strong>
                             </div>
                             <div class="acc-summary-item">
-                                <span>Projetos em andamento</span>
-                                <strong>4</strong>
+                                <span>Desligamento</span>
+                                <strong>{{ employee_profile.termination_date|date:"d/m/Y"|default:"—" }}</strong>
                             </div>
                             <div class="acc-summary-item">
-                                <span>Valor/hora</span>
-                                <strong>R$ 25,57</strong>
+                                <span>Cargo atual</span>
+                                <strong>{{ employee_profile.current_job_title|default:"—" }}</strong>
                             </div>
                         </div>
+                        {% if current_job %}
+                        <p class="config-empty-hint">Cargo vigente no histórico: <strong>{{ current_job.job_title }}</strong></p>
+                        {% endif %}
+                        {% else %}
+                        <p class="config-empty-hint">Seu vínculo empregatício ainda não foi configurado pelo gestor neste workspace.</p>
+                        {% endif %}
+                    </section>
+
+                    <section class="acc-summary">
+                        <h3>Histórico de remuneração (somente você)</h3>
+                        {% if compensation_history %}
+                        <div class="acc-comp-table-wrap">
+                            <table class="acc-comp-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Tipo de remuneração</th>
+                                        <th scope="col" class="acc-comp-th-num">Salário mensal</th>
+                                        <th scope="col" class="acc-comp-th-num">Valor por hora</th>
+                                        <th scope="col">Início</th>
+                                        <th scope="col">Fim</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ch in compensation_history %}
+                                    <tr>
+                                        <td>{{ ch.get_compensation_type_display }}</td>
+                                        <td class="acc-comp-td-num">{{ ch.monthly_salary|default:"—" }}</td>
+                                        <td class="acc-comp-td-num">{{ ch.hourly_rate|default:"—" }}</td>
+                                        <td>{{ ch.start_date|date:"d/m/Y" }}</td>
+                                        <td>{{ ch.end_date|date:"d/m/Y"|default:"Vigente" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="config-empty-hint">Sem histórico salarial para este workspace.</p>
+                        {% endif %}
                     </section>
 
                     <div class="acc-actions">
                         <button type="submit" class="acc-btn acc-btn-primary">
                             <i class="fas fa-save" aria-hidden="true"></i>
-                            Salvar alterações
+                            Salvar data de nascimento
                         </button>
                     </div>
                 </form>

@@ -4,13 +4,60 @@
         <div class="spaceon-grid-small">
             <article class="spaceon-card q1-card">
                 <header class="q1-card-header">
-                    <i class="fas fa-calendar-check" aria-hidden="true"></i>
-                    <h2>Pré-apontamento</h2>
+                    <div class="q1-card-header__title">
+                        <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                        <h2>Pré-apontamento</h2>
+                    </div>
+                    <button
+                        type="button"
+                        class="q1-card-header__info"
+                        id="q1-pre-entry-info-open"
+                        aria-haspopup="dialog"
+                        aria-controls="q1-pre-entry-info-dialog"
+                        aria-label="Informações sobre o pré-apontamento"
+                    >
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    </button>
                 </header>
 
-                <p class="q1-pre-entry-hint" id="q1-pre-entry-hint">
-                    Preencha os campos conforme o template do gestor. A <strong>data</strong> será definida ao selecionar um dia no calendário (em breve).
-                </p>
+                <dialog id="q1-pre-entry-info-dialog" class="q1-pre-entry-dialog" aria-labelledby="q1-pre-entry-info-title">
+                    <div class="q1-pre-entry-dialog__panel">
+                        <div class="q1-pre-entry-dialog__head">
+                            <h3 id="q1-pre-entry-info-title">Sobre o pré-apontamento</h3>
+                            <button type="button" class="q1-pre-entry-dialog__close" id="q1-pre-entry-info-close" aria-label="Fechar">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="q1-pre-entry-dialog__body">
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Horas totais</h4>
+                                <p>Informe as <strong>horas</strong> e os campos do template e clique em <strong>Preparar apontamento</strong>. Depois clique no dia no calendário para salvar.</p>
+                            </section>
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Entrada e saída</h4>
+                                <p>Informe <strong>início e fim</strong>, os demais campos do template e clique em <strong>Preparar apontamento</strong>. Em seguida clique no dia no calendário para salvar.</p>
+                            </section>
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Cronômetro</h4>
+                                <p>Use <strong>Iniciar</strong> e <strong>Parar</strong> quando terminar. Depois, se o template exigir, complete os campos e clique em <strong>Salvar dados do apontamento</strong>.</p>
+                            </section>
+                        </div>
+                    </div>
+                </dialog>
+
+                <div
+                    id="q1-time-entry-api"
+                    class="q1-api-endpoints"
+                    hidden
+                    data-workspace-id="{{ active_member_workspace.pk|default:'' }}"
+                    data-manual-create-url="{% url 'user-time-entry-manual-create' %}"
+                    data-month-counts-url="{% url 'user-time-entry-month-counts' %}"
+                    data-timer-draft-url="{% url 'user-time-entry-timer-draft' %}"
+                    data-timer-start-url="{% url 'user-time-entry-timer-start' %}"
+                    data-timer-stop-url="{% url 'user-time-entry-timer-stop' %}"
+                    data-timer-complete-url="{% url 'user-time-entry-timer-complete' %}"
+                    data-timer-discard-url="{% url 'user-time-entry-timer-discard-pending' %}"
+                ></div>
 
                 {% if entry_form.configured and entry_form.template_name %}
                 <p class="q1-template-meta">
@@ -28,17 +75,80 @@
                 </p>
                 {% endif %}
 
-                <form class="q1-form" action="#" method="post" aria-describedby="q1-pre-entry-hint">
+                <form
+                    id="q1-pre-entry-form"
+                    class="q1-form"
+                    action="#"
+                    method="post"
+                    data-configured="{% if entry_form.configured %}true{% else %}false{% endif %}"
+                >
                     {% csrf_token %}
 
-                    <div class="q1-row">
-                        <div class="q1-field q1-hours">
-                            <label for="horas-gastas">Horas *</label>
-                            <div class="q1-hours-control">
-                                <input id="horas-gastas" name="hours" type="number" value="0" min="0" step="0.25" required>
-                                <button type="button" aria-label="Aumentar horas">+</button>
-                                <button type="button" aria-label="Diminuir horas">-</button>
+                    <fieldset class="q1-mode-fieldset">
+                        <legend class="sr-only">Modo de lançamento</legend>
+                        <div class="q1-mode-options">
+                            <label class="q1-mode-option">
+                                <input type="radio" name="launch_mode" value="duration" checked>
+                                <span>Horas totais</span>
+                            </label>
+                            <label class="q1-mode-option">
+                                <input type="radio" name="launch_mode" value="time_range">
+                                <span>Entrada e saída</span>
+                            </label>
+                            <label class="q1-mode-option">
+                                <input type="radio" name="launch_mode" value="timer">
+                                <span>Cronômetro</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div class="q1-row q1-overtime-row">
+                        <label class="q1-checkbox-label">
+                            <input type="checkbox" name="is_overtime" id="q1-is-overtime" value="on">
+                            <span>Hora extra (opcional)</span>
+                        </label>
+                    </div>
+
+                    <div id="q1-block-duration" class="q1-mode-block">
+                        <div class="q1-row">
+                            <div class="q1-field q1-hours">
+                                <label for="horas-gastas">Horas *</label>
+                                <div class="q1-hours-control">
+                                    <input id="horas-gastas" name="hours" type="number" value="0" min="0" step="0.25">
+                                    <button type="button" aria-label="Aumentar horas">+</button>
+                                    <button type="button" aria-label="Diminuir horas">-</button>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="q1-block-range" class="q1-mode-block q1-hidden">
+                        <div class="q1-row q1-row-two">
+                            <div class="q1-field">
+                                <label for="entry-start-time">Início *</label>
+                                <input id="entry-start-time" name="start_time" type="time" step="60">
+                            </div>
+                            <div class="q1-field">
+                                <label for="entry-end-time">Fim *</label>
+                                <input id="entry-end-time" name="end_time" type="time" step="60">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="q1-block-timer" class="q1-mode-block q1-hidden">
+                        <div class="q1-timer-status-row">
+                            <span class="q1-timer-pulse" id="q1-timer-pulse" aria-hidden="true"></span>
+                            <p id="q1-timer-status" class="q1-timer-status" role="status" aria-live="polite"></p>
+                        </div>
+                        <div class="q1-timer-actions">
+                            <button type="button" class="q1-btn q1-btn-timer" id="q1-timer-start">
+                                <i class="fas fa-play" aria-hidden="true"></i>
+                                Iniciar
+                            </button>
+                            <button type="button" class="q1-btn q1-btn-timer" id="q1-timer-stop" disabled>
+                                <i class="fas fa-stop" aria-hidden="true"></i>
+                                Parar
+                            </button>
                         </div>
                     </div>
 
@@ -113,12 +223,29 @@
                     </div>
                     {% endif %}
 
+                    <div id="q1-post-timer-wrap" class="q1-post-timer-wrap q1-hidden">
+                        <p class="q1-post-timer-hint">
+                            Cronômetro finalizado. Preencha os campos exigidos pelo template (se houver) e salve, ou descarte se foi por engano.
+                        </p>
+                        <input type="hidden" id="q1-timer-stopped-entry-id" value="">
+                        <div class="q1-post-timer-actions">
+                            <button type="button" class="q1-btn q1-btn-primary" id="q1-timer-save-template">
+                                <i class="fas fa-save" aria-hidden="true"></i>
+                                Salvar dados do apontamento
+                            </button>
+                            <button type="button" class="q1-btn q1-btn-post-timer-discard" id="q1-timer-discard-pending">
+                                <i class="fas fa-undo" aria-hidden="true"></i>
+                                Descartar apontamento
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="q1-actions">
-                        <button type="submit" class="q1-btn q1-btn-primary">
-                            <i class="fas fa-lock" aria-hidden="true"></i>
-                            Preparar Apontamento
+                        <button type="button" class="q1-btn q1-btn-primary" id="q1-btn-prepare">
+                            <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                            Preparar apontamento
                         </button>
-                        <button type="button" class="q1-btn q1-btn-secondary">
+                        <button type="button" class="q1-btn q1-btn-secondary" id="q1-btn-memorize">
                             <i class="fas fa-tag" aria-hidden="true"></i>
                             Memorizar
                         </button>
@@ -134,20 +261,31 @@
             </article>
         </div>
 
-        <div class="spaceon-grid">
-            <article class="spaceon-card q3-calendar-card">
+        <div class="spaceon-grid" id="q3-calendar-section-wrap">
+            <article
+                class="spaceon-card q3-calendar-card"
+                id="q3-calendar-card"
+            >
                 <header class="q3-calendar-header">
                     <div class="q3-calendar-title">
                         <i class="fas fa-calendar" aria-hidden="true"></i>
                         <h3>Calendário</h3>
                     </div>
                     <div class="q3-calendar-controls">
-                        <span>{{ calendar_heading }}</span>
-                        <button type="button" aria-label="Mês anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
-                        <button type="button" aria-label="Próximo mês"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-                        <button type="button" aria-label="Atualizar"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+                        <span id="q3-calendar-month-label" class="q3-calendar-month-label" aria-live="polite">{{ calendar_heading }}</span>
+                        <button type="button" id="q3-cal-prev" class="q3-cal-nav-btn" aria-label="Mês anterior" title="Mês anterior">
+                            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="q3-cal-next" class="q3-cal-nav-btn" aria-label="Próximo mês" title="Próximo mês">
+                            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="q3-cal-today" class="q3-cal-nav-btn" aria-label="Ir para o mês atual" title="Mês atual (sua região)">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </header>
+
+                <p class="q3-calendar-status" id="q3-calendar-status" role="status"></p>
 
                 <div class="q3-calendar-wrapper">
                     <table class="q3-calendar-table" aria-label="Calendário mensal">
@@ -162,23 +300,8 @@
                                 <th>Sáb</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for week in calendar_days %}
-                            <tr>
-                                {% for day in week %}
-                                    {% if day %}
-                                <td class="calendar-day">
-                                    <span class="day-number">{{ day }}</span>
-                                    <div class="day-content">
-                                        <!-- entradas dinâmicas futuras (TimeEntry) -->
-                                    </div>
-                                </td>
-                                    {% else %}
-                                <td class="calendar-day muted-day"></td>
-                                    {% endif %}
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
+                        <tbody id="q3-calendar-body">
+                            {# Grade do calendário: spaceon_time_entry.js (mês = relógio local) #}
                         </tbody>
                     </table>
                 </div>
@@ -192,10 +315,57 @@
                         <i class="fas fa-list-ul" aria-hidden="true"></i>
                         <h3>Histórico de Apontamentos</h3>
                     </div>
-                    <button type="button" aria-label="Expandir ou recolher histórico">
-                        <i class="fas fa-chevron-up" aria-hidden="true"></i>
-                    </button>
+                    <div class="q4-history-header__actions">
+                        <button type="button" class="q4-history-header__toggle" aria-label="Expandir ou recolher histórico">
+                            <i class="fas fa-chevron-up" aria-hidden="true"></i>
+                        </button>
+                        <button
+                            type="button"
+                            class="q4-history-header__info"
+                            id="q4-history-info-open"
+                            aria-haspopup="dialog"
+                            aria-controls="q4-history-info-dialog"
+                            aria-label="Informações sobre o histórico de apontamentos"
+                        >
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </header>
+
+                <dialog id="q4-history-info-dialog" class="q1-pre-entry-dialog" aria-labelledby="q4-history-info-title">
+                    <div class="q1-pre-entry-dialog__panel">
+                        <div class="q1-pre-entry-dialog__head">
+                            <h3 id="q4-history-info-title">Sobre o histórico de apontamentos</h3>
+                            <button type="button" class="q1-pre-entry-dialog__close" id="q4-history-info-close" aria-label="Fechar">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="q1-pre-entry-dialog__body">
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Registro completo</h4>
+                                <p>
+                                    Esta lista é o <strong>registro completo</strong> dos seus apontamentos salvos na plataforma,
+                                    <strong>desde a sua entrada</strong> no SpaceOn — ou seja, todo o histórico disponível para consulta neste workspace.
+                                </p>
+                            </section>
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Filtros</h4>
+                                <p>
+                                    Use os filtros acima para <strong>encontrar com facilidade</strong> os apontamentos desejados e para
+                                    <strong>exibir apenas o que for conveniente</strong> no momento, sem alterar os dados salvos.
+                                </p>
+                            </section>
+                            <section class="q1-pre-entry-dialog__section">
+                                <h4>Exportar Excel</h4>
+                                <p>
+                                    O conteúdo mostrado na tabela — <strong>já com os filtros aplicados</strong> — poderá ser exportado para Excel
+                                    automaticamente pelo botão <strong>Exportar Excel</strong>. Essa exportação <strong>ainda não está ativa</strong>;
+                                    quando estiver disponível, o mesmo botão disparará o download do arquivo.
+                                </p>
+                            </section>
+                        </div>
+                    </div>
+                </dialog>
 
                 <div class="q4-history-content">
                     <section class="q4-panel q4-filters-panel" aria-label="Filtros do histórico">
@@ -204,40 +374,124 @@
                             <h4>Filtros do Histórico</h4>
                         </header>
 
-                        <form class="q4-filters-form" action="#" method="get">
+                        <form id="q4-history-filters-form" class="q4-filters-form" action="{% url 'user-home' %}" method="get">
                             <div class="q4-filters-grid">
                                 <div class="q4-filter-field">
                                     <label for="filtro-ano">Ano</label>
-                                    <select id="filtro-ano"><option>Todos</option></select>
+                                    <select id="filtro-ano" name="hf_year">
+                                        <option value=""{% if history_selection.year is None %} selected{% endif %}>Todos</option>
+                                        {% for y in history_filter_years %}
+                                        <option value="{{ y }}"{% if history_selection.year == y %} selected{% endif %}>{{ y }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                                 <div class="q4-filter-field">
                                     <label for="filtro-mes">Mês</label>
-                                    <select id="filtro-mes"><option>Todos</option></select>
+                                    <select id="filtro-mes" name="hf_month">
+                                        <option value=""{% if history_selection.month is None %} selected{% endif %}>Todos</option>
+                                        {% for num, label in history_filter_months %}
+                                        <option value="{{ num }}"{% if history_selection.month == num %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                                 <div class="q4-filter-field">
                                     <label for="filtro-dia">Dia</label>
-                                    <select id="filtro-dia"><option>Todos</option></select>
+                                    <select id="filtro-dia" name="hf_day">
+                                        <option value=""{% if history_selection.day is None %} selected{% endif %}>Todos</option>
+                                        {% for d in history_filter_days %}
+                                        <option value="{{ d }}"{% if history_selection.day == d %} selected{% endif %}>{{ d }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                                 <div class="q4-filter-field">
-                                    <label for="filtro-tipo">Tipo</label>
-                                    <select id="filtro-tipo"><option>Todos</option></select>
+                                    <label for="filtro-hora-extra">Hora extra</label>
+                                    <select id="filtro-hora-extra" name="hf_overtime">
+                                        <option value=""{% if history_selection.overtime_param == "" %} selected{% endif %}>Todos</option>
+                                        <option value="1"{% if history_selection.overtime_param == "1" %} selected{% endif %}>Sim</option>
+                                        <option value="0"{% if history_selection.overtime_param == "0" %} selected{% endif %}>Não</option>
+                                    </select>
                                 </div>
+
+                                {% if entry_form.use_client %}
                                 <div class="q4-filter-field">
-                                    <label for="filtro-formato">Formato</label>
-                                    <select id="filtro-formato"><option>Todos</option></select>
+                                    <label for="filtro-cliente">Cliente</label>
+                                    {% if entry_clients %}
+                                    <select id="filtro-cliente" name="hf_client_id">
+                                        <option value=""{% if history_selection.client_id is None %} selected{% endif %}>Todos</option>
+                                        {% for c in entry_clients %}
+                                        <option value="{{ c.pk }}"{% if history_selection.client_id == c.pk %} selected{% endif %}>{{ c.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <select id="filtro-cliente" name="hf_client_id" disabled aria-disabled="true">
+                                        <option value="">Nenhum cliente liberado</option>
+                                    </select>
+                                    {% endif %}
                                 </div>
+                                {% endif %}
+
+                                {% if entry_form.use_project %}
                                 <div class="q4-filter-field">
-                                    <label for="filtro-subtipo">Subtipo</label>
-                                    <select id="filtro-subtipo"><option>Todos</option></select>
+                                    <label for="filtro-projeto">Projeto</label>
+                                    {% if entry_projects %}
+                                    <select id="filtro-projeto" name="hf_project_id">
+                                        <option value=""{% if history_selection.project_id is None %} selected{% endif %}>Todos</option>
+                                        {% for p in entry_projects %}
+                                        <option value="{{ p.pk }}" data-client-id="{{ p.client_id }}"{% if history_selection.project_id == p.pk %} selected{% endif %}>{{ p.client.name }} — {{ p.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <select id="filtro-projeto" name="hf_project_id" disabled aria-disabled="true">
+                                        <option value="">Nenhum projeto liberado</option>
+                                    </select>
+                                    {% endif %}
                                 </div>
+                                {% endif %}
+
+                                {% if entry_form.use_task %}
                                 <div class="q4-filter-field">
-                                    <label for="filtro-tag">Tag</label>
-                                    <select id="filtro-tag"><option>Todos</option></select>
+                                    <label for="filtro-tarefa">Tarefa</label>
+                                    {% if entry_tasks %}
+                                    <select id="filtro-tarefa" name="hf_task_id">
+                                        <option value=""{% if history_selection.task_id is None %} selected{% endif %}>Todas</option>
+                                        {% for t in entry_tasks %}
+                                        <option value="{{ t.pk }}" data-project-id="{{ t.project_id }}" data-client-id="{{ t.project.client_id }}"{% if history_selection.task_id == t.pk %} selected{% endif %}>{{ t.project.name }} — {{ t.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <select id="filtro-tarefa" name="hf_task_id" disabled aria-disabled="true">
+                                        <option value="">Nenhuma tarefa disponível</option>
+                                    </select>
+                                    {% endif %}
                                 </div>
+                                {% endif %}
+
+                                {% if entry_form.use_type %}
                                 <div class="q4-filter-field">
-                                    <label for="filtro-extra">Hora Extra</label>
-                                    <select id="filtro-extra"><option>Todos</option></select>
+                                    <label for="filtro-tipo-apontamento">Tipo de apontamento</label>
+                                    <select id="filtro-tipo-apontamento" name="hf_entry_type">
+                                        <option value=""{% if history_selection.entry_type == "" %} selected{% endif %}>Todos</option>
+                                        <option value="internal"{% if history_selection.entry_type == "internal" %} selected{% endif %}>Interno</option>
+                                        <option value="external"{% if history_selection.entry_type == "external" %} selected{% endif %}>Externo</option>
+                                    </select>
                                 </div>
+                                {% endif %}
+
+                                {% if entry_form.use_description %}
+                                <div class="q4-filter-field q4-filter-field--wide">
+                                    <label for="filtro-descricao">Descrição</label>
+                                    <input
+                                        type="text"
+                                        id="filtro-descricao"
+                                        name="hf_description"
+                                        class="q4-filter-text"
+                                        placeholder="Contém…"
+                                        maxlength="200"
+                                        value="{{ history_selection.description_query }}"
+                                        autocomplete="off"
+                                    >
+                                </div>
+                                {% endif %}
                             </div>
 
                             <div class="q4-filter-actions">
@@ -245,10 +499,10 @@
                                     <i class="fas fa-search" aria-hidden="true"></i>
                                     Aplicar Filtros
                                 </button>
-                                <button type="button" class="q4-btn q4-btn-neutral">
+                                <a href="{% url 'user-home' %}" class="q4-btn q4-btn-neutral">
                                     <i class="fas fa-times" aria-hidden="true"></i>
                                     Limpar Filtros
-                                </button>
+                                </a>
                                 <button type="button" class="q4-btn q4-btn-outline">
                                     <i class="fas fa-file-export" aria-hidden="true"></i>
                                     Exportar Excel
@@ -258,59 +512,64 @@
                     </section>
 
                     <section class="q4-panel q4-table-panel" aria-label="Tabela de histórico">
+                        {% if history_list_limited %}
+                        <p class="q4-history-cap-note" role="status">
+                            Mostrando até {{ history_list_limit }} registros mais recentes que correspondem aos filtros. Afine os filtros para localizar apontamentos mais antigos.
+                        </p>
+                        {% endif %}
                         <div class="q4-table-wrapper">
                             <table class="q4-history-table">
                                 <thead>
                                     <tr>
                                         <th>Data</th>
-                                        <th>Descrição</th>
-                                        <th>Tipo</th>
-                                        <th>Formato</th>
-                                        <th>Subtipo</th>
-                                        <th>Tag</th>
-                                        <th>Hora Início</th>
-                                        <th>Hora Fim</th>
+                                        {% if entry_form.use_client %}<th>Cliente</th>{% endif %}
+                                        {% if entry_form.use_project %}<th>Projeto</th>{% endif %}
+                                        {% if entry_form.use_task %}<th>Tarefa</th>{% endif %}
+                                        {% if entry_form.use_description %}<th>Descrição</th>{% endif %}
+                                        {% if entry_form.use_type %}<th>Tipo</th>{% endif %}
+                                        <th>Modo</th>
+                                        <th>Início</th>
+                                        <th>Fim</th>
                                         <th>Horas</th>
-                                        <th>Hora Extra</th>
+                                        <th>Hora extra</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    {% for entry in history_entries %}
                                     <tr>
-                                        <td>11/03/2026</td>
-                                        <td>PBI xxxx - PGTO TI Requisição Compra: Correções Lint, Libs e configurações</td>
-                                        <td>Desenvolvimento</td>
-                                        <td>Code e No-Code</td>
-                                        <td>Proj PgtoForTI</td>
-                                        <td>Sem PBI 999</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>1.0h</td>
-                                        <td><span class="q4-pill">Não</span></td>
+                                        <td>{{ entry.date|date:"d/m/Y" }}</td>
+                                        {% if entry_form.use_client %}
+                                        <td>{% if entry.client %}{{ entry.client.name }}{% else %}—{% endif %}</td>
+                                        {% endif %}
+                                        {% if entry_form.use_project %}
+                                        <td>{% if entry.project %}{{ entry.project.client.name }} — {{ entry.project.name }}{% else %}—{% endif %}</td>
+                                        {% endif %}
+                                        {% if entry_form.use_task %}
+                                        <td>{% if entry.task %}{{ entry.task.project.name }} — {{ entry.task.name }}{% else %}—{% endif %}</td>
+                                        {% endif %}
+                                        {% if entry_form.use_description %}
+                                        <td class="q4-history-cell-desc">{% if entry.description %}{{ entry.description|truncatechars:160 }}{% else %}—{% endif %}</td>
+                                        {% endif %}
+                                        {% if entry_form.use_type %}
+                                        <td>{% if entry.entry_type %}{{ entry.get_entry_type_display }}{% else %}—{% endif %}</td>
+                                        {% endif %}
+                                        <td>{{ entry.get_entry_mode_display }}</td>
+                                        <td>{% if entry.start_time %}{{ entry.start_time|time:"H:i" }}{% else %}—{% endif %}</td>
+                                        <td>{% if entry.end_time %}{{ entry.end_time|time:"H:i" }}{% else %}—{% endif %}</td>
+                                        <td>{{ entry.history_hours_label }}</td>
+                                        <td>
+                                            {% if entry.is_overtime %}
+                                            <span class="q4-pill q4-pill--yes">Sim</span>
+                                            {% else %}
+                                            <span class="q4-pill q4-pill--muted">Não</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
+                                    {% empty %}
                                     <tr>
-                                        <td>09/03/2026</td>
-                                        <td>PBI xxxx - GenCOA - erro de tratativa de status final/packing list</td>
-                                        <td>Suporte</td>
-                                        <td>Code e No-Code</td>
-                                        <td>Proj GenCoa</td>
-                                        <td>Sem PBI 999</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>4.0h</td>
-                                        <td><span class="q4-pill">Não</span></td>
+                                        <td colspan="{{ history_table_colspan }}" class="q4-history-empty">Nenhum apontamento salvo encontrado com os filtros atuais.</td>
                                     </tr>
-                                    <tr>
-                                        <td>09/03/2026</td>
-                                        <td>PBI xxxx - GenCOA - Correção email BA1 para caso de falha e também no envio correto</td>
-                                        <td>Suporte</td>
-                                        <td>Code e No-Code</td>
-                                        <td>Proj GenCoa</td>
-                                        <td>Sem PBI 999</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>1.0h</td>
-                                        <td><span class="q4-pill">Não</span></td>
-                                    </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
