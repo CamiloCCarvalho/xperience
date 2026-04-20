@@ -95,29 +95,154 @@
                             <span class="config-stat-label">Tarefas</span>
                         </div>
                         <div class="config-stat-box">
-                            <span class="config-stat-value">{{ config_workspace.budget_total|default:"—" }}</span>
-                            <span class="config-stat-label">Budget do workspace</span>
+                            <span class="config-stat-value">{{ workspace_cash_balance }}</span>
+                            <span class="config-stat-label">Saldo em caixa</span>
+                        </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ workspace_cash_inflows }}</span>
+                            <span class="config-stat-label">Entradas</span>
+                        </div>
+                        <div class="config-stat-box">
+                            <span class="config-stat-value">{{ workspace_cash_outflows }}</span>
+                            <span class="config-stat-label">Saídas</span>
                         </div>
                     </div>
+                </div>
+            </article>
+
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-wallet" aria-hidden="true"></i>
+                        <h2>Fluxo de caixa</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <div class="config-form">
                     <form class="config-form" method="post" action="{% url 'admin-config' %}">
                         {% csrf_token %}
-                        <input type="hidden" name="action" value="update_workspace_budget">
-                        <div class="config-field">
-                            <label for="workspace-budget-total">Budget total do workspace</label>
-                            <input
-                                id="workspace-budget-total"
-                                type="number"
-                                name="budget_total"
-                                step="0.01"
-                                min="0"
-                                class="config-widget-input"
-                                value="{{ config_workspace.budget_total|default:'' }}"
-                            >
+                        <input type="hidden" name="action" value="create_financial_entry">
+                        <div class="config-grid config-grid-two">
+                            {% for field in financial_entry_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
                         </div>
                         <div class="config-actions">
-                            <button type="submit" class="config-btn-save">Salvar budget</button>
+                            <button type="submit" class="config-btn-save">Adicionar lançamento</button>
                         </div>
                     </form>
+
+                    {% if financial_entries %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Fluxo</th>
+                                    <th>Valor</th>
+                                    <th>Descrição</th>
+                                    <th>Cliente</th>
+                                    <th>Projeto</th>
+                                    <th>Colaborador</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in financial_entries %}
+                                <tr>
+                                    <td>{{ item.occurred_on|date:"d/m/Y" }}</td>
+                                    <td>{{ item.get_entry_kind_display }}</td>
+                                    <td>{{ item.get_flow_type_display }}</td>
+                                    <td>{{ item.amount }}</td>
+                                    <td>{{ item.description }}</td>
+                                    <td>{% if item.client %}{{ item.client.name }}{% else %}—{% endif %}</td>
+                                    <td>{% if item.project %}{{ item.project.name }}{% else %}—{% endif %}</td>
+                                    <td>{% if item.user %}{{ item.user.email }}{% else %}—{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum lançamento financeiro cadastrado ainda.</p>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-bullseye" aria-hidden="true"></i>
+                        <h2>Metas financeiras</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <div class="config-form">
+                    <form class="config-form" method="post" action="{% url 'admin-config' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_budget_goal">
+                        <div class="config-grid config-grid-two">
+                            {% for field in budget_goal_form %}
+                            <div class="config-field">
+                                {{ field.errors }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="config-actions">
+                            <button type="submit" class="config-btn-save">Adicionar meta</button>
+                        </div>
+                    </form>
+
+                    {% if budget_goals %}
+                    <div class="config-table-wrap">
+                        <table class="config-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Escopo</th>
+                                    <th>Meta mínima</th>
+                                    <th>Data da meta mínima</th>
+                                    <th>Meta desejada</th>
+                                    <th>Data da meta desejada</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for goal in budget_goals %}
+                                <tr>
+                                    <td>
+                                        {% if goal.project %}
+                                            Projeto: {{ goal.project.name }}
+                                        {% elif goal.client %}
+                                            Cliente: {{ goal.client.name }}
+                                        {% else %}
+                                            Workspace
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ goal.minimum_target_amount }}</td>
+                                    <td>{{ goal.minimum_target_date|date:"d/m/Y" }}</td>
+                                    <td>{{ goal.desired_target_amount }}</td>
+                                    <td>{{ goal.desired_target_date|date:"d/m/Y" }}</td>
+                                    <td>{{ goal.description|default:"—" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhuma meta financeira cadastrada ainda.</p>
+                    {% endif %}
                 </div>
             </article>
             </div>

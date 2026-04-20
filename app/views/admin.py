@@ -3,17 +3,21 @@ from typing import cast
 
 from django.contrib import messages
 from django.db import IntegrityError, transaction
+from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from app.avatar import handle_user_avatar_upload, user_avatar_url, workspace_avatar_url
 from app.decorators import admin_active_workspace_required, platform_admin_required
+from app.financial import calculate_workspace_balance
 from app.forms import (
+    BudgetGoalForm,
     ClientCreateForm,
     CompensationHistoryForm,
     DepartmentForm,
     EmployeeProfileForm,
+    FinancialEntryManualForm,
     JobHistoryForm,
     MemberAddForm,
     ProjectCreateForm,
@@ -25,10 +29,12 @@ from app.forms import (
     WorkspaceCreateForm,
 )
 from app.models import (
+    BudgetGoal,
     Client,
     CompensationHistory,
     Department,
     EmployeeProfile,
+    FinancialEntry,
     JobHistory,
     Membership,
     Project,
@@ -643,17 +649,12 @@ def admin_config(request):
     profile_form = EmployeeProfileForm(workspace=ws)
     job_history_form = JobHistoryForm(workspace=ws)
     compensation_form = CompensationHistoryForm(workspace=ws)
+    financial_entry_form = FinancialEntryManualForm(workspace=ws)
+    budget_goal_form = BudgetGoalForm(workspace=ws)
 
     if request.method == "POST":
         action = request.POST.get("action")
-        if action == "update_workspace_budget":
-            budget_raw = (request.POST.get("budget_total") or "").strip()
-            ws.budget_total = budget_raw or None
-            ws.updated_by = request.user
-            ws.save(update_fields=["budget_total", "updated_by"])
-            messages.success(request, "Budget do workspace atualizado.")
-            return redirect("admin-config")
-        elif action == "upsert_employee_profile":
+        if action == "upsert_employee_profile":
             profile_form = EmployeeProfileForm(request.POST, workspace=ws)
             if profile_form.is_valid():
                 candidate = profile_form.save(commit=False)
@@ -684,6 +685,26 @@ def admin_config(request):
             if compensation_form.is_valid():
                 compensation_form.save()
                 messages.success(request, "Histórico de remuneração cadastrado.")
+                return redirect("admin-config")
+        elif action == "create_financial_entry":
+            financial_entry_form = FinancialEntryManualForm(request.POST, workspace=ws)
+            if financial_entry_form.is_valid():
+                financial_entry_form.save(
+                    workspace=ws,
+                    created_by=request.user,
+                    updated_by=request.user,
+                )
+                messages.success(request, "Lançamento financeiro cadastrado.")
+                return redirect("admin-config")
+        elif action == "create_budget_goal":
+            budget_goal_form = BudgetGoalForm(request.POST, workspace=ws)
+            if budget_goal_form.is_valid():
+                budget_goal_form.save(
+                    workspace=ws,
+                    created_by=request.user,
+                    updated_by=request.user,
+                )
+                messages.success(request, "Meta financeira cadastrada.")
                 return redirect("admin-config")
         elif action == "create_client":
             client_form = ClientCreateForm(request.POST, prefix="cli_create")
@@ -808,6 +829,21 @@ def admin_config(request):
         for ch in compensation_history
         if _can_view_compensation(request.user, ch.employee_profile.user, ws)
     ]
+    financial_entries = (
+        FinancialEntry.objects.filter(workspace=ws)
+        .select_related("client", "project", "user", "created_by", "updated_by")
+        .order_by("-occurred_on", "-pk")
+    )
+    budget_goals = (
+        BudgetGoal.objects.filter(workspace=ws)
+        .select_related("client", "project", "created_by", "updated_by")
+        .order_by("-created_at", "-pk")
+    )
+    financial_summary = financial_entries.aggregate(
+        inflows=Sum("amount", filter=Q(flow_type=FinancialEntry.FlowType.INFLOW)),
+        outflows=Sum("amount", filter=Q(flow_type=FinancialEntry.FlowType.OUTFLOW)),
+    )
+    workspace_cash_balance = calculate_workspace_balance(ws)
     birthdays_preview = _upcoming_birthdays(ws)
 
     ctx.update(
@@ -841,9 +877,16 @@ def admin_config(request):
             "employee_profiles": employee_profiles,
             "latest_job_by_profile": latest_job_by_profile,
             "compensation_history": compensation_history_visible,
+            "financial_entries": financial_entries[:50],
+            "budget_goals": budget_goals[:50],
+            "workspace_cash_balance": workspace_cash_balance,
+            "workspace_cash_inflows": financial_summary["inflows"] or 0,
+            "workspace_cash_outflows": financial_summary["outflows"] or 0,
             "employee_profile_form": profile_form,
             "job_history_form": job_history_form,
             "compensation_history_form": compensation_form,
+            "financial_entry_form": financial_entry_form,
+            "budget_goal_form": budget_goal_form,
             "birthdays_preview": birthdays_preview,
         }
     )

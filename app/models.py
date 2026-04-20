@@ -1,6 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from typing import ClassVar
@@ -112,12 +112,6 @@ class Workspace(models.Model):
     owner = models.ForeignKey('User', on_delete=models.CASCADE)
     workspace_name = models.CharField(max_length=255)
     workspace_description = models.TextField(blank=True)
-    budget_total = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        null=True,
-        blank=True,
-    )
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -361,6 +355,260 @@ class CompensationHistory(models.Model):
 
     def __str__(self):
         return f"{self.employee_profile.user.email} - {self.get_compensation_type_display()}"
+
+
+class FinancialEntryQuerySet(models.QuerySet):
+    def inflows(self):
+        return self.filter(flow_type=FinancialEntry.FlowType.INFLOW)
+
+    def outflows(self):
+        return self.filter(flow_type=FinancialEntry.FlowType.OUTFLOW)
+
+
+class FinancialEntry(models.Model):
+    class EntryKind(models.TextChoices):
+        MANUAL = "manual", "Manual"
+        TIME_ENTRY_COST = "time_entry_cost", "Custo de apontamento"
+        REVERSAL = "reversal", "Estorno"
+
+    class FlowType(models.TextChoices):
+        INFLOW = "inflow", "Entrada"
+        OUTFLOW = "outflow", "Saída"
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="financial_entries",
+    )
+    entry_kind = models.CharField(max_length=24, choices=EntryKind.choices)
+    flow_type = models.CharField(max_length=16, choices=FlowType.choices)
+    occurred_on = models.DateField(default=timezone.localdate)
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    description = models.TextField()
+    client = models.ForeignKey(
+        "Client",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    project = models.ForeignKey(
+        "Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    time_entry = models.ForeignKey(
+        "TimeEntry",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_entries",
+    )
+    source_time_entry_id = models.PositiveBigIntegerField(null=True, blank=True)
+    reversal_of = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reversal_entries",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_financial_entries",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_financial_entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = FinancialEntryQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["-occurred_on", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("time_entry", "entry_kind"),
+                condition=Q(time_entry__isnull=False),
+                name="app_financialentry_unique_kind_per_time_entry",
+            ),
+            models.UniqueConstraint(
+                fields=("reversal_of",),
+                condition=Q(reversal_of__isnull=False),
+                name="app_financialentry_single_reversal_per_entry",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["workspace", "occurred_on"]),
+            models.Index(fields=["workspace", "flow_type"]),
+            models.Index(fields=["workspace", "entry_kind"]),
+        ]
+        verbose_name = "Lançamento financeiro"
+        verbose_name_plural = "Lançamentos financeiros"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+
+        if self.client_id and self.workspace_id and self.client.workspace_id != self.workspace_id:
+            errors["client"] = "O cliente deve pertencer ao mesmo workspace do lançamento."
+
+        if self.project_id and self.workspace_id and self.project.workspace_id != self.workspace_id:
+            errors["project"] = "O projeto deve pertencer ao mesmo workspace do lançamento."
+
+        if self.client_id and self.project_id and self.project.client_id != self.client_id:
+            errors["project"] = "O projeto deve pertencer ao cliente informado."
+
+        if self.entry_kind == self.EntryKind.TIME_ENTRY_COST:
+            if self.flow_type != self.FlowType.OUTFLOW:
+                errors["flow_type"] = "Custo de apontamento deve ser uma saída."
+            if not self.time_entry_id:
+                errors["time_entry"] = "Informe o apontamento de origem para custo automático."
+            if self.reversal_of_id:
+                errors["reversal_of"] = "Custo automático não pode apontar para um estorno."
+
+        if self.entry_kind == self.EntryKind.REVERSAL:
+            if not self.reversal_of_id:
+                errors["reversal_of"] = "Informe o lançamento original para gerar estorno."
+            elif self.reversal_of_id == self.pk:
+                errors["reversal_of"] = "Um lançamento não pode estornar a si mesmo."
+
+        if self.entry_kind == self.EntryKind.MANUAL and self.reversal_of_id:
+            errors["reversal_of"] = "Lançamento manual não pode apontar para estorno."
+
+        if self.reversal_of_id:
+            original = self.reversal_of
+            if original is not None and self.flow_type == original.flow_type:
+                errors["flow_type"] = "O estorno deve ter fluxo oposto ao lançamento original."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        if self.time_entry_id and self.source_time_entry_id is None:
+            self.source_time_entry_id = self.time_entry_id
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_flow_type_display()} {self.amount} em {self.occurred_on}"
+
+
+class BudgetGoal(models.Model):
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="budget_goals",
+    )
+    client = models.ForeignKey(
+        "Client",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="budget_goals",
+    )
+    project = models.ForeignKey(
+        "Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="budget_goals",
+    )
+    minimum_target_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    minimum_target_date = models.DateField()
+    desired_target_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    desired_target_date = models.DateField()
+    description = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_budget_goals",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_budget_goals",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [
+            models.Index(fields=["workspace", "minimum_target_date"]),
+            models.Index(fields=["workspace", "desired_target_date"]),
+        ]
+        verbose_name = "Meta de budget"
+        verbose_name_plural = "Metas de budget"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+
+        if self.client_id and self.workspace_id and self.client.workspace_id != self.workspace_id:
+            errors["client"] = "O cliente deve pertencer ao mesmo workspace da meta."
+
+        if self.project_id and self.workspace_id and self.project.workspace_id != self.workspace_id:
+            errors["project"] = "O projeto deve pertencer ao mesmo workspace da meta."
+
+        if self.client_id and self.project_id and self.project.client_id != self.client_id:
+            errors["project"] = "O projeto deve pertencer ao cliente informado."
+
+        if self.desired_target_amount < self.minimum_target_amount:
+            errors["desired_target_amount"] = "A meta desejada não pode ser menor que a meta mínima."
+
+        if self.desired_target_date < self.minimum_target_date:
+            errors["desired_target_date"] = (
+                "A data da meta desejada não pode ser anterior à data da meta mínima."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        if self.project_id:
+            scope = self.project.name
+        elif self.client_id:
+            scope = self.client.name
+        else:
+            scope = self.workspace.workspace_name
+        return f"Meta {scope}"
 
 
 class WorkSchedule(models.Model):
@@ -968,11 +1216,37 @@ class TimeEntry(models.Model):
             if not has_project:
                 raise PermissionDenied("Usuário sem permissão para este projeto neste workspace.")
 
-    def save(self, *args, skip_access_check: bool = False, **kwargs) -> None:
+    def save(
+        self,
+        *args,
+        skip_access_check: bool = False,
+        financial_actor: User | None = None,
+        sync_financial: bool = True,
+        **kwargs,
+    ) -> None:
         self.full_clean()
         if not skip_access_check:
             self._assert_user_access()
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if sync_financial and self.status == self.Status.SAVED:
+                from app.financial import sync_time_entry_financial_entry
+
+                sync_time_entry_financial_entry(self, actor=financial_actor or self.user)
+
+    def delete(
+        self,
+        *args,
+        financial_actor: User | None = None,
+        sync_financial: bool = True,
+        **kwargs,
+    ) -> tuple[int, dict[str, int]]:
+        with transaction.atomic():
+            if sync_financial and self.status == self.Status.SAVED:
+                from app.financial import reverse_time_entry_financial_entry
+
+                reverse_time_entry_financial_entry(self, actor=financial_actor or self.user)
+            return super().delete(*args, **kwargs)
 
     def __str__(self):
         if self.hours is not None:

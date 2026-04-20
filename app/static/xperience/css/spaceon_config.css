@@ -665,6 +665,22 @@
     margin-top: 0;
 }
 
+/* Aba Empresa: três cards (Workspace, Fluxo de caixa, Metas) em coluna */
+.spaceon-config-page .admin-config-ws-main #admin-config-ws-empresa .spaceon-grid {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 1.25rem;
+    min-height: unset;
+    width: 100%;
+}
+
+.spaceon-config-page .admin-config-ws-main #admin-config-ws-empresa .spaceon-grid > .config-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
 [data-theme="dark"] .spaceon-config-page .admin-config-ws-main .admin-tt-tab--active {
     color: var(--green-dark);
     background: #2a313b;

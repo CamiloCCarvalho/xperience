@@ -15,7 +15,11 @@ from django.utils import timezone
 
 from app.models import (
     Client as AppClient,
+    BudgetGoal,
+    CompensationHistory,
     Department,
+    EmployeeProfile,
+    FinancialEntry,
     Membership,
     Project,
     TimeEntry,
@@ -36,6 +40,23 @@ from app.time_entry_timer import (
 from app.workspace_session import SESSION_ADMIN_WORKSPACE_KEY, SESSION_MEMBER_WORKSPACE_KEY
 
 User = get_user_model()
+
+
+def create_hourly_compensation(user, workspace, *, hourly_rate=Decimal("100.00")):
+    profile = EmployeeProfile.objects.create(
+        user=user,
+        workspace=workspace,
+        employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+        hire_date=date(2024, 1, 1),
+        current_job_title="Contributor",
+    )
+    CompensationHistory.objects.create(
+        employee_profile=profile,
+        compensation_type=CompensationHistory.CompensationType.HOURLY,
+        hourly_rate=hourly_rate,
+        start_date=date(2024, 1, 1),
+    )
+    return profile
 
 
 class TimerDomainTests(TestCase):
@@ -60,6 +81,7 @@ class TimerDomainTests(TestCase):
             workspace_name="WS1",
             workspace_description="",
         )
+        create_hourly_compensation(self.member, self.ws)
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
         self.dept = Department.objects.create(
             workspace=self.ws,
@@ -160,6 +182,7 @@ class TimerHttpTests(TestCase):
             workspace_name="WS2",
             workspace_description="",
         )
+        create_hourly_compensation(self.member, self.ws)
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
         self.dept = Department.objects.create(workspace=self.ws, name="D2")
         UserDepartment.objects.create(
@@ -260,6 +283,7 @@ class PreparedSubmitHttpTests(TestCase):
             workspace_name="WS3",
             workspace_description="",
         )
+        create_hourly_compensation(self.member, self.ws)
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
         self.dept = Department.objects.create(workspace=self.ws, name="D3")
         tpl = TimeEntryTemplate.objects.create(
@@ -335,6 +359,7 @@ class ManualTimeEntryApiTests(TestCase):
             workspace_name="WSM",
             workspace_description="",
         )
+        create_hourly_compensation(self.member, self.ws)
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
         self.dept = Department.objects.create(workspace=self.ws, name="DM")
         tpl = TimeEntryTemplate.objects.create(
@@ -486,6 +511,7 @@ class TimerCompleteFieldsHttpTests(TestCase):
             workspace_name="WSTC",
             workspace_description="",
         )
+        create_hourly_compensation(self.member, self.ws)
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
         self.dept = Department.objects.create(workspace=self.ws, name="DTC")
         tpl = TimeEntryTemplate.objects.create(
@@ -562,6 +588,7 @@ class TimeEntryMonthCountsHttpTests(TestCase):
             workspace_name="WSMC",
             workspace_description="",
         )
+        create_hourly_compensation(self.member, self.ws)
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
         self.dept = Department.objects.create(workspace=self.ws, name="DMC")
         UserDepartment.objects.create(
@@ -705,6 +732,7 @@ class UserHomeHistoryTableTests(TestCase):
             workspace_name="WSHist",
             workspace_description="",
         )
+        create_hourly_compensation(self.member, self.ws)
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
         self.dept = Department.objects.create(workspace=self.ws, name="DeptHist")
         self.tpl = TimeEntryTemplate.objects.create(
@@ -841,6 +869,209 @@ class UserHomeHistoryTableTests(TestCase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Legacy filtro 20 maio")
+
+
+class FinancialFlowTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="ownerfin@example.com",
+            password="x",
+            first_name="O",
+            last_name="F",
+        )
+        self.member = User.objects.create_user(
+            email="memberfin@example.com",
+            password="x",
+            first_name="M",
+            last_name="F",
+        )
+        self.ws = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WSFin",
+            workspace_description="",
+        )
+        create_hourly_compensation(self.member, self.ws, hourly_rate=Decimal("50.00"))
+        self.client_ref = AppClient.objects.create(workspace=self.ws, name="Cliente Fin")
+        self.project = Project.objects.create(
+            workspace=self.ws,
+            client=self.client_ref,
+            name="Projeto Fin",
+        )
+        UserClient.objects.create(user=self.member, workspace=self.ws, client=self.client_ref)
+        UserProject.objects.create(user=self.member, workspace=self.ws, project=self.project)
+        self.dept = Department.objects.create(workspace=self.ws, name="Financeiro")
+        UserDepartment.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            is_primary=True,
+        )
+
+    def test_saved_time_entry_creates_automatic_financial_entry(self):
+        entry = TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 7, 10),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("2.00"),
+            client=self.client_ref,
+            project=self.project,
+        )
+        fin = FinancialEntry.objects.get(
+            time_entry=entry,
+            entry_kind=FinancialEntry.EntryKind.TIME_ENTRY_COST,
+        )
+        self.assertEqual(fin.flow_type, FinancialEntry.FlowType.OUTFLOW)
+        self.assertEqual(fin.amount, Decimal("100.00"))
+        self.assertEqual(fin.user, self.member)
+        self.assertEqual(fin.project, self.project)
+
+    def test_updating_saved_time_entry_recalculates_financial_entry(self):
+        entry = TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 7, 11),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1.00"),
+        )
+        entry.hours = Decimal("3.00")
+        entry.save(financial_actor=self.owner)
+        fin = FinancialEntry.objects.get(
+            source_time_entry_id=entry.pk,
+            entry_kind=FinancialEntry.EntryKind.TIME_ENTRY_COST,
+        )
+        self.assertEqual(fin.amount, Decimal("150.00"))
+        self.assertEqual(fin.updated_by, self.owner)
+
+    def test_deleting_saved_time_entry_creates_reversal(self):
+        entry = TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 7, 12),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1.00"),
+        )
+        original = FinancialEntry.objects.get(
+            source_time_entry_id=entry.pk,
+            entry_kind=FinancialEntry.EntryKind.TIME_ENTRY_COST,
+        )
+        source_entry_id = entry.pk
+        entry.delete(financial_actor=self.owner)
+        original.refresh_from_db()
+        reversal = FinancialEntry.objects.get(reversal_of=original)
+        self.assertEqual(reversal.flow_type, FinancialEntry.FlowType.INFLOW)
+        self.assertEqual(reversal.amount, original.amount)
+        self.assertEqual(reversal.source_time_entry_id, source_entry_id)
+        self.assertEqual(reversal.created_by, self.owner)
+
+    def test_budget_goal_accepts_workspace_client_and_project_scope(self):
+        workspace_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            minimum_target_amount=Decimal("1000.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("2000.00"),
+            desired_target_date=date(2026, 9, 1),
+        )
+        client_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            client=self.client_ref,
+            minimum_target_amount=Decimal("500.00"),
+            minimum_target_date=date(2026, 8, 5),
+            desired_target_amount=Decimal("800.00"),
+            desired_target_date=date(2026, 9, 5),
+        )
+        project_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            client=self.client_ref,
+            project=self.project,
+            minimum_target_amount=Decimal("200.00"),
+            minimum_target_date=date(2026, 8, 10),
+            desired_target_amount=Decimal("300.00"),
+            desired_target_date=date(2026, 9, 10),
+        )
+        self.assertIsNotNone(workspace_goal.pk)
+        self.assertEqual(client_goal.client, self.client_ref)
+        self.assertEqual(project_goal.project, self.project)
+
+
+class AdminConfigFinancialTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email="adminfin@example.com",
+            password="x",
+            first_name="Admin",
+            last_name="Fin",
+        )
+        self.admin_user.platform_role = User.PlatformRole.ADMIN
+        self.admin_user.save(update_fields=["platform_role"])
+        self.ws = Workspace.objects.create(
+            owner=self.admin_user,
+            workspace_name="WSAdminFin",
+            workspace_description="",
+        )
+        self.member = User.objects.create_user(
+            email="memberadminfin@example.com",
+            password="x",
+            first_name="Member",
+            last_name="Fin",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws, role="manager")
+        self.client_ref = AppClient.objects.create(workspace=self.ws, name="Cliente Admin Fin")
+        self.project = Project.objects.create(
+            workspace=self.ws,
+            client=self.client_ref,
+            name="Projeto Admin Fin",
+        )
+        self.client = Client()
+        self.client.force_login(self.admin_user)
+        session = self.client.session
+        session[SESSION_ADMIN_WORKSPACE_KEY] = self.ws.pk
+        session.save()
+
+    def test_admin_config_creates_manual_financial_entry(self):
+        response = self.client.post(
+            reverse("admin-config"),
+            {
+                "action": "create_financial_entry",
+                "flow_type": FinancialEntry.FlowType.INFLOW,
+                "occurred_on": "2026-08-01",
+                "amount": "1500.00",
+                "description": "Novo contrato",
+                "client": self.client_ref.pk,
+                "project": self.project.pk,
+                "user": self.member.pk,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        fin = FinancialEntry.objects.get(entry_kind=FinancialEntry.EntryKind.MANUAL)
+        self.assertEqual(fin.created_by, self.admin_user)
+        self.assertEqual(fin.client, self.client_ref)
+
+    def test_admin_config_creates_budget_goal(self):
+        response = self.client.post(
+            reverse("admin-config"),
+            {
+                "action": "create_budget_goal",
+                "client": self.client_ref.pk,
+                "project": self.project.pk,
+                "minimum_target_amount": "1000.00",
+                "minimum_target_date": "2026-08-01",
+                "desired_target_amount": "2000.00",
+                "desired_target_date": "2026-09-01",
+                "description": "Meta do trimestre",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        goal = BudgetGoal.objects.get(project=self.project)
+        self.assertEqual(goal.created_by, self.admin_user)
 
 
 class UserAccountAvatarTests(TestCase):

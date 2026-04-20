@@ -3,13 +3,16 @@ from decimal import Decimal, InvalidOperation
 from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Q
+from django.utils import timezone
 from typing import cast
 
 from app.models import (
+    BudgetGoal,
     Client,
     CompensationHistory,
     Department,
     EmployeeProfile,
+    FinancialEntry,
     JobHistory,
     Membership,
     Project,
@@ -94,11 +97,10 @@ class LoginForm(forms.Form):
 class WorkspaceCreateForm(forms.ModelForm):
     class Meta:
         model = Workspace
-        fields = ("workspace_name", "workspace_description", "budget_total")
+        fields = ("workspace_name", "workspace_description")
         labels = {
             "workspace_name": "Nome do workspace",
             "workspace_description": "Descrição",
-            "budget_total": "Budget total",
         }
 
 
@@ -645,6 +647,131 @@ class CompensationHistoryForm(forms.ModelForm):
             profile_field.queryset = EmployeeProfile.objects.filter(
                 workspace=workspace
             ).select_related("user").order_by("user__email")
+
+
+class FinancialEntryManualForm(forms.ModelForm):
+    class Meta:
+        model = FinancialEntry
+        fields = ("flow_type", "occurred_on", "amount", "description", "client", "project", "user")
+        labels = {
+            "flow_type": "Fluxo",
+            "occurred_on": "Data",
+            "amount": "Valor",
+            "description": "Descrição",
+            "client": "Cliente",
+            "project": "Projeto",
+            "user": "Colaborador",
+        }
+        widgets = {
+            "flow_type": forms.Select(attrs=_config_field_attrs),
+            "occurred_on": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "amount": forms.NumberInput(attrs={**_config_field_attrs, "step": "0.01", "min": "0.01"}),
+            "description": forms.Textarea(attrs={**_config_field_attrs, "rows": 2}),
+            "client": forms.Select(attrs=_config_field_attrs),
+            "project": forms.Select(attrs=_config_field_attrs),
+            "user": forms.Select(attrs=_config_field_attrs),
+        }
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        self._workspace = workspace
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.initial.setdefault("occurred_on", timezone.localdate())
+        if workspace is not None:
+            client_field = cast(forms.ModelChoiceField, self.fields["client"])
+            client_field.queryset = Client.objects.filter(workspace=workspace).order_by("name")
+            project_field = cast(forms.ModelChoiceField, self.fields["project"])
+            project_field.queryset = Project.objects.filter(workspace=workspace).select_related(
+                "client"
+            ).order_by("client__name", "name")
+            user_field = cast(forms.ModelChoiceField, self.fields["user"])
+            user_field.queryset = User.objects.filter(
+                Q(memberships__workspace=workspace) | Q(pk=workspace.owner_id)
+            ).order_by("email").distinct()
+
+    def save(
+        self,
+        commit=True,
+        *,
+        workspace: Workspace | None = None,
+        created_by: User | None = None,
+        updated_by: User | None = None,
+    ):
+        obj = super().save(commit=False)
+        obj.entry_kind = FinancialEntry.EntryKind.MANUAL
+        obj.workspace = workspace or self._workspace  # type: ignore[assignment]
+        if created_by is not None:
+            obj.created_by = obj.created_by or created_by
+        if updated_by is not None:
+            obj.updated_by = updated_by
+        if commit:
+            obj.save()
+        return obj
+
+
+class BudgetGoalForm(forms.ModelForm):
+    class Meta:
+        model = BudgetGoal
+        fields = (
+            "client",
+            "project",
+            "minimum_target_amount",
+            "minimum_target_date",
+            "desired_target_amount",
+            "desired_target_date",
+            "description",
+        )
+        labels = {
+            "client": "Cliente",
+            "project": "Projeto",
+            "minimum_target_amount": "Meta mínima",
+            "minimum_target_date": "Data da meta mínima",
+            "desired_target_amount": "Meta desejada",
+            "desired_target_date": "Data da meta desejada",
+            "description": "Descrição",
+        }
+        widgets = {
+            "client": forms.Select(attrs=_config_field_attrs),
+            "project": forms.Select(attrs=_config_field_attrs),
+            "minimum_target_amount": forms.NumberInput(
+                attrs={**_config_field_attrs, "step": "0.01", "min": "0.01"}
+            ),
+            "minimum_target_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "desired_target_amount": forms.NumberInput(
+                attrs={**_config_field_attrs, "step": "0.01", "min": "0.01"}
+            ),
+            "desired_target_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "description": forms.Textarea(attrs={**_config_field_attrs, "rows": 2}),
+        }
+
+    def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
+        self._workspace = workspace
+        super().__init__(*args, **kwargs)
+        if workspace is not None:
+            client_field = cast(forms.ModelChoiceField, self.fields["client"])
+            client_field.queryset = Client.objects.filter(workspace=workspace).order_by("name")
+            project_field = cast(forms.ModelChoiceField, self.fields["project"])
+            project_field.queryset = Project.objects.filter(workspace=workspace).select_related(
+                "client"
+            ).order_by("client__name", "name")
+
+    def save(
+        self,
+        commit=True,
+        *,
+        workspace: Workspace | None = None,
+        created_by: User | None = None,
+        updated_by: User | None = None,
+    ):
+        obj = super().save(commit=False)
+        obj.workspace = workspace or self._workspace  # type: ignore[assignment]
+        if created_by is not None:
+            obj.created_by = obj.created_by or created_by
+        if updated_by is not None:
+            obj.updated_by = updated_by
+        if commit:
+            obj.save()
+        return obj
 
 
 class ManualTimeEntryForm(forms.ModelForm):

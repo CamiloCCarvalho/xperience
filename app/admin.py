@@ -1,10 +1,12 @@
 from django.contrib import admin
 
 from .models import (
+    BudgetGoal,
     Client,
     CompensationHistory,
     Department,
     EmployeeProfile,
+    FinancialEntry,
     JobHistory,
     Project,
     Task,
@@ -120,6 +122,48 @@ class CompensationHistoryAdmin(admin.ModelAdmin):
     autocomplete_fields = ("employee_profile",)
 
 
+@admin.register(FinancialEntry)
+class FinancialEntryAdmin(admin.ModelAdmin):
+    list_display = (
+        "workspace",
+        "entry_kind",
+        "flow_type",
+        "occurred_on",
+        "amount",
+        "client",
+        "project",
+        "user",
+    )
+    list_filter = ("workspace", "entry_kind", "flow_type")
+    search_fields = ("description", "user__email", "client__name", "project__name")
+    autocomplete_fields = (
+        "workspace",
+        "client",
+        "project",
+        "user",
+        "time_entry",
+        "reversal_of",
+        "created_by",
+        "updated_by",
+    )
+
+
+@admin.register(BudgetGoal)
+class BudgetGoalAdmin(admin.ModelAdmin):
+    list_display = (
+        "workspace",
+        "client",
+        "project",
+        "minimum_target_amount",
+        "minimum_target_date",
+        "desired_target_amount",
+        "desired_target_date",
+    )
+    list_filter = ("workspace",)
+    search_fields = ("description", "client__name", "project__name")
+    autocomplete_fields = ("workspace", "client", "project", "created_by", "updated_by")
+
+
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ("name", "workspace", "is_active", "created_at", "created_by")
@@ -165,7 +209,18 @@ class TimeEntryAdmin(admin.ModelAdmin):
     list_display = ("user", "workspace", "department", "date", "hours", "is_overtime", "client", "project", "task")
     list_filter = ("workspace", "department")
     date_hierarchy = "date"
+    search_fields = ("user__email", "project__name", "client__name", "description")
     autocomplete_fields = ("user", "workspace", "department", "client", "project", "task")
 
     def save_model(self, request, obj, form, change):
-        obj.save(skip_access_check=request.user.is_superuser)
+        obj.save(
+            skip_access_check=request.user.is_superuser,
+            financial_actor=request.user,
+        )
+
+    def delete_model(self, request, obj):
+        obj.delete(financial_actor=request.user)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            obj.delete(financial_actor=request.user)
