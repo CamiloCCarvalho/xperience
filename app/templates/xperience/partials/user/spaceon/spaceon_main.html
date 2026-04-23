@@ -50,6 +50,7 @@
                     class="q1-api-endpoints"
                     hidden
                     data-workspace-id="{{ active_member_workspace.pk|default:'' }}"
+                    data-member-display-name="{% firstof user.get_full_name user.email %}"
                     data-manual-create-url="{% url 'user-time-entry-manual-create' %}"
                     data-month-counts-url="{% url 'user-time-entry-month-counts' %}"
                     data-timer-draft-url="{% url 'user-time-entry-timer-draft' %}"
@@ -57,6 +58,9 @@
                     data-timer-stop-url="{% url 'user-time-entry-timer-stop' %}"
                     data-timer-complete-url="{% url 'user-time-entry-timer-complete' %}"
                     data-timer-discard-url="{% url 'user-time-entry-timer-discard-pending' %}"
+                    data-day-detail-url="{% url 'user-time-entry-day-detail' %}"
+                    data-manual-update-url-template="{% url 'user-time-entry-manual-update' pk=888001888 %}"
+                    data-manual-delete-url-template="{% url 'user-time-entry-manual-delete' pk=888001888 %}"
                 ></div>
 
                 {% if entry_form.configured and entry_form.template_name %}
@@ -217,6 +221,8 @@
                                 <option value="">Selecione...</option>
                                 <option value="internal">Interno</option>
                                 <option value="external">Externo</option>
+                                <option value="displacement">Deslocamento</option>
+                                <option value="home_office">Home Office</option>
                             </select>
                         </div>
                         {% endif %}
@@ -241,7 +247,13 @@
                     </div>
 
                     <div class="q1-actions">
-                        <button type="button" class="q1-btn q1-btn-primary" id="q1-btn-prepare">
+                        <button
+                            type="button"
+                            class="q1-btn q1-btn-primary"
+                            id="q1-btn-prepare"
+                            aria-keyshortcuts="Control+Space"
+                            title="Atalho: Ctrl+Espaço"
+                        >
                             <i class="fas fa-clipboard-check" aria-hidden="true"></i>
                             Preparar apontamento
                         </button>
@@ -305,6 +317,138 @@
                         </tbody>
                     </table>
                 </div>
+
+                <dialog id="q3-birthday-info-dialog" class="q1-pre-entry-dialog" aria-labelledby="q3-birthday-info-title">
+                    <div class="q1-pre-entry-dialog__panel">
+                        <div class="q1-pre-entry-dialog__head">
+                            <h3 id="q3-birthday-info-title">Aniversário</h3>
+                            <button type="button" class="q1-pre-entry-dialog__close" id="q3-birthday-info-close" aria-label="Fechar">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="q1-pre-entry-dialog__body">
+                            <section class="q1-pre-entry-dialog__section">
+                                <p id="q3-birthday-info-text" class="q3-birthday-info-message"></p>
+                            </section>
+                        </div>
+                    </div>
+                </dialog>
+
+                <dialog id="q3-calendar-day-dialog" class="q1-pre-entry-dialog q3-calendar-day-dialog" aria-labelledby="q3-calendar-day-dialog-title">
+                    <div class="q1-pre-entry-dialog__panel">
+                        <div class="q1-pre-entry-dialog__head">
+                            <h3 id="q3-calendar-day-dialog-title">Dia</h3>
+                            <button type="button" class="q1-pre-entry-dialog__close" id="q3-calendar-day-dialog-close" aria-label="Fechar">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="q1-pre-entry-dialog__body">
+                            <div id="q3-day-modal-view">
+                                <section class="q1-pre-entry-dialog__section">
+                                    <h4>Apontamentos</h4>
+                                    <div id="q3-day-entries-list" class="q3-day-modal-entries"></div>
+                                </section>
+                                <section class="q1-pre-entry-dialog__section">
+                                    <h4>Eventos</h4>
+                                    <div id="q3-day-events-list" class="q3-day-modal-events"></div>
+                                </section>
+                            </div>
+                            <div id="q3-day-modal-edit" class="q1-hidden">
+                                <button type="button" class="q3-day-modal-edit__back" id="q3-day-modal-edit-back">Voltar</button>
+                                <h4 class="q3-day-modal-edit__title">Editar apontamento</h4>
+                                <form id="q3-day-modal-edit-form" class="q3-day-modal-edit-form" action="#" method="post">
+                                    <div class="q3-day-edit-field q1-hidden" id="q3-day-edit-row-duration">
+                                        <label for="q3-day-edit-hours">Horas</label>
+                                        <input type="number" id="q3-day-edit-hours" name="hours" min="0" max="24" step="0.25" value="">
+                                    </div>
+                                    <div class="q3-day-edit-field q1-hidden" id="q3-day-edit-row-range">
+                                        <label for="q3-day-edit-start">Início</label>
+                                        <input type="time" id="q3-day-edit-start" name="start_time" value="">
+                                        <label for="q3-day-edit-end">Fim</label>
+                                        <input type="time" id="q3-day-edit-end" name="end_time" value="">
+                                    </div>
+                                    {% if entry_form.use_client or entry_form.use_project or entry_form.use_task %}
+                                    <div class="q3-day-edit-row q1-row q1-row-four">
+                                        {% if entry_form.use_client %}
+                                        <div class="q1-field">
+                                            <label for="q3-day-edit-client">Cliente</label>
+                                            {% if entry_clients %}
+                                            <select id="q3-day-edit-client" name="client_id" autocomplete="organization">
+                                                <option value="">Selecione…</option>
+                                                {% for c in entry_clients %}
+                                                <option value="{{ c.pk }}">{{ c.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <p class="q1-access-empty">Nenhum cliente liberado para você neste workspace. Peça ao gestor.</p>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        {% if entry_form.use_project %}
+                                        <div class="q1-field">
+                                            <label for="q3-day-edit-project">Projeto</label>
+                                            {% if entry_projects %}
+                                            <select id="q3-day-edit-project" name="project_id">
+                                                <option value="">Selecione…</option>
+                                                {% for p in entry_projects %}
+                                                <option value="{{ p.pk }}" data-client-id="{{ p.client_id }}">{{ p.client.name }} — {{ p.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <p class="q1-access-empty">Nenhum projeto liberado para você neste workspace. Peça ao gestor.</p>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        {% if entry_form.use_task %}
+                                        <div class="q1-field">
+                                            <label for="q3-day-edit-task">Tarefa</label>
+                                            {% if entry_tasks %}
+                                            <select id="q3-day-edit-task" name="task_id">
+                                                <option value="">Selecione…</option>
+                                                {% for t in entry_tasks %}
+                                                <option value="{{ t.pk }}" data-project-id="{{ t.project_id }}" data-client-id="{{ t.project.client_id }}">{{ t.project.name }} — {{ t.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <p class="q1-access-empty">Nenhuma tarefa disponível nos seus projetos. Peça ao gestor.</p>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    {% if entry_form.use_description %}
+                                    <div class="q3-day-edit-field">
+                                        <label for="q3-day-edit-description">Descrição</label>
+                                        <textarea id="q3-day-edit-description" name="description" rows="2"></textarea>
+                                    </div>
+                                    {% endif %}
+                                    {% if entry_form.use_type %}
+                                    <div class="q3-day-edit-field">
+                                        <label for="q3-day-edit-entry-type">Tipo de apontamento</label>
+                                        <select id="q3-day-edit-entry-type" name="entry_type">
+                                            <option value="">Selecione…</option>
+                                            <option value="internal">Interno</option>
+                                            <option value="external">Externo</option>
+                                            <option value="displacement">Deslocamento</option>
+                                            <option value="home_office">Home Office</option>
+                                        </select>
+                                    </div>
+                                    {% endif %}
+                                    <div class="q3-day-edit-field">
+                                        <label class="q1-checkbox-label">
+                                            <input type="checkbox" id="q3-day-edit-overtime" name="is_overtime" value="on">
+                                            <span>Hora extra</span>
+                                        </label>
+                                    </div>
+                                    <p class="q3-day-edit-status" id="q3-day-edit-status" role="status"></p>
+                                    <div class="q3-day-edit-actions">
+                                        <button type="submit" class="q1-btn q1-btn-primary" id="q3-day-edit-save">Salvar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </dialog>
             </article>
         </div>
 
@@ -473,6 +617,8 @@
                                         <option value=""{% if history_selection.entry_type == "" %} selected{% endif %}>Todos</option>
                                         <option value="internal"{% if history_selection.entry_type == "internal" %} selected{% endif %}>Interno</option>
                                         <option value="external"{% if history_selection.entry_type == "external" %} selected{% endif %}>Externo</option>
+                                        <option value="displacement"{% if history_selection.entry_type == "displacement" %} selected{% endif %}>Deslocamento</option>
+                                        <option value="home_office"{% if history_selection.entry_type == "home_office" %} selected{% endif %}>Home Office</option>
                                     </select>
                                 </div>
                                 {% endif %}

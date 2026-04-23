@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    BoardCard,
     BudgetGoal,
     Client,
     CompensationHistory,
@@ -8,6 +9,7 @@ from .models import (
     EmployeeProfile,
     FinancialEntry,
     JobHistory,
+    PrivateBoardColumn,
     Project,
     Task,
     TimeEntry,
@@ -32,7 +34,19 @@ class UserAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {"fields": ("email",)}),
         ("Plataforma", {"fields": ("platform_role",)}),
-        ("Perfil", {"fields": ("first_name", "last_name", "avatar", "birth_date", "platform_join_date")}),
+        (
+            "Perfil",
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "avatar",
+                    "birth_date",
+                    "birthday_public_in_workspace",
+                    "platform_join_date",
+                )
+            },
+        ),
         (
             "Permissões Django",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
@@ -113,6 +127,8 @@ class CompensationHistoryAdmin(admin.ModelAdmin):
         "employee_profile",
         "compensation_type",
         "monthly_salary",
+        "monthly_salary_is_fixed",
+        "monthly_reference_hours",
         "hourly_rate",
         "start_date",
         "end_date",
@@ -152,6 +168,7 @@ class FinancialEntryAdmin(admin.ModelAdmin):
 class BudgetGoalAdmin(admin.ModelAdmin):
     list_display = (
         "workspace",
+        "visibility",
         "client",
         "project",
         "minimum_target_amount",
@@ -159,7 +176,7 @@ class BudgetGoalAdmin(admin.ModelAdmin):
         "desired_target_amount",
         "desired_target_date",
     )
-    list_filter = ("workspace",)
+    list_filter = ("workspace", "visibility")
     search_fields = ("description", "client__name", "project__name")
     autocomplete_fields = ("workspace", "client", "project", "created_by", "updated_by")
 
@@ -186,6 +203,41 @@ class TaskAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "project__workspace")
     search_fields = ("name", "project__name")
     autocomplete_fields = ("project",)
+
+
+@admin.register(PrivateBoardColumn)
+class PrivateBoardColumnAdmin(admin.ModelAdmin):
+    list_display = ("name", "workspace", "user", "position", "updated_at")
+    list_filter = ("workspace",)
+    search_fields = ("name", "user__email")
+    autocomplete_fields = ("workspace", "user")
+
+
+@admin.register(BoardCard)
+class BoardCardAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "workspace",
+        "visibility",
+        "private_column",
+        "position",
+        "created_by",
+        "updated_at",
+    )
+    list_filter = ("workspace", "visibility")
+    search_fields = ("title", "description", "created_by__email")
+    autocomplete_fields = (
+        "workspace",
+        "created_by",
+        "updated_by",
+        "private_column",
+        "client",
+        "project",
+        "task",
+        "budget_goal",
+        "assigned_user",
+        "assigned_department",
+    )
 
 
 @admin.register(UserClient)

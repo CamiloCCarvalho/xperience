@@ -324,6 +324,7 @@
                     );
                     hideLinkedOption(sel, res.data.client_id);
                     updateRowSortAttrs(row);
+                    refreshRowTagOverflow(row);
                 } else {
                     addProjectTag(
                         row.querySelector("[data-acf-cell-projects]"),
@@ -333,6 +334,7 @@
                     );
                     hideLinkedOption(sel, res.data.project_id);
                     updateRowSortAttrs(row);
+                    refreshRowTagOverflow(row);
                 }
             });
         });
@@ -354,6 +356,41 @@
                 });
                 row.setAttribute("data-sort-projects", pns.length ? pns.join(",") : "zzzz");
             }
+        }
+
+        function refreshTagOverflowInCell(cell) {
+            if (!cell) {
+                return;
+            }
+            var wrap = cell.querySelector(".acf-members__tags-wrap");
+            var toggle = cell.querySelector("[data-acf-tags-toggle]");
+            if (!wrap || !toggle) {
+                return;
+            }
+            var tagsCount = wrap.querySelectorAll(".acf-members__tag").length;
+            var shouldCollapse = tagsCount > 4;
+            wrap.classList.remove("acf-members__tags-wrap--expanded");
+            wrap.classList.remove("acf-members__tags-wrap--collapsed");
+            toggle.classList.remove("acf-members__tags-toggle--placeholder");
+            toggle.textContent = "Ver todos";
+            toggle.setAttribute("aria-expanded", "false");
+            toggle.setAttribute("aria-hidden", "false");
+            if (!shouldCollapse) {
+                toggle.classList.add("acf-members__tags-toggle--placeholder");
+                toggle.setAttribute("aria-hidden", "true");
+                return;
+            }
+            wrap.classList.add("acf-members__tags-wrap--collapsed");
+            toggle.textContent = "Ver todos (" + String(tagsCount) + ")";
+            toggle.setAttribute("aria-expanded", "false");
+        }
+
+        function refreshRowTagOverflow(row) {
+            if (!row) {
+                return;
+            }
+            refreshTagOverflowInCell(row.querySelector("[data-acf-cell-clients]"));
+            refreshTagOverflowInCell(row.querySelector("[data-acf-cell-projects]"));
         }
 
         tbody.addEventListener("click", function (ev) {
@@ -383,6 +420,7 @@
                             showLinkedOption(sel, cid);
                         }
                         updateRowSortAttrs(row);
+                        refreshRowTagOverflow(row);
                     });
                 } else if (tag.classList.contains("acf-members__tag--project")) {
                     var upid = tag.getAttribute("data-up-id");
@@ -400,7 +438,33 @@
                             showLinkedOption(s2, pid);
                         }
                         updateRowSortAttrs(row);
+                        refreshRowTagOverflow(row);
                     });
+                }
+                return;
+            }
+            var toggle = ev.target.closest("[data-acf-tags-toggle]");
+            if (toggle) {
+                if (toggle.classList.contains("acf-members__tags-toggle--placeholder")) {
+                    return;
+                }
+                var tagsCell = toggle.closest(".acf-members__td--tags");
+                var wrap = tagsCell ? tagsCell.querySelector(".acf-members__tags-wrap") : null;
+                if (!wrap) {
+                    return;
+                }
+                var expanded = wrap.classList.contains("acf-members__tags-wrap--expanded");
+                if (expanded) {
+                    wrap.classList.remove("acf-members__tags-wrap--expanded");
+                    wrap.classList.add("acf-members__tags-wrap--collapsed");
+                    var countCollapsed = wrap.querySelectorAll(".acf-members__tag").length;
+                    toggle.textContent = "Ver todos (" + String(countCollapsed) + ")";
+                    toggle.setAttribute("aria-expanded", "false");
+                } else {
+                    toggle.textContent = "Recolher";
+                    wrap.classList.remove("acf-members__tags-wrap--collapsed");
+                    wrap.classList.add("acf-members__tags-wrap--expanded");
+                    toggle.setAttribute("aria-expanded", "true");
                 }
                 return;
             }
@@ -433,6 +497,7 @@
 
         updateSortIndicators();
         root.querySelectorAll(".acf-members__client-select, .acf-members__project-select").forEach(syncSelectEnabled);
+        root.querySelectorAll("tr.acf-members__row").forEach(refreshRowTagOverflow);
         goToPage(1);
     }
 

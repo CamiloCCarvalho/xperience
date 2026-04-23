@@ -1,14 +1,24 @@
 from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 from typing import cast
 
 from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from app.avatar import handle_user_avatar_upload, user_avatar_url, workspace_avatar_url
+from app.admin_dashboard_data import build_admin_dashboard
+from app.avatar import (
+    handle_user_avatar_upload,
+    handle_workspace_avatar_upload,
+    remove_user_avatar,
+    remove_workspace_avatar,
+    user_avatar_url,
+    workspace_avatar_url,
+)
 from app.decorators import admin_active_workspace_required, platform_admin_required
 from app.financial import calculate_workspace_balance
 from app.forms import (
@@ -55,6 +65,13 @@ from app.workspace_session import (
 )
 
 page_admin = "xperience/pages/admin/"
+
+
+def _format_brl_money(value: Decimal | int | float | None) -> str:
+    amount = Decimal(str(value if value is not None else 0))
+    quantized = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    s = f"{quantized:,.2f}"
+    return "R$ " + s.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def _admin_context(request):
@@ -396,11 +413,12 @@ def admin_home(request):
 @platform_admin_required
 @admin_active_workspace_required
 def admin_dashboard(request):
-    return render(
-        request,
-        page_admin + "dashboard.html",
-        context=_admin_context(request),
-    )
+    ws = request.active_admin_workspace
+    assert ws is not None
+    period_key = (request.GET.get("period") or "month_current").strip()
+    ctx = _admin_context(request)
+    ctx["dashboard"] = build_admin_dashboard(ws, period_key)
+    return render(request, page_admin + "dashboard.html", context=ctx)
 
 
 def _user_in_workspace_admin_context(user: User, ws: Workspace) -> bool:
@@ -468,6 +486,11 @@ def _can_view_compensation(request_user: User, target_user: User, ws: Workspace)
         workspace=ws,
         role__in=("admin", "manager"),
     ).exists()
+
+
+def _admin_config_redirect_hash(fragment: str) -> HttpResponseRedirect:
+    """Redirect para a config do workspace com fragmento de aba (ex.: sub-aba Fornecedores)."""
+    return HttpResponseRedirect(f"{reverse('admin-config')}{fragment}")
 
 
 def _upcoming_birthdays(ws: Workspace, days_ahead: int = 60):
@@ -646,46 +669,169 @@ def admin_config(request):
     task_create_dialog_open = False
     task_edit_dialog_open = False
     task_edit_target_id = ""
-    profile_form = EmployeeProfileForm(workspace=ws)
-    job_history_form = JobHistoryForm(workspace=ws)
-    compensation_form = CompensationHistoryForm(workspace=ws)
+    financial_entry_tab_open = False
+    budget_goal_create_dialog_open = False
+    budget_goal_edit_dialog_open = False
+    budget_goal_edit_target_id = ""
+    job_history_create_dialog_open = False
+    job_history_edit_dialog_open = False
+    job_history_edit_target_id = ""
+    compensation_history_create_dialog_open = False
+    compensation_history_edit_dialog_open = False
+    compensation_history_edit_target_id = ""
+    employee_profile_create_dialog_open = False
+    employee_profile_edit_dialog_open = False
+    employee_profile_edit_target_id = ""
+    profile_form = EmployeeProfileForm(prefix="ep_create", workspace=ws)
+    profile_edit_form = EmployeeProfileForm(prefix="ep_edit", workspace=ws)
+    job_history_form = JobHistoryForm(prefix="jh_create", workspace=ws)
+    job_history_edit_form = JobHistoryForm(prefix="jh_edit", workspace=ws)
+    compensation_form = CompensationHistoryForm(prefix="ch_create", workspace=ws)
+    compensation_history_edit_form = CompensationHistoryForm(prefix="ch_edit", workspace=ws)
     financial_entry_form = FinancialEntryManualForm(workspace=ws)
-    budget_goal_form = BudgetGoalForm(workspace=ws)
+    budget_goal_form = BudgetGoalForm(prefix="goal_create", workspace=ws)
+    budget_goal_edit_form = BudgetGoalForm(prefix="goal_edit", workspace=ws)
 
     if request.method == "POST":
         action = request.POST.get("action")
-        if action == "upsert_employee_profile":
-            profile_form = EmployeeProfileForm(request.POST, workspace=ws)
+        if action == "create_employee_profile":
+            profile_form = EmployeeProfileForm(request.POST, prefix="ep_create", workspace=ws)
             if profile_form.is_valid():
                 candidate = profile_form.save(commit=False)
-                existing = EmployeeProfile.objects.filter(
-                    workspace=ws,
-                    user=candidate.user,
-                ).first()
-                if existing is not None:
-                    existing.employment_status = candidate.employment_status
-                    existing.hire_date = candidate.hire_date
-                    existing.termination_date = candidate.termination_date
-                    existing.current_job_title = candidate.current_job_title
-                    existing.save()
-                    messages.success(request, "Vínculo empregatício atualizado.")
+                if EmployeeProfile.objects.filter(workspace=ws, user=candidate.user).exists():
+                    profile_form.add_error(
+                        "user",
+                        "Já existe vínculo para este colaborador neste workspace.",
+                    )
                 else:
                     candidate.workspace = ws
                     candidate.save()
-                    messages.success(request, "Vínculo empregatício criado.")
-                return redirect("admin-config")
+                    messages.success(request, "Vínculo empregatício cadastrado.")
+                    return _admin_config_redirect_hash("#admin-config-ws-vinculo")
+            profile_edit_form = EmployeeProfileForm(prefix="ep_edit", workspace=ws)
+            employee_profile_create_dialog_open = True
+        elif action == "update_employee_profile":
+            ep = (
+                EmployeeProfile.objects.filter(
+                    pk=request.POST.get("employee_profile_id"),
+                    workspace=ws,
+                )
+                .select_related("user")
+                .first()
+            )
+            if ep is None:
+                messages.error(request, "Vínculo inválido.")
+                return _admin_config_redirect_hash("#admin-config-ws-vinculo")
+            profile_edit_form = EmployeeProfileForm(
+                request.POST, prefix="ep_edit", instance=ep, workspace=ws
+            )
+            if profile_edit_form.is_valid():
+                profile_edit_form.save()
+                messages.success(request, "Vínculo empregatício atualizado.")
+                return _admin_config_redirect_hash("#admin-config-ws-vinculo")
+            profile_form = EmployeeProfileForm(prefix="ep_create", workspace=ws)
+            employee_profile_edit_dialog_open = True
+            employee_profile_edit_target_id = str(ep.pk)
+        elif action == "delete_employee_profile":
+            deleted, _ = EmployeeProfile.objects.filter(
+                pk=request.POST.get("employee_profile_id"),
+                workspace=ws,
+            ).delete()
+            if deleted:
+                messages.success(request, "Vínculo removido.")
+            else:
+                messages.error(request, "Vínculo não encontrado.")
+            return _admin_config_redirect_hash("#admin-config-ws-vinculo")
         elif action == "create_job_history":
-            job_history_form = JobHistoryForm(request.POST, workspace=ws)
+            job_history_form = JobHistoryForm(request.POST, prefix="jh_create", workspace=ws)
             if job_history_form.is_valid():
                 job_history_form.save()
-                messages.success(request, "Histórico de cargo cadastrado.")
-                return redirect("admin-config")
+                messages.success(request, "Cargo cadastrado.")
+                return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            job_history_edit_form = JobHistoryForm(prefix="jh_edit", workspace=ws)
+            job_history_create_dialog_open = True
+        elif action == "update_job_history":
+            jh = (
+                JobHistory.objects.filter(
+                    pk=request.POST.get("job_history_id"),
+                    employee_profile__workspace=ws,
+                )
+                .select_related("employee_profile")
+                .first()
+            )
+            if jh is None:
+                messages.error(request, "Registro de cargo inválido.")
+                return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            job_history_edit_form = JobHistoryForm(
+                request.POST, prefix="jh_edit", instance=jh, workspace=ws
+            )
+            if job_history_edit_form.is_valid():
+                job_history_edit_form.save()
+                messages.success(request, "Cargo atualizado.")
+                return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            job_history_form = JobHistoryForm(prefix="jh_create", workspace=ws)
+            job_history_edit_dialog_open = True
+            job_history_edit_target_id = str(jh.pk)
+        elif action == "delete_job_history":
+            deleted, _ = JobHistory.objects.filter(
+                pk=request.POST.get("job_history_id"),
+                employee_profile__workspace=ws,
+            ).delete()
+            messages.success(request, "Cargo removido.") if deleted else messages.error(
+                request, "Registro de cargo não encontrado."
+            )
+            return _admin_config_redirect_hash("#admin-config-ws-cargos")
         elif action == "create_compensation_history":
-            compensation_form = CompensationHistoryForm(request.POST, workspace=ws)
+            compensation_form = CompensationHistoryForm(request.POST, prefix="ch_create", workspace=ws)
             if compensation_form.is_valid():
                 compensation_form.save()
-                messages.success(request, "Histórico de remuneração cadastrado.")
-                return redirect("admin-config")
+                messages.success(request, "Remuneração cadastrada.")
+                return _admin_config_redirect_hash("#admin-config-ws-remuneracao")
+            compensation_history_edit_form = CompensationHistoryForm(prefix="ch_edit", workspace=ws)
+            compensation_history_create_dialog_open = True
+        elif action == "update_compensation_history":
+            ch = (
+                CompensationHistory.objects.filter(
+                    pk=request.POST.get("compensation_history_id"),
+                    employee_profile__workspace=ws,
+                )
+                .select_related("employee_profile", "employee_profile__user")
+                .first()
+            )
+            if ch is None:
+                messages.error(request, "Registro de remuneração inválido.")
+                return _admin_config_redirect_hash("#admin-config-ws-remuneracao")
+            if not _can_view_compensation(request.user, ch.employee_profile.user, ws):
+                messages.error(request, "Sem permissão para alterar esta remuneração.")
+                return _admin_config_redirect_hash("#admin-config-ws-remuneracao")
+            compensation_history_edit_form = CompensationHistoryForm(
+                request.POST, prefix="ch_edit", instance=ch, workspace=ws
+            )
+            if compensation_history_edit_form.is_valid():
+                compensation_history_edit_form.save()
+                messages.success(request, "Remuneração atualizada.")
+                return _admin_config_redirect_hash("#admin-config-ws-remuneracao")
+            compensation_form = CompensationHistoryForm(prefix="ch_create", workspace=ws)
+            compensation_history_edit_dialog_open = True
+            compensation_history_edit_target_id = str(ch.pk)
+        elif action == "delete_compensation_history":
+            ch = (
+                CompensationHistory.objects.filter(
+                    pk=request.POST.get("compensation_history_id"),
+                    employee_profile__workspace=ws,
+                )
+                .select_related("employee_profile", "employee_profile__user")
+                .first()
+            )
+            if ch is None:
+                messages.error(request, "Registro de remuneração não encontrado.")
+                return _admin_config_redirect_hash("#admin-config-ws-remuneracao")
+            if not _can_view_compensation(request.user, ch.employee_profile.user, ws):
+                messages.error(request, "Sem permissão para excluir esta remuneração.")
+                return _admin_config_redirect_hash("#admin-config-ws-remuneracao")
+            ch.delete()
+            messages.success(request, "Remuneração removida.")
+            return _admin_config_redirect_hash("#admin-config-ws-remuneracao")
         elif action == "create_financial_entry":
             financial_entry_form = FinancialEntryManualForm(request.POST, workspace=ws)
             if financial_entry_form.is_valid():
@@ -696,8 +842,9 @@ def admin_config(request):
                 )
                 messages.success(request, "Lançamento financeiro cadastrado.")
                 return redirect("admin-config")
+            financial_entry_tab_open = True
         elif action == "create_budget_goal":
-            budget_goal_form = BudgetGoalForm(request.POST, workspace=ws)
+            budget_goal_form = BudgetGoalForm(request.POST, prefix="goal_create", workspace=ws)
             if budget_goal_form.is_valid():
                 budget_goal_form.save(
                     workspace=ws,
@@ -706,6 +853,50 @@ def admin_config(request):
                 )
                 messages.success(request, "Meta financeira cadastrada.")
                 return redirect("admin-config")
+            budget_goal_edit_form = BudgetGoalForm(prefix="goal_edit", workspace=ws)
+            budget_goal_create_dialog_open = True
+        elif action == "update_budget_goal":
+            goal = BudgetGoal.objects.filter(
+                pk=request.POST.get("budget_goal_id"),
+                workspace=ws,
+            ).first()
+            if goal is None:
+                messages.error(request, "Meta inválida.")
+                return _admin_config_redirect_hash("#admin-config-ws-metas")
+            budget_goal_edit_form = BudgetGoalForm(
+                request.POST,
+                prefix="goal_edit",
+                instance=goal,
+                workspace=ws,
+            )
+            if budget_goal_edit_form.is_valid():
+                budget_goal_edit_form.save(
+                    workspace=ws,
+                    updated_by=request.user,
+                )
+                messages.success(request, "Meta financeira atualizada.")
+                return _admin_config_redirect_hash("#admin-config-ws-metas")
+            budget_goal_form = BudgetGoalForm(prefix="goal_create", workspace=ws)
+            budget_goal_edit_dialog_open = True
+            budget_goal_edit_target_id = str(request.POST.get("budget_goal_id") or goal.pk)
+        elif action == "delete_budget_goal":
+            deleted, _ = BudgetGoal.objects.filter(
+                pk=request.POST.get("budget_goal_id"),
+                workspace=ws,
+            ).delete()
+            messages.success(request, "Meta financeira removida.") if deleted else messages.error(
+                request, "Meta financeira não encontrada."
+            )
+            return _admin_config_redirect_hash("#admin-config-ws-metas")
+        elif action == "update_workspace_avatar":
+            handle_workspace_avatar_upload(request, ws)
+            return redirect("admin-config")
+        elif action == "remove_workspace_avatar":
+            if remove_workspace_avatar(ws):
+                messages.success(request, "Logo do workspace removida.")
+            else:
+                messages.info(request, "Este workspace ainda não possui logo.")
+            return redirect("admin-config")
         elif action == "create_client":
             client_form = ClientCreateForm(request.POST, prefix="cli_create")
             if client_form.is_valid():
@@ -829,13 +1020,18 @@ def admin_config(request):
         for ch in compensation_history
         if _can_view_compensation(request.user, ch.employee_profile.user, ws)
     ]
+    job_history_entries = (
+        JobHistory.objects.filter(employee_profile__workspace=ws)
+        .select_related("employee_profile", "employee_profile__user")
+        .order_by("employee_profile__user__email", "-start_date", "-pk")
+    )
     financial_entries = (
         FinancialEntry.objects.filter(workspace=ws)
         .select_related("client", "project", "user", "created_by", "updated_by")
         .order_by("-occurred_on", "-pk")
     )
     budget_goals = (
-        BudgetGoal.objects.filter(workspace=ws)
+        BudgetGoal.visible_for_user(workspace=ws, user=request.user)
         .select_related("client", "project", "created_by", "updated_by")
         .order_by("-created_at", "-pk")
     )
@@ -844,11 +1040,14 @@ def admin_config(request):
         outflows=Sum("amount", filter=Q(flow_type=FinancialEntry.FlowType.OUTFLOW)),
     )
     workspace_cash_balance = calculate_workspace_balance(ws)
+    workspace_cash_inflows = financial_summary["inflows"] or Decimal("0")
+    workspace_cash_outflows = financial_summary["outflows"] or Decimal("0")
     birthdays_preview = _upcoming_birthdays(ws)
 
     ctx.update(
         {
             "config_workspace": ws,
+            "config_workspace_avatar_url": workspace_avatar_url(ws),
             "client_form": client_form,
             "client_edit_form": client_edit_form,
             "client_create_dialog_open": client_create_dialog_open,
@@ -864,6 +1063,10 @@ def admin_config(request):
             "task_create_dialog_open": task_create_dialog_open,
             "task_edit_dialog_open": task_edit_dialog_open,
             "task_edit_target_id": task_edit_target_id,
+            "financial_entry_tab_open": financial_entry_tab_open,
+            "budget_goal_create_dialog_open": budget_goal_create_dialog_open,
+            "budget_goal_edit_dialog_open": budget_goal_edit_dialog_open,
+            "budget_goal_edit_target_id": budget_goal_edit_target_id,
             "clients": clients,
             "projects": projects,
             "tasks": tasks,
@@ -879,14 +1082,28 @@ def admin_config(request):
             "compensation_history": compensation_history_visible,
             "financial_entries": financial_entries[:50],
             "budget_goals": budget_goals[:50],
-            "workspace_cash_balance": workspace_cash_balance,
-            "workspace_cash_inflows": financial_summary["inflows"] or 0,
-            "workspace_cash_outflows": financial_summary["outflows"] or 0,
+            "workspace_cash_balance": _format_brl_money(workspace_cash_balance),
+            "workspace_cash_inflows": _format_brl_money(workspace_cash_inflows),
+            "workspace_cash_outflows": _format_brl_money(workspace_cash_outflows),
             "employee_profile_form": profile_form,
+            "employee_profile_edit_form": profile_edit_form,
+            "employee_profile_create_dialog_open": employee_profile_create_dialog_open,
+            "employee_profile_edit_dialog_open": employee_profile_edit_dialog_open,
+            "employee_profile_edit_target_id": employee_profile_edit_target_id,
             "job_history_form": job_history_form,
+            "job_history_edit_form": job_history_edit_form,
+            "job_history_entries": job_history_entries,
+            "job_history_create_dialog_open": job_history_create_dialog_open,
+            "job_history_edit_dialog_open": job_history_edit_dialog_open,
+            "job_history_edit_target_id": job_history_edit_target_id,
             "compensation_history_form": compensation_form,
+            "compensation_history_edit_form": compensation_history_edit_form,
+            "compensation_history_create_dialog_open": compensation_history_create_dialog_open,
+            "compensation_history_edit_dialog_open": compensation_history_edit_dialog_open,
+            "compensation_history_edit_target_id": compensation_history_edit_target_id,
             "financial_entry_form": financial_entry_form,
             "budget_goal_form": budget_goal_form,
+            "budget_goal_edit_form": budget_goal_edit_form,
             "birthdays_preview": birthdays_preview,
         }
     )
@@ -902,6 +1119,12 @@ def admin_account(request):
         action = request.POST.get("action")
         if action == "update_avatar":
             handle_user_avatar_upload(request, user)
+            return redirect("admin-account")
+        if action == "remove_avatar":
+            if remove_user_avatar(user):
+                messages.success(request, "Foto de perfil removida.")
+            else:
+                messages.info(request, "Você ainda não possui foto de perfil.")
             return redirect("admin-account")
     return render(
         request,

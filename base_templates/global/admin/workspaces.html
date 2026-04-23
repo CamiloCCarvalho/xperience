@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 {% load static %}
 
 <head>
     {% include "xperience/partials/head.html" %}
     <!-- user workspaces styles -->
-    <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=6">
-    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=8">
+    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=7">
     <title>{% block title %}{% endblock title %} | Xperience</title>
 </head>
 
 
 
 <!-- body -->
-<body data-theme="dark" class="home-page workspaces-page">
+<body data-theme="dark" class="home-page workspaces-page admin-workspaces-page">
 
     <!-- container -->
     <div class="container">
@@ -23,7 +23,6 @@
     </div>
 
     <!-- scripts -->
-    <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
     <script src="{% static 'xperience/js/header_user_menu.js' %}?v=1" defer></script>
     <script src="{% static 'xperience/js/admin_workspace_card_menu.js' %}?v=1" defer></script>
 </body>

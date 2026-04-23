@@ -1,4 +1,4 @@
-<!-- main content -->
+{% load static %}
 <main class="main">
     <section class="main-container">
         <div class="spaceon-grid">
@@ -6,138 +6,354 @@
                 <header class="dash-header">
                     <div class="dash-title-wrap">
                         <i class="fas fa-chart-line" aria-hidden="true"></i>
-                        <h2>Dashboard de Apontamentos</h2>
+                        <h2>Dashboard</h2>
                     </div>
-                    <span class="dash-period">Março 2026</span>
+                    <div class="dash-header-right">
+                        <nav class="dash-period-filters" aria-label="Período do dashboard">
+                            {% for opt in dashboard.period_options %}
+                                <a
+                                    href="{% url 'admin-dashboard' %}?period={{ opt.key }}"
+                                    class="dash-period-link{% if opt.active %} dash-period-link--active{% endif %}"
+                                >{{ opt.label }}</a>
+                            {% endfor %}
+                        </nav>
+                        <span class="dash-period">{{ dashboard.period_label }}</span>
+                    </div>
                 </header>
 
-                <section class="dash-kpi-grid" aria-label="Resumo de indicadores">
-                    <div class="dash-kpi-card">
-                        <span class="dash-kpi-label">Horas no mês</span>
-                        <strong class="dash-kpi-value">160h</strong>
+                {% if not dashboard.has_any_content %}
+                    <div class="dash-empty" role="status">
+                        <p>Não há dados suficientes neste workspace para o período selecionado.</p>
+                        <p class="dash-empty-hint">Cadastre lançamentos financeiros ou apontamentos salvos para ver indicadores aqui.</p>
                     </div>
-                    <div class="dash-kpi-card">
-                        <span class="dash-kpi-label">Horas na semana</span>
-                        <strong class="dash-kpi-value">38h</strong>
-                    </div>
-                    <div class="dash-kpi-card">
-                        <span class="dash-kpi-label">Faltas</span>
-                        <strong class="dash-kpi-value">1</strong>
-                    </div>
-                    <div class="dash-kpi-card">
-                        <span class="dash-kpi-label">Valor hora</span>
-                        <strong class="dash-kpi-value">R$ 25,57</strong>
-                    </div>
-                    <div class="dash-kpi-card">
-                        <span class="dash-kpi-label">Total semana</span>
-                        <strong class="dash-kpi-value">R$ 971,66</strong>
-                    </div>
-                    <div class="dash-kpi-card">
-                        <span class="dash-kpi-label">Total mês</span>
-                        <strong class="dash-kpi-value">R$ 4.091,20</strong>
-                    </div>
-                </section>
+                {% else %}
 
-                <section class="dash-chart-grid">
-                    <article class="dash-panel">
-                        <h3>Horas por Projeto</h3>
-                        <div class="dash-bars" role="img" aria-label="Gráfico de horas por projeto">
-                            <div class="dash-bar-row">
-                                <span>Projeto A</span>
-                                <div class="dash-bar-track"><div class="dash-bar-fill" style="width: 82%;"></div></div>
-                                <strong>52h</strong>
+                    {% if dashboard.show_finance_kpis or dashboard.show_operation %}
+                        <section class="dash-section" aria-labelledby="dash-overview-title">
+                            <h3 id="dash-overview-title" class="dash-section-title">Visão geral</h3>
+                            <div class="dash-kpi-grid" aria-label="Indicadores principais">
+                                {% if dashboard.show_finance_kpis %}
+                                    <div class="dash-kpi-card">
+                                        <span class="dash-kpi-label">Saldo atual (caixa)</span>
+                                        <strong class="dash-kpi-value">R$ {{ dashboard.current_balance_fmt }}</strong>
+                                    </div>
+                                    <div class="dash-kpi-card">
+                                        <span class="dash-kpi-label">Entradas no período</span>
+                                        <strong class="dash-kpi-value">R$ {{ dashboard.inflow_total_fmt }}</strong>
+                                    </div>
+                                    <div class="dash-kpi-card">
+                                        <span class="dash-kpi-label">Saídas no período</span>
+                                        <strong class="dash-kpi-value">R$ {{ dashboard.outflow_total_fmt }}</strong>
+                                    </div>
+                                    <div class="dash-kpi-card">
+                                        <span class="dash-kpi-label">Resultado líquido no período</span>
+                                        <strong class="dash-kpi-value">R$ {{ dashboard.net_total_fmt }}</strong>
+                                    </div>
+                                {% endif %}
+                                {% if dashboard.show_operation %}
+                                    <div class="dash-kpi-card">
+                                        <span class="dash-kpi-label">Horas apontadas no período</span>
+                                        <strong class="dash-kpi-value">{{ dashboard.total_logged_hours_fmt }} h</strong>
+                                    </div>
+                                    <div class="dash-kpi-card">
+                                        <span class="dash-kpi-label">Custo da equipe no período</span>
+                                        <strong class="dash-kpi-value">R$ {{ dashboard.team_cost_total_fmt }}</strong>
+                                    </div>
+                                {% endif %}
                             </div>
-                            <div class="dash-bar-row">
-                                <span>Projeto B</span>
-                                <div class="dash-bar-track"><div class="dash-bar-fill" style="width: 61%;"></div></div>
-                                <strong>39h</strong>
-                            </div>
-                            <div class="dash-bar-row">
-                                <span>Projeto C</span>
-                                <div class="dash-bar-track"><div class="dash-bar-fill" style="width: 48%;"></div></div>
-                                <strong>31h</strong>
-                            </div>
-                            <div class="dash-bar-row">
-                                <span>Projeto D</span>
-                                <div class="dash-bar-track"><div class="dash-bar-fill" style="width: 29%;"></div></div>
-                                <strong>18h</strong>
-                            </div>
-                        </div>
-                    </article>
+                        </section>
+                    {% endif %}
 
-                    <article class="dash-panel">
-                        <h3>Comparativo Semanal</h3>
-                        <div class="dash-week-grid" role="img" aria-label="Comparativo de horas por semana">
-                            <div class="dash-week-col">
-                                <span>Sem 1</span>
-                                <div class="dash-week-bar" style="height: 55%;"></div>
-                                <strong>31h</strong>
+                    {% if dashboard.show_finance_trends %}
+                        <section class="dash-section" aria-labelledby="dash-trends-title">
+                            <h3 id="dash-trends-title" class="dash-section-title">Tendência financeira</h3>
+                            <div class="dash-chart-grid dash-chart-grid--trends">
+                                <article class="dash-panel">
+                                    <h4 class="dash-panel-subtitle">Entradas e saídas por dia</h4>
+                                    <div class="dash-daily-scroll" role="img" aria-label="Barras diárias de entradas e saídas">
+                                        {% for d in dashboard.daily_series %}
+                                            <div class="dash-daily-col" title="{{ d.day_label }}: entradas R$ {{ d.inflow|stringformat:'.2f' }} · saídas R$ {{ d.outflow|stringformat:'.2f' }}">
+                                                <div class="dash-daily-stack">
+                                                    <span class="dash-daily-bar dash-daily-bar--in" style="height: {{ d.pct_in }}%;"></span>
+                                                    <span class="dash-daily-bar dash-daily-bar--out" style="height: {{ d.pct_out }}%;"></span>
+                                                </div>
+                                                <span class="dash-daily-label">{{ d.day_label }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="dash-legend-inline">
+                                        <span><i class="dash-swatch dash-swatch--in"></i> Entradas</span>
+                                        <span><i class="dash-swatch dash-swatch--out"></i> Saídas</span>
+                                    </div>
+                                    <p class="dash-chart-note dash-chart-note--inline">
+                                        Em cada dia, as barras somam 100% da altura na proporção do movimento daquele dia
+                                        (entradas + saídas).
+                                    </p>
+                                </article>
+                                <article class="dash-panel">
+                                    <h4 class="dash-panel-subtitle">Saldo acumulado no período</h4>
+                                    <div class="dash-balance-chart" role="img" aria-label="Evolução do saldo acumulado">
+                                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="dash-balance-svg">
+                                            <polyline
+                                                fill="none"
+                                                stroke="url(#dashBalGrad)"
+                                                stroke-width="1.2"
+                                                vector-effect="non-scaling-stroke"
+                                                points="{{ dashboard.balance_svg_points }}"
+                                            />
+                                            <defs>
+                                                <linearGradient id="dashBalGrad" x1="0" x2="1" y1="0" y2="0">
+                                                    <stop offset="0%" stop-color="var(--green-dark)" />
+                                                    <stop offset="100%" stop-color="var(--green-light)" />
+                                                </linearGradient>
+                                            </defs>
+                                        </svg>
+                                    </div>
+                                    <p class="dash-chart-note">Saldo considera todos os lançamentos até cada dia do intervalo.</p>
+                                </article>
                             </div>
-                            <div class="dash-week-col">
-                                <span>Sem 2</span>
-                                <div class="dash-week-bar" style="height: 68%;"></div>
-                                <strong>38h</strong>
-                            </div>
-                            <div class="dash-week-col">
-                                <span>Sem 3</span>
-                                <div class="dash-week-bar" style="height: 72%;"></div>
-                                <strong>40h</strong>
-                            </div>
-                            <div class="dash-week-col">
-                                <span>Sem 4</span>
-                                <div class="dash-week-bar" style="height: 61%;"></div>
-                                <strong>34h</strong>
-                            </div>
-                        </div>
-                    </article>
-                </section>
+                        </section>
+                    {% endif %}
 
-                <section class="dash-table-panel">
-                    <h3>Resumo Financeiro e Frequência</h3>
-                    <div class="dash-table-wrap">
-                        <table class="dash-table">
-                            <thead>
-                                <tr>
-                                    <th>Período</th>
-                                    <th>Horas</th>
-                                    <th>Valor Hora</th>
-                                    <th>Total</th>
-                                    <th>Faltas</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Semana 1</td>
-                                    <td>31h</td>
-                                    <td>R$ 25,57</td>
-                                    <td>R$ 792,67</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Semana 2</td>
-                                    <td>38h</td>
-                                    <td>R$ 25,57</td>
-                                    <td>R$ 971,66</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Semana 3</td>
-                                    <td>40h</td>
-                                    <td>R$ 25,57</td>
-                                    <td>R$ 1.022,80</td>
-                                    <td>1</td>
-                                </tr>
-                                <tr>
-                                    <td>Semana 4</td>
-                                    <td>34h</td>
-                                    <td>R$ 25,57</td>
-                                    <td>R$ 869,38</td>
-                                    <td>0</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+                    {% if dashboard.show_where_money %}
+                        <section class="dash-section" aria-labelledby="dash-where-title">
+                            <h3 id="dash-where-title" class="dash-section-title">Onde o dinheiro foi</h3>
+                            <div class="dash-chart-grid dash-chart-grid--where">
+                                {% if dashboard.outflow_by_kind %}
+                                    <article class="dash-panel">
+                                        <h4 class="dash-panel-subtitle">Saídas por tipo</h4>
+                                        {% if dashboard.outflow_pie_style %}
+                                            <div class="dash-pie-row">
+                                                <div class="dash-pie" style="background: {{ dashboard.outflow_pie_style }};" role="img" aria-label="Distribuição de saídas por tipo"></div>
+                                                <ul class="dash-pie-legend">
+                                                    {% for k in dashboard.outflow_by_kind %}
+                                                        <li><span class="dash-pie-legend-name">{{ k.label }}</span> <strong>R$ {{ k.amount_fmt }}</strong></li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% else %}
+                                            <ul class="dash-kind-list">
+                                                {% for k in dashboard.outflow_by_kind %}
+                                                    <li><span>{{ k.label }}</span> <strong>R$ {{ k.amount_fmt }}</strong></li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.department_cost_breakdown %}
+                                    <article class="dash-panel">
+                                        <h4 class="dash-panel-subtitle">Custo por departamento</h4>
+                                        <div class="dash-bars">
+                                            {% for row in dashboard.department_cost_breakdown %}
+                                                <div class="dash-bar-row">
+                                                    <span class="dash-bar-name">{{ row.name }}</span>
+                                                    <div class="dash-bar-track"><div class="dash-bar-fill" style="width: {{ row.pct_width }}%;"></div></div>
+                                                    <strong>R$ {{ row.amount_fmt }}</strong>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.employee_cost_breakdown %}
+                                    <article class="dash-panel dash-panel--wide">
+                                        <h4 class="dash-panel-subtitle">Custo por colaborador</h4>
+                                        <div class="dash-bars">
+                                            {% for row in dashboard.employee_cost_breakdown %}
+                                                <div class="dash-bar-row dash-bar-row--emp">
+                                                    <span class="dash-bar-name">{{ row.name }}</span>
+                                                    <div class="dash-bar-track"><div class="dash-bar-fill dash-bar-fill--alt" style="width: {{ row.pct_width }}%;"></div></div>
+                                                    <strong>R$ {{ row.amount_fmt }}</strong>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.department_hours_breakdown %}
+                                    <article class="dash-panel">
+                                        <h4 class="dash-panel-subtitle">Horas por departamento</h4>
+                                        <div class="dash-bars">
+                                            {% for row in dashboard.department_hours_breakdown %}
+                                                <div class="dash-bar-row">
+                                                    <span class="dash-bar-name">{{ row.name }}</span>
+                                                    <div class="dash-bar-track"><div class="dash-bar-fill dash-bar-fill--hours" style="width: {{ row.pct_width }}%;"></div></div>
+                                                    <strong>{{ row.amount|stringformat:".2f" }} h</strong>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.employee_hours_breakdown %}
+                                    <article class="dash-panel dash-panel--wide">
+                                        <h4 class="dash-panel-subtitle">Horas por colaborador</h4>
+                                        <div class="dash-bars">
+                                            {% for row in dashboard.employee_hours_breakdown %}
+                                                <div class="dash-bar-row dash-bar-row--emp">
+                                                    <span class="dash-bar-name">{{ row.name }}</span>
+                                                    <div class="dash-bar-track"><div class="dash-bar-fill dash-bar-fill--hours" style="width: {{ row.pct_width }}%;"></div></div>
+                                                    <strong>{{ row.amount|stringformat:".2f" }} h</strong>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                            </div>
+                        </section>
+                    {% endif %}
+
+                    {% if dashboard.show_commercial %}
+                        <section class="dash-section" aria-labelledby="dash-commercial-title">
+                            <h3 id="dash-commercial-title" class="dash-section-title">Clientes e projetos</h3>
+                            <div class="dash-chart-grid dash-chart-grid--commercial">
+                                {% if dashboard.client_cost_breakdown %}
+                                    <article class="dash-panel">
+                                        <h4 class="dash-panel-subtitle">Custo por cliente (apontamentos)</h4>
+                                        <div class="dash-bars">
+                                            {% for row in dashboard.client_cost_breakdown %}
+                                                <div class="dash-bar-row">
+                                                    <span class="dash-bar-name">{{ row.name }}</span>
+                                                    <div class="dash-bar-track"><div class="dash-bar-fill" style="width: {{ row.pct_width }}%;"></div></div>
+                                                    <strong>R$ {{ row.amount_fmt }}</strong>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.client_inflow_breakdown %}
+                                    <article class="dash-panel">
+                                        <h4 class="dash-panel-subtitle">Entradas por cliente (caixa)</h4>
+                                        <div class="dash-bars">
+                                            {% for row in dashboard.client_inflow_breakdown %}
+                                                <div class="dash-bar-row">
+                                                    <span class="dash-bar-name">{{ row.name }}</span>
+                                                    <div class="dash-bar-track"><div class="dash-bar-fill dash-bar-fill--inflow" style="width: {{ row.pct_width }}%;"></div></div>
+                                                    <strong>R$ {{ row.amount_fmt }}</strong>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.project_cost_breakdown %}
+                                    <article class="dash-panel dash-panel--wide">
+                                        <h4 class="dash-panel-subtitle">Custo por projeto (apontamentos)</h4>
+                                        <div class="dash-bars">
+                                            {% for row in dashboard.project_cost_breakdown %}
+                                                <div class="dash-bar-row dash-bar-row--proj">
+                                                    <span class="dash-bar-name">{{ row.name }}</span>
+                                                    <div class="dash-bar-track"><div class="dash-bar-fill" style="width: {{ row.pct_width }}%;"></div></div>
+                                                    <strong>R$ {{ row.amount_fmt }}</strong>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.show_budget_block %}
+                                    <article class="dash-panel dash-panel--wide">
+                                        <h4 class="dash-panel-subtitle">Budget planejado vs gasto (projetos)</h4>
+                                        <div class="dash-budget-table-wrap">
+                                            <table class="dash-budget-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Projeto</th>
+                                                        <th>Cliente</th>
+                                                        <th>Budget</th>
+                                                        <th>Gasto</th>
+                                                        <th>%</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for p in dashboard.project_budget_rows %}
+                                                        <tr{% if p.over_budget %} class="dash-row-warn"{% endif %}>
+                                                            <td>{{ p.name }}</td>
+                                                            <td>{{ p.client_name }}</td>
+                                                            <td>R$ {{ p.budget_fmt }}</td>
+                                                            <td>R$ {{ p.spent_fmt }}</td>
+                                                            <td>
+                                                                <div class="dash-mini-bar-track"><div class="dash-mini-bar-fill{% if p.over_budget %} dash-mini-bar-fill--over{% endif %}" style="width: {{ p.pct_width }}%;"></div></div>
+                                                                {{ p.pct }}%
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.show_hours_estimate_block %}
+                                    <article class="dash-panel dash-panel--wide">
+                                        <h4 class="dash-panel-subtitle">Horas estimadas vs realizadas (projeto)</h4>
+                                        <p class="dash-muted">Horas realizadas somam todos os apontamentos salvos do projeto; estimativa vem do cadastro do projeto.</p>
+                                        <div class="dash-budget-table-wrap">
+                                            <table class="dash-budget-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Projeto</th>
+                                                        <th>Cliente</th>
+                                                        <th>Estimadas</th>
+                                                        <th>Realizadas</th>
+                                                        <th>%</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for p in dashboard.projects_hours_compare %}
+                                                        <tr>
+                                                            <td>{{ p.name }}</td>
+                                                            <td>{{ p.client_name }}</td>
+                                                            <td>{{ p.estimated|stringformat:".2f" }} h</td>
+                                                            <td>{{ p.realized|stringformat:".2f" }} h</td>
+                                                            <td>{{ p.pct_hours|stringformat:".1f" }}%</td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </article>
+                                {% endif %}
+                                {% if dashboard.risky_projects %}
+                                    <article class="dash-panel dash-panel--wide">
+                                        <h4 class="dash-panel-subtitle">Projetos em risco de estouro (&ge; 90% do budget)</h4>
+                                        <ul class="dash-risk-list">
+                                            {% for r in dashboard.risky_projects %}
+                                                <li>
+                                                    <strong>{{ r.name }}</strong> — {{ r.client_name }}
+                                                    {% if r.over_budget %}<span class="dash-badge dash-badge--danger">Acima do budget</span>{% else %}<span class="dash-badge">{{ r.pct }}%</span>{% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </article>
+                                {% endif %}
+                            </div>
+                        </section>
+                    {% endif %}
+
+                    {% if dashboard.show_attention %}
+                        <section class="dash-section dash-table-panel" aria-labelledby="dash-attention-title">
+                            <h3 id="dash-attention-title" class="dash-section-title">Itens de atenção</h3>
+                            <div class="dash-table-wrap">
+                                <table class="dash-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tipo</th>
+                                            <th>Descrição</th>
+                                            <th>Detalhe</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in dashboard.attention_rows %}
+                                            <tr>
+                                                <td>{{ row.label }}</td>
+                                                <td>{{ row.title }}</td>
+                                                <td>{{ row.detail }}</td>
+                                                <td>{% if row.amount_fmt %}R$ {{ row.amount_fmt }}{% else %}—{% endif %}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    {% endif %}
+
+                {% endif %}
             </article>
         </div>
     </section>

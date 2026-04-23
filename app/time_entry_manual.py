@@ -4,13 +4,18 @@ Apontamentos manuais (duração / intervalo): lookup e serialização para API.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 
 from app.models import TimeEntry, User, Workspace
 from app.time_entry_prepared import get_member_template_flags
-from app.time_entry_timer import _json_bool
+from app.time_entry_timer import (
+    _json_bool,
+    assert_user_may_delete_time_entry,
+    assert_user_may_edit_time_entry,
+)
 
 
 def get_member_time_entry(user: User, workspace: Workspace, pk: int) -> TimeEntry | None:
@@ -28,6 +33,66 @@ def assert_manual_entry_editable(entry: TimeEntry) -> None:
         raise ValidationError("Rascunhos devem ser tratados pelo fluxo de cronômetro.")
     if entry.entry_mode == TimeEntry.EntryMode.TIMER:
         raise ValidationError("Apontamentos de cronômetro não podem ser editados por este formulário.")
+
+
+def time_entry_hours_label(entry: TimeEntry) -> str:
+    if entry.hours is not None:
+        return f"{entry.hours.normalize()} h"
+    if entry.duration_minutes:
+        h = (Decimal(entry.duration_minutes) / Decimal(60)).quantize(Decimal("0.01"))
+        return f"{h} h"
+    return "—"
+
+
+def entry_summary_line(entry: TimeEntry) -> str:
+    parts: list[str] = []
+    if entry.project_id and getattr(entry, "project", None):
+        parts.append(entry.project.name)
+    elif entry.client_id and getattr(entry, "client", None):
+        parts.append(entry.client.name)
+    if entry.task_id and getattr(entry, "task", None):
+        parts.append(entry.task.name)
+    head = " · ".join(parts) if parts else ""
+    desc = (entry.description or "").strip()
+    if desc:
+        if len(desc) > 80:
+            desc = desc[:77] + "..."
+        return f"{head} — {desc}" if head else desc
+    return head or "—"
+
+
+def day_modal_entry_payload(user: User, entry: TimeEntry) -> dict[str, Any]:
+    """
+    Linha compacta para o modal do calendário + permissões (departamento principal do membro).
+    """
+    can_edit = False
+    if entry.status == TimeEntry.Status.SAVED:
+        try:
+            assert_manual_entry_editable(entry)
+            assert_user_may_edit_time_entry(user, entry)
+            can_edit = True
+        except (ValidationError, PermissionDenied):
+            can_edit = False
+
+    can_delete = False
+    if entry.status == TimeEntry.Status.SAVED:
+        try:
+            assert_user_may_delete_time_entry(user, entry)
+            can_delete = True
+        except PermissionDenied:
+            can_delete = False
+
+    row: dict[str, Any] = {
+        "id": entry.pk,
+        "entry_mode": entry.entry_mode,
+        "hours_label": time_entry_hours_label(entry),
+        "summary": entry_summary_line(entry),
+        "can_edit": can_edit,
+        "can_delete": can_delete,
+    }
+    if can_edit:
+        row["edit"] = manual_time_entry_json(entry)
+    return row
 
 
 def manual_time_entry_json(entry: TimeEntry) -> dict[str, Any]:
@@ -126,8 +191,8 @@ def complete_saved_timer_template_fields(
     if flags["use_task"] and entry.task_id is None:
         raise ValidationError("Selecione uma tarefa.")
     if flags["use_type"]:
-        et = entry.entry_type or ""
-        if et not in (TimeEntry.EntryType.INTERNAL, TimeEntry.EntryType.EXTERNAL):
+        et = (entry.entry_type or "").strip()
+        if et not in TimeEntry.allowed_entry_type_values():
             raise ValidationError("Selecione o tipo de apontamento.")
 
     entry.timer_pending_template_completion = False

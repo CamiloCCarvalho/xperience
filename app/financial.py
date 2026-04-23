@@ -1,89 +1,33 @@
 from __future__ import annotations
 
-from calendar import monthrange
-from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db import models
 from django.db.models import Sum
 
-from app.models import CompensationHistory, EmployeeProfile, FinancialEntry, TimeEntry, User, Workspace
-
-_DEFAULT_MONTHLY_HOURS = Decimal("160")
-_DAY_KEY_BY_WEEKDAY = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+from app.models import FinancialEntry, TimeEntry, User, Workspace
 
 
 def _quantize_money(value: Decimal) -> Decimal:
-    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    from app.compensation_pay import quantize_money
+
+    return quantize_money(value)
 
 
-def _time_entry_hours(entry: TimeEntry) -> Decimal:
-    if entry.hours is not None:
-        return Decimal(str(entry.hours))
-    if entry.duration_minutes is not None:
-        return Decimal(entry.duration_minutes) / Decimal("60")
-    raise ValidationError("Apontamento salvo sem duração válida para cálculo financeiro.")
+def get_time_entry_compensation(entry: TimeEntry):
+    """Compatível com código legado: delega à camada única de remuneração."""
+    from app.compensation_pay import get_compensation_for_entry
 
-
-def _monthly_expected_hours(entry: TimeEntry) -> Decimal:
-    schedule = getattr(entry.department, "schedule", None)
-    if schedule is None or not getattr(schedule, "expected_hours_per_day", None):
-        return _DEFAULT_MONTHLY_HOURS
-
-    working_days = list(schedule.working_days or [])
-    if not working_days:
-        working_days = ["mon", "tue", "wed", "thu", "fri"]
-
-    year = entry.date.year
-    month = entry.date.month
-    _, days_in_month = monthrange(year, month)
-    worked_days = 0
-    allowed = set(working_days)
-    for day in range(1, days_in_month + 1):
-        current = date(year, month, day)
-        if _DAY_KEY_BY_WEEKDAY[current.weekday()] in allowed:
-            worked_days += 1
-
-    total = Decimal(worked_days) * Decimal(schedule.expected_hours_per_day)
-    return total if total > 0 else _DEFAULT_MONTHLY_HOURS
-
-
-def get_time_entry_compensation(entry: TimeEntry) -> CompensationHistory:
-    profile = EmployeeProfile.objects.filter(
-        user=entry.user,
-        workspace=entry.workspace,
-    ).first()
-    if profile is None:
-        raise ValidationError("Colaborador sem vínculo empregatício no workspace para cálculo financeiro.")
-
-    compensation = (
-        CompensationHistory.objects.filter(
-            employee_profile=profile,
-            start_date__lte=entry.date,
-        )
-        .filter(models.Q(end_date__isnull=True) | models.Q(end_date__gte=entry.date))
-        .order_by("-start_date", "-pk")
-        .first()
-    )
-    if compensation is None:
-        raise ValidationError("Não existe remuneração vigente para este colaborador na data do apontamento.")
-    return compensation
+    return get_compensation_for_entry(entry)
 
 
 def get_time_entry_cost(entry: TimeEntry) -> Decimal:
-    compensation = get_time_entry_compensation(entry)
-    hours = _time_entry_hours(entry)
-    if compensation.compensation_type == CompensationHistory.CompensationType.HOURLY:
-        assert compensation.hourly_rate is not None
-        return _quantize_money(Decimal(str(compensation.hourly_rate)) * hours)
-
-    assert compensation.monthly_salary is not None
-    expected_hours = _monthly_expected_hours(entry)
-    if expected_hours <= 0:
-        raise ValidationError("Horas esperadas inválidas para cálculo do custo mensal.")
-    hourly_rate = Decimal(str(compensation.monthly_salary)) / expected_hours
-    return _quantize_money(hourly_rate * hours)
+    """Custo do apontamento = snapshot monetário (definido em ``TimeEntry.save``)."""
+    if entry.status != TimeEntry.Status.SAVED:
+        raise ValidationError("Apenas apontamentos salvos têm custo calculável.")
+    if entry.pay_amount_snapshot is None:
+        raise ValidationError("Apontamento sem valor monetário consolidado (snapshot).")
+    return Decimal(str(entry.pay_amount_snapshot))
 
 
 def _time_entry_cost_description(entry: TimeEntry) -> str:

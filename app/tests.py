@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from app.models import (
+    BoardCard,
     Client as AppClient,
     BudgetGoal,
     CompensationHistory,
@@ -21,7 +22,9 @@ from app.models import (
     EmployeeProfile,
     FinancialEntry,
     Membership,
+    PrivateBoardColumn,
     Project,
+    Task,
     TimeEntry,
     TimeEntryTemplate,
     UserClient,
@@ -30,6 +33,7 @@ from app.models import (
     WorkSchedule,
     Workspace,
 )
+from app.admin_dashboard_data import build_admin_dashboard
 from app.time_entry_timer import (
     assert_user_may_delete_time_entry,
     assert_user_may_edit_time_entry,
@@ -489,6 +493,59 @@ class ManualTimeEntryApiTests(TestCase):
         )
         self.assertEqual(r.status_code, 400)
 
+    def test_day_detail_requires_valid_date(self):
+        r = self.client.get(reverse("user-time-entry-day-detail"), {"date": "not-a-date"})
+        self.assertEqual(r.status_code, 400)
+
+    def test_day_detail_lists_entries_with_edit_payload_when_allowed(self):
+        r = self._post_json(
+            "user-time-entry-manual-create",
+            {
+                "entry_mode": TimeEntry.EntryMode.DURATION,
+                "date": "2026-06-20",
+                "hours": "2",
+            },
+        )
+        self.assertEqual(r.status_code, 201, r.content)
+        r2 = self.client.get(reverse("user-time-entry-day-detail"), {"date": "2026-06-20"})
+        self.assertEqual(r2.status_code, 200)
+        data = r2.json()
+        self.assertEqual(data["date"], "2026-06-20")
+        self.assertEqual(len(data["entries"]), 1)
+        e0 = data["entries"][0]
+        self.assertTrue(e0["can_edit"])
+        self.assertTrue(e0["can_delete"])
+        self.assertIn("edit", e0)
+        self.assertEqual(e0["edit"]["hours"], "2.00")
+
+    def test_day_detail_respects_department_edit_delete_flags(self):
+        r = self._post_json(
+            "user-time-entry-manual-create",
+            {
+                "entry_mode": TimeEntry.EntryMode.DURATION,
+                "date": "2026-06-21",
+                "hours": "1",
+            },
+        )
+        self.assertEqual(r.status_code, 201, r.content)
+        self.dept.can_edit_time_entries = False
+        self.dept.can_delete_time_entries = False
+        self.dept.save(update_fields=["can_edit_time_entries", "can_delete_time_entries"])
+        r2 = self.client.get(reverse("user-time-entry-day-detail"), {"date": "2026-06-21"})
+        self.assertEqual(r2.status_code, 200)
+        e0 = r2.json()["entries"][0]
+        self.assertFalse(e0["can_edit"])
+        self.assertFalse(e0["can_delete"])
+        self.assertNotIn("edit", e0)
+
+    def test_day_detail_includes_birthday_event(self):
+        self.member.birth_date = date(1991, 8, 22)
+        self.member.save(update_fields=["birth_date"])
+        r = self.client.get(reverse("user-time-entry-day-detail"), {"date": "2026-08-22"})
+        self.assertEqual(r.status_code, 200)
+        events = r.json()["events"]
+        self.assertTrue(any(e.get("type") == "birthday" for e in events))
+
 
 class TimerCompleteFieldsHttpTests(TestCase):
     def setUp(self):
@@ -653,6 +710,62 @@ class TimeEntryMonthCountsHttpTests(TestCase):
         self.assertEqual(data["expected_hours_per_day"], 8)
         self.assertEqual(data["by_date_hours"]["2026-04-10"], 2.0)
         self.assertEqual(data["by_date_hours"]["2026-04-11"], 0.5)
+        self.assertEqual(data["by_date_pay"]["2026-04-10"], 200.0)
+        self.assertEqual(data["by_date_pay"]["2026-04-11"], 50.0)
+        self.assertIsNone(data.get("member_birthday"))
+        self.assertEqual(
+            data.get("schedule_weekday_visual"),
+            {"working_days": ["mon"]},
+        )
+
+    def test_month_counts_includes_member_birthday_when_set(self):
+        self.member.birth_date = date(1990, 4, 10)
+        self.member.save(update_fields=["birth_date"])
+        r = self.client.get(
+            reverse("user-time-entry-month-counts"),
+            {"year": 2026, "month": 4},
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["member_birthday"], {"month": 4, "day": 10})
+
+    def test_month_counts_workspace_public_birthdays_lists_colleagues_only(self):
+        colleague = User.objects.create_user(
+            email="colleaguebday@example.com",
+            password="x",
+            first_name="Colega",
+            last_name="Aniv",
+        )
+        colleague.platform_role = User.PlatformRole.MEMBER
+        colleague.save(update_fields=["platform_role"])
+        colleague.birth_date = date(1985, 6, 18)
+        colleague.birthday_public_in_workspace = True
+        colleague.save(update_fields=["birth_date", "birthday_public_in_workspace"])
+        Membership.objects.create(user=colleague, workspace=self.ws, role="user")
+
+        hidden = User.objects.create_user(
+            email="hiddenbday@example.com",
+            password="x",
+            first_name="Privado",
+            last_name="X",
+        )
+        hidden.platform_role = User.PlatformRole.MEMBER
+        hidden.save(update_fields=["platform_role"])
+        hidden.birth_date = date(1992, 6, 20)
+        hidden.birthday_public_in_workspace = False
+        hidden.save(update_fields=["birth_date", "birthday_public_in_workspace"])
+        Membership.objects.create(user=hidden, workspace=self.ws, role="user")
+
+        r = self.client.get(
+            reverse("user-time-entry-month-counts"),
+            {"year": 2026, "month": 6},
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        pub = data.get("workspace_public_birthdays") or []
+        self.assertEqual(len(pub), 1)
+        self.assertEqual(pub[0]["month"], 6)
+        self.assertEqual(pub[0]["day"], 18)
+        self.assertIn("Colega", pub[0].get("display_name", ""))
 
     def test_month_counts_expected_null_without_schedule(self):
         self.assertIsNone(self.dept.schedule_id)
@@ -674,6 +787,45 @@ class TimeEntryMonthCountsHttpTests(TestCase):
         data = r.json()
         self.assertIsNone(data.get("expected_hours_per_day"))
         self.assertEqual(data["by_date_hours"]["2026-05-05"], 2.0)
+        self.assertEqual(data["by_date_pay"]["2026-05-05"], 200.0)
+        self.assertIsNone(data.get("schedule_weekday_visual"))
+
+    def test_month_counts_schedule_weekday_visual_null_when_folga_not_fixed(self):
+        sched = WorkSchedule.objects.create(
+            workspace=self.ws,
+            name="Rotativo",
+            working_days=["mon", "tue", "wed", "thu", "fri"],
+            expected_hours_per_day=8,
+            has_fixed_days=False,
+        )
+        self.dept.schedule = sched
+        self.dept.save(update_fields=["schedule"])
+        r = self.client.get(
+            reverse("user-time-entry-month-counts"),
+            {"year": 2026, "month": 4},
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIsNone(r.json().get("schedule_weekday_visual"))
+
+    def test_month_counts_schedule_weekday_defaults_weekdays_when_working_days_empty(self):
+        sched = WorkSchedule.objects.create(
+            workspace=self.ws,
+            name="Sem lista",
+            working_days=[],
+            expected_hours_per_day=8,
+            has_fixed_days=True,
+        )
+        self.dept.schedule = sched
+        self.dept.save(update_fields=["schedule"])
+        r = self.client.get(
+            reverse("user-time-entry-month-counts"),
+            {"year": 2026, "month": 4},
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            r.json().get("schedule_weekday_visual"),
+            {"working_days": ["mon", "tue", "wed", "thu", "fri"]},
+        )
 
     def test_month_counts_hours_from_duration_minutes(self):
         sched = WorkSchedule.objects.create(
@@ -703,6 +855,11 @@ class TimeEntryMonthCountsHttpTests(TestCase):
         data = r.json()
         self.assertEqual(data["by_date"]["2026-06-01"], 1)
         self.assertEqual(data["by_date_hours"]["2026-06-01"], 1.5)
+        self.assertEqual(data["by_date_pay"]["2026-06-01"], 150.0)
+        self.assertEqual(
+            data.get("schedule_weekday_visual"),
+            {"working_days": ["mon"]},
+        )
 
     def test_month_counts_invalid_params(self):
         r = self.client.get(reverse("user-time-entry-month-counts"), {"year": 1999, "month": 4})
@@ -927,6 +1084,9 @@ class FinancialFlowTests(TestCase):
         self.assertEqual(fin.amount, Decimal("100.00"))
         self.assertEqual(fin.user, self.member)
         self.assertEqual(fin.project, self.project)
+        entry.refresh_from_db()
+        self.assertEqual(entry.pay_amount_snapshot, Decimal("100.00"))
+        self.assertEqual(entry.effective_hourly_rate_snapshot, Decimal("50.0000"))
 
     def test_updating_saved_time_entry_recalculates_financial_entry(self):
         entry = TimeEntry.objects.create(
@@ -946,6 +1106,8 @@ class FinancialFlowTests(TestCase):
         )
         self.assertEqual(fin.amount, Decimal("150.00"))
         self.assertEqual(fin.updated_by, self.owner)
+        entry.refresh_from_db()
+        self.assertEqual(entry.pay_amount_snapshot, Decimal("150.00"))
 
     def test_deleting_saved_time_entry_creates_reversal(self):
         entry = TimeEntry.objects.create(
@@ -1059,19 +1221,304 @@ class AdminConfigFinancialTests(TestCase):
             reverse("admin-config"),
             {
                 "action": "create_budget_goal",
-                "client": self.client_ref.pk,
-                "project": self.project.pk,
-                "minimum_target_amount": "1000.00",
-                "minimum_target_date": "2026-08-01",
-                "desired_target_amount": "2000.00",
-                "desired_target_date": "2026-09-01",
-                "description": "Meta do trimestre",
+                "goal_create-client": self.client_ref.pk,
+                "goal_create-project": self.project.pk,
+                "goal_create-minimum_target_amount": "1000.00",
+                "goal_create-minimum_target_date": "2026-08-01",
+                "goal_create-desired_target_amount": "2000.00",
+                "goal_create-desired_target_date": "2026-09-01",
+                "goal_create-visibility": BudgetGoal.Visibility.PUBLIC,
+                "goal_create-description": "Meta do trimestre",
             },
             follow=True,
         )
         self.assertEqual(response.status_code, 200)
         goal = BudgetGoal.objects.get(project=self.project)
         self.assertEqual(goal.created_by, self.admin_user)
+
+    def test_admin_config_updates_budget_goal(self):
+        goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            client=self.client_ref,
+            project=self.project,
+            visibility=BudgetGoal.Visibility.PRIVATE,
+            minimum_target_amount=Decimal("1000.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("2000.00"),
+            desired_target_date=date(2026, 9, 1),
+            description="Meta inicial",
+            created_by=self.admin_user,
+            updated_by=self.admin_user,
+        )
+
+        response = self.client.post(
+            reverse("admin-config"),
+            {
+                "action": "update_budget_goal",
+                "budget_goal_id": goal.pk,
+                "goal_edit-client": self.client_ref.pk,
+                "goal_edit-project": self.project.pk,
+                "goal_edit-minimum_target_amount": "1500.00",
+                "goal_edit-minimum_target_date": "2026-08-10",
+                "goal_edit-desired_target_amount": "3000.00",
+                "goal_edit-desired_target_date": "2026-09-10",
+                "goal_edit-visibility": BudgetGoal.Visibility.PUBLIC,
+                "goal_edit-description": "Meta revisada",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        goal.refresh_from_db()
+        self.assertEqual(goal.minimum_target_amount, Decimal("1500.00"))
+        self.assertEqual(goal.desired_target_amount, Decimal("3000.00"))
+        self.assertEqual(goal.visibility, BudgetGoal.Visibility.PUBLIC)
+        self.assertEqual(goal.description, "Meta revisada")
+
+    def test_admin_config_deletes_budget_goal(self):
+        goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            client=self.client_ref,
+            project=self.project,
+            visibility=BudgetGoal.Visibility.PRIVATE,
+            minimum_target_amount=Decimal("1000.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("2000.00"),
+            desired_target_date=date(2026, 9, 1),
+            created_by=self.admin_user,
+            updated_by=self.admin_user,
+        )
+        response = self.client.post(
+            reverse("admin-config"),
+            {
+                "action": "delete_budget_goal",
+                "budget_goal_id": goal.pk,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(BudgetGoal.objects.filter(pk=goal.pk).exists())
+
+
+    def _png_upload(self) -> SimpleUploadedFile:
+        from PIL import Image
+
+        buf = BytesIO()
+        Image.new("RGB", (8, 8), color=(30, 120, 90)).save(buf, format="PNG")
+        buf.seek(0)
+        return SimpleUploadedFile("workspace-logo.png", buf.read(), content_type="image/png")
+
+    def test_admin_config_updates_workspace_logo(self):
+        media = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(media, ignore_errors=True))
+        with self.settings(MEDIA_ROOT=str(media)):
+            up = self._png_upload()
+            response = self.client.post(
+                reverse("admin-config"),
+                {
+                    "action": "update_workspace_avatar",
+                    "workspace_avatar": up,
+                },
+                follow=True,
+            )
+        self.assertEqual(response.status_code, 200)
+        self.ws.refresh_from_db()
+        self.assertTrue(self.ws.workspace_avatar.name)
+
+    def test_admin_config_removes_workspace_logo(self):
+        media = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(media, ignore_errors=True))
+        with self.settings(MEDIA_ROOT=str(media)):
+            up = self._png_upload()
+            self.client.post(
+                reverse("admin-config"),
+                {
+                    "action": "update_workspace_avatar",
+                    "workspace_avatar": up,
+                },
+                follow=True,
+            )
+            self.ws.refresh_from_db()
+            self.assertTrue(self.ws.workspace_avatar.name)
+            response = self.client.post(
+                reverse("admin-config"),
+                {"action": "remove_workspace_avatar"},
+                follow=True,
+            )
+        self.assertEqual(response.status_code, 200)
+        self.ws.refresh_from_db()
+        self.assertFalse(self.ws.workspace_avatar.name)
+
+
+class BudgetGoalVisibilityTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="owner-goal-vis@example.com",
+            password="x",
+            first_name="Owner",
+            last_name="Goal",
+        )
+        self.creator = User.objects.create_user(
+            email="creator-goal-vis@example.com",
+            password="x",
+            first_name="Creator",
+            last_name="Goal",
+        )
+        self.other_member = User.objects.create_user(
+            email="other-goal-vis@example.com",
+            password="x",
+            first_name="Other",
+            last_name="Goal",
+        )
+        self.creator.platform_role = User.PlatformRole.MEMBER
+        self.creator.save(update_fields=["platform_role"])
+        self.other_member.platform_role = User.PlatformRole.MEMBER
+        self.other_member.save(update_fields=["platform_role"])
+
+        self.ws = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WS Goal Visibility",
+            workspace_description="",
+        )
+        Membership.objects.create(user=self.creator, workspace=self.ws, role="manager")
+        Membership.objects.create(user=self.other_member, workspace=self.ws, role="user")
+
+        self.client_ref = AppClient.objects.create(workspace=self.ws, name="Cliente Goal Visibility")
+        self.project = Project.objects.create(
+            workspace=self.ws,
+            client=self.client_ref,
+            name="Projeto Goal Visibility",
+        )
+
+    def test_creator_visualizes_private_goal(self):
+        private_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            created_by=self.creator,
+            visibility=BudgetGoal.Visibility.PRIVATE,
+            minimum_target_amount=Decimal("100.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("200.00"),
+            desired_target_date=date(2026, 9, 1),
+        )
+
+        visible_ids = set(
+            BudgetGoal.visible_for_user(workspace=self.ws, user=self.creator).values_list("id", flat=True)
+        )
+        self.assertIn(private_goal.pk, visible_ids)
+
+    def test_other_member_does_not_visualize_private_goal(self):
+        private_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            created_by=self.creator,
+            visibility=BudgetGoal.Visibility.PRIVATE,
+            minimum_target_amount=Decimal("100.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("200.00"),
+            desired_target_date=date(2026, 9, 1),
+        )
+
+        visible_ids = set(
+            BudgetGoal.visible_for_user(workspace=self.ws, user=self.other_member).values_list("id", flat=True)
+        )
+        self.assertNotIn(private_goal.pk, visible_ids)
+
+    def test_public_goal_is_visible_in_workspace(self):
+        public_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            created_by=self.creator,
+            visibility=BudgetGoal.Visibility.PUBLIC,
+            minimum_target_amount=Decimal("100.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("200.00"),
+            desired_target_date=date(2026, 9, 1),
+        )
+
+        visible_ids = set(
+            BudgetGoal.visible_for_user(workspace=self.ws, user=self.other_member).values_list("id", flat=True)
+        )
+        public_ids = set(BudgetGoal.public_for_workspace(workspace=self.ws).values_list("id", flat=True))
+        self.assertIn(public_goal.pk, visible_ids)
+        self.assertIn(public_goal.pk, public_ids)
+
+    def test_public_goal_still_respects_client_project_workspace_scope(self):
+        ws2 = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WS Goal Visibility 2",
+            workspace_description="",
+        )
+        client_other_ws = AppClient.objects.create(workspace=ws2, name="Cliente de outro WS")
+        project_other_ws = Project.objects.create(
+            workspace=ws2,
+            client=client_other_ws,
+            name="Projeto de outro WS",
+        )
+
+        with self.assertRaises(ValidationError):
+            BudgetGoal.objects.create(
+                workspace=self.ws,
+                created_by=self.creator,
+                visibility=BudgetGoal.Visibility.PUBLIC,
+                client=client_other_ws,
+                project=project_other_ws,
+                minimum_target_amount=Decimal("100.00"),
+                minimum_target_date=date(2026, 8, 1),
+                desired_target_amount=Decimal("200.00"),
+                desired_target_date=date(2026, 9, 1),
+            )
+
+    def test_mural_listing_uses_only_public_goals(self):
+        private_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            created_by=self.creator,
+            visibility=BudgetGoal.Visibility.PRIVATE,
+            minimum_target_amount=Decimal("100.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("200.00"),
+            desired_target_date=date(2026, 9, 1),
+        )
+        public_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            created_by=self.creator,
+            visibility=BudgetGoal.Visibility.PUBLIC,
+            minimum_target_amount=Decimal("300.00"),
+            minimum_target_date=date(2026, 8, 2),
+            desired_target_amount=Decimal("400.00"),
+            desired_target_date=date(2026, 9, 2),
+        )
+
+        client = Client()
+        client.force_login(self.creator)
+        session = client.session
+        session[SESSION_MEMBER_WORKSPACE_KEY] = self.ws.pk
+        session.save()
+
+        response = client.get(reverse("user-dashboard"))
+        self.assertEqual(response.status_code, 200)
+
+        mural_goals = response.context["mural_ui"]["budgetGoals"]
+        mural_goal_ids = {item["id"] for item in mural_goals}
+        self.assertIn(public_goal.pk, mural_goal_ids)
+        self.assertNotIn(private_goal.pk, mural_goal_ids)
+
+    def test_mural_card_accepts_only_public_budget_goal(self):
+        private_goal = BudgetGoal.objects.create(
+            workspace=self.ws,
+            created_by=self.creator,
+            visibility=BudgetGoal.Visibility.PRIVATE,
+            minimum_target_amount=Decimal("100.00"),
+            minimum_target_date=date(2026, 8, 1),
+            desired_target_amount=Decimal("200.00"),
+            desired_target_date=date(2026, 9, 1),
+        )
+        with self.assertRaises(ValidationError):
+            BoardCard.objects.create(
+                workspace=self.ws,
+                created_by=self.creator,
+                updated_by=self.creator,
+                visibility=BoardCard.Visibility.PUBLIC,
+                title="Card com meta privada",
+                budget_goal=private_goal,
+                position=0,
+            )
 
 
 class UserAccountAvatarTests(TestCase):
@@ -1133,6 +1580,19 @@ class UserAccountAvatarTests(TestCase):
         self.member.refresh_from_db()
         self.assertFalse(self.member.avatar.name)
 
+    def test_post_remove_avatar_clears_image_field(self):
+        media = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(media, ignore_errors=True))
+        with self.settings(MEDIA_ROOT=str(media)):
+            up = self._png_upload()
+            self.client.post(reverse("user-account"), {"action": "update_avatar", "avatar": up})
+            self.member.refresh_from_db()
+            self.assertTrue(self.member.avatar.name)
+            r = self.client.post(reverse("user-account"), {"action": "remove_avatar"}, follow=True)
+        self.assertEqual(r.status_code, 200)
+        self.member.refresh_from_db()
+        self.assertFalse(self.member.avatar.name)
+
 
 class AdminAccountAvatarHttpTests(TestCase):
     def setUp(self):
@@ -1176,3 +1636,709 @@ class AdminAccountAvatarHttpTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.admin.refresh_from_db()
         self.assertTrue(self.admin.avatar.name)
+
+    def test_admin_post_remove_avatar_clears_image_field(self):
+        media = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(media, ignore_errors=True))
+        with self.settings(MEDIA_ROOT=str(media)):
+            up = self._png_upload()
+            self.client.post(reverse("admin-account"), {"action": "update_avatar", "avatar": up})
+            self.admin.refresh_from_db()
+            self.assertTrue(self.admin.avatar.name)
+            r = self.client.post(reverse("admin-account"), {"action": "remove_avatar"}, follow=True)
+        self.assertEqual(r.status_code, 200)
+        self.admin.refresh_from_db()
+        self.assertFalse(self.admin.avatar.name)
+
+
+class CompensationPayCalculationTests(TestCase):
+    """Regras centralizadas em ``app.compensation_pay`` + snapshots em ``TimeEntry``."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="ownercpay@example.com",
+            password="x",
+            first_name="O",
+            last_name="C",
+        )
+        self.member = User.objects.create_user(
+            email="membercpay@example.com",
+            password="x",
+            first_name="M",
+            last_name="C",
+        )
+        self.ws = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WSCPay",
+            workspace_description="",
+        )
+        self.profile = EmployeeProfile.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_title="Dev",
+        )
+        self.sched = WorkSchedule.objects.create(
+            workspace=self.ws,
+            name="SegSex8h",
+            working_days=["mon", "tue", "wed", "thu", "fri"],
+            expected_hours_per_day=8,
+        )
+        self.dept = Department.objects.create(
+            workspace=self.ws,
+            name="DeptCPay",
+            schedule=self.sched,
+        )
+        UserDepartment.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            is_primary=True,
+        )
+
+    def _saved_entry(self, **kwargs):
+        defaults = dict(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1.00"),
+        )
+        defaults.update(kwargs)
+        return TimeEntry.objects.create(**defaults)
+
+    def test_hourly_uses_rate_vigente_na_data_do_apontamento(self):
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.HOURLY,
+            hourly_rate=Decimal("40.00"),
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.HOURLY,
+            hourly_rate=Decimal("90.00"),
+            start_date=date(2026, 2, 1),
+        )
+        e_jan = self._saved_entry(date=date(2026, 1, 15), hours=Decimal("2"))
+        e_feb = self._saved_entry(date=date(2026, 2, 10), hours=Decimal("1"))
+        self.assertEqual(e_jan.pay_amount_snapshot, Decimal("80.00"))
+        self.assertEqual(e_feb.pay_amount_snapshot, Decimal("90.00"))
+
+    def test_monthly_fixed_uses_expected_hours_of_month(self):
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.MONTHLY,
+            monthly_salary=Decimal("4000.00"),
+            monthly_salary_is_fixed=True,
+            start_date=date(2026, 4, 1),
+        )
+        from app.compensation_pay import expected_working_hours_in_month
+
+        expected_h = expected_working_hours_in_month(2026, 4, self.sched)
+        self.assertGreater(expected_h, Decimal("0"))
+        entry = self._saved_entry(date=date(2026, 4, 7), hours=Decimal("1"))
+        hourly_eff = Decimal("4000.00") / expected_h
+        self.assertEqual(entry.pay_amount_snapshot, (hourly_eff * Decimal("1")).quantize(Decimal("0.01")))
+        self.assertEqual(entry.expected_month_hours_snapshot.quantize(Decimal("0.0001")), expected_h.quantize(Decimal("0.0001")))
+
+    def test_monthly_non_fixed_uses_reference_hours(self):
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.MONTHLY,
+            monthly_salary=Decimal("4000.00"),
+            monthly_salary_is_fixed=False,
+            monthly_reference_hours=Decimal("160.00"),
+            start_date=date(2026, 5, 1),
+        )
+        entry = self._saved_entry(date=date(2026, 5, 12), hours=Decimal("2"))
+        self.assertEqual(entry.pay_amount_snapshot, Decimal("50.00"))
+        self.assertEqual(entry.expected_month_hours_snapshot, Decimal("160.0000"))
+
+    def test_edit_saved_entry_recalculates_snapshot(self):
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.HOURLY,
+            hourly_rate=Decimal("50.00"),
+            start_date=date(2026, 6, 1),
+        )
+        entry = self._saved_entry(date=date(2026, 6, 3), hours=Decimal("1"))
+        self.assertEqual(entry.pay_amount_snapshot, Decimal("50.00"))
+        entry.hours = Decimal("3")
+        entry.save()
+        entry.refresh_from_db()
+        self.assertEqual(entry.pay_amount_snapshot, Decimal("150.00"))
+
+    def test_saved_timer_duration_minutes_pay(self):
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.HOURLY,
+            hourly_rate=Decimal("60.00"),
+            start_date=date(2026, 7, 1),
+        )
+        entry = TimeEntry(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 7, 2),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.TIMER,
+            hours=None,
+            duration_minutes=30,
+        )
+        entry.save()
+        entry.refresh_from_db()
+        self.assertEqual(entry.pay_amount_snapshot, Decimal("30.00"))
+
+    def test_delete_saved_keeps_reversal_amount_matching_snapshot(self):
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.HOURLY,
+            hourly_rate=Decimal("10.00"),
+            start_date=date(2026, 8, 1),
+        )
+        entry = self._saved_entry(date=date(2026, 8, 5), hours=Decimal("2"))
+        fin = FinancialEntry.objects.get(time_entry=entry, entry_kind=FinancialEntry.EntryKind.TIME_ENTRY_COST)
+        self.assertEqual(fin.amount, entry.pay_amount_snapshot)
+        entry.delete(financial_actor=self.owner)
+        rev = FinancialEntry.objects.get(reversal_of=fin)
+        self.assertEqual(rev.amount, fin.amount)
+
+
+class AdminDashboardDataTests(TestCase):
+    """Dashboard do gestor: agregações reais por workspace e período."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="admindash@example.com",
+            password="x",
+            first_name="Ad",
+            last_name="Dash",
+        )
+        self.admin.platform_role = User.PlatformRole.ADMIN
+        self.admin.save(update_fields=["platform_role"])
+        self.ws = Workspace.objects.create(
+            owner=self.admin,
+            workspace_name="WSDash",
+            workspace_description="",
+        )
+        self.ws_other = Workspace.objects.create(
+            owner=self.admin,
+            workspace_name="WSDashOther",
+            workspace_description="",
+        )
+        self.member = User.objects.create_user(
+            email="memberdash@example.com",
+            password="x",
+            first_name="Mem",
+            last_name="Dash",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws, role="user")
+        self.profile = EmployeeProfile.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_title="Dev",
+        )
+        self.sched = WorkSchedule.objects.create(
+            workspace=self.ws,
+            name="DashSch",
+            working_days=["mon", "tue", "wed", "thu", "fri"],
+            expected_hours_per_day=8,
+        )
+        self.dept = Department.objects.create(
+            workspace=self.ws,
+            name="DeptDash",
+            schedule=self.sched,
+        )
+        UserDepartment.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            is_primary=True,
+        )
+        CompensationHistory.objects.create(
+            employee_profile=self.profile,
+            compensation_type=CompensationHistory.CompensationType.HOURLY,
+            hourly_rate=Decimal("100.00"),
+            start_date=date(2020, 1, 1),
+        )
+        self.client_http = Client()
+        self.client_http.force_login(self.admin)
+        s = self.client_http.session
+        s[SESSION_ADMIN_WORKSPACE_KEY] = self.ws.pk
+        s.save()
+
+    def _today(self):
+        return timezone.localdate()
+
+    def test_http_dashboard_empty_workspace(self):
+        r = self.client_http.get(reverse("admin-dashboard"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Não há dados suficientes")
+
+    def test_http_dashboard_shows_financial_when_manual_entry(self):
+        FinancialEntry.objects.create(
+            workspace=self.ws,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.INFLOW,
+            occurred_on=self._today(),
+            amount=Decimal("250.00"),
+            description="Entrada teste",
+            created_by=self.admin,
+        )
+        r = self.client_http.get(reverse("admin-dashboard"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Saldo atual")
+        self.assertContains(r, "250,00")
+
+    def test_daily_financial_bars_split_by_day_total(self):
+        today = self._today()
+        FinancialEntry.objects.create(
+            workspace=self.ws,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.INFLOW,
+            occurred_on=today,
+            amount=Decimal("1000.00"),
+            description="In",
+            created_by=self.admin,
+        )
+        FinancialEntry.objects.create(
+            workspace=self.ws,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.OUTFLOW,
+            occurred_on=today,
+            amount=Decimal("500.00"),
+            description="Out",
+            created_by=self.admin,
+        )
+        dash = build_admin_dashboard(self.ws, "7d")
+        row = next(d for d in dash["daily_series"] if d["day"] == today.isoformat())
+        self.assertEqual(row["pct_in"] + row["pct_out"], 100)
+        self.assertEqual(row["pct_in"], 67)
+        self.assertEqual(row["pct_out"], 33)
+
+    def test_build_dashboard_counts_saved_time_only(self):
+        today = self._today()
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=today,
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("2.00"),
+        )
+        dash = build_admin_dashboard(self.ws, "7d")
+        self.assertGreater(dash["total_logged_hours"], 0)
+        self.assertGreater(dash["team_cost_total"], Decimal("0"))
+
+    def test_build_dashboard_other_workspace_excluded(self):
+        FinancialEntry.objects.create(
+            workspace=self.ws_other,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.INFLOW,
+            occurred_on=self._today(),
+            amount=Decimal("99999.00"),
+            description="Outro WS",
+            created_by=self.admin,
+        )
+        dash = build_admin_dashboard(self.ws, "7d")
+        self.assertFalse(dash["has_any_content"])
+
+    def test_project_budget_block_when_budget_set(self):
+        cli = AppClient.objects.create(workspace=self.ws, name="Cliente B")
+        UserClient.objects.create(user=self.member, workspace=self.ws, client=cli)
+        proj = Project.objects.create(
+            workspace=self.ws,
+            client=cli,
+            name="Proj B",
+            budget=Decimal("1000.00"),
+            estimated_hours=Decimal("10.00"),
+        )
+        UserProject.objects.create(user=self.member, workspace=self.ws, project=proj)
+        today = self._today()
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            client=cli,
+            project=proj,
+            date=today,
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("9.00"),
+        )
+        dash = build_admin_dashboard(self.ws, "7d")
+        self.assertTrue(dash["show_budget_block"])
+        self.assertTrue(dash["show_hours_estimate_block"])
+        self.assertGreaterEqual(len(dash["risky_projects"]), 1)
+
+    def test_project_without_budget_no_budget_section(self):
+        cli = AppClient.objects.create(workspace=self.ws, name="Cliente C")
+        UserClient.objects.create(user=self.member, workspace=self.ws, client=cli)
+        proj_nb = Project.objects.create(
+            workspace=self.ws, client=cli, name="Proj Sem Budget", budget=None
+        )
+        UserProject.objects.create(user=self.member, workspace=self.ws, project=proj_nb)
+        today = self._today()
+        TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            client=cli,
+            project=proj_nb,
+            date=today,
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1.00"),
+        )
+        dash = build_admin_dashboard(self.ws, "7d")
+        rows = [r for r in dash["project_budget_rows"] if r["name"] == "Proj Sem Budget"]
+        self.assertEqual(len(rows), 0)
+
+
+class MuralMemberApiTests(TestCase):
+    """Backend mínimo do Mural/Kanban (membro)."""
+
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=False)
+        self.owner = User.objects.create_user(
+            email="mural-owner@example.com",
+            password="x",
+            first_name="O",
+            last_name="wner",
+        )
+        self.member_a = User.objects.create_user(
+            email="mural-a@example.com",
+            password="x",
+            first_name="A",
+            last_name="lpha",
+        )
+        self.member_b = User.objects.create_user(
+            email="mural-b@example.com",
+            password="x",
+            first_name="B",
+            last_name="ravo",
+        )
+        for u in (self.member_a, self.member_b):
+            u.platform_role = User.PlatformRole.MEMBER
+            u.save(update_fields=["platform_role"])
+
+        self.ws = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="Mural WS",
+            workspace_description="",
+        )
+        for u in (self.member_a, self.member_b):
+            Membership.objects.create(user=u, workspace=self.ws, role="user")
+            create_hourly_compensation(u, self.ws)
+
+        self.dept = Department.objects.create(
+            workspace=self.ws,
+            name="Dept Mural",
+            time_tracking_mode=Department.TimeTrackingMode.DURATION,
+        )
+        for u in (self.member_a, self.member_b):
+            UserDepartment.objects.create(
+                user=u,
+                workspace=self.ws,
+                department=self.dept,
+                is_primary=True,
+            )
+
+        self.cli = AppClient.objects.create(workspace=self.ws, name="Cli Mural")
+        for u in (self.member_a, self.member_b):
+            UserClient.objects.create(user=u, workspace=self.ws, client=self.cli)
+        self.proj = Project.objects.create(
+            workspace=self.ws,
+            client=self.cli,
+            name="Proj Mural",
+        )
+        for u in (self.member_a, self.member_b):
+            UserProject.objects.create(user=u, workspace=self.ws, project=self.proj)
+        self.task = Task.objects.create(project=self.proj, name="Task Mural")
+
+        self.ws_other = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="Outro WS",
+            workspace_description="",
+        )
+        self.cli_other = AppClient.objects.create(workspace=self.ws_other, name="Cli Outro")
+        self.proj_other = Project.objects.create(
+            workspace=self.ws_other,
+            client=self.cli_other,
+            name="Proj Outro",
+        )
+
+    def _session_ws(self, user, ws: Workspace):
+        self.client.force_login(user)
+        s = self.client.session
+        s[SESSION_MEMBER_WORKSPACE_KEY] = ws.pk
+        s.save()
+
+    def test_mural_default_columns_created(self):
+        self._session_ws(self.member_a, self.ws)
+        self.assertEqual(PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).count(), 0)
+        r = self.client.get(reverse("user-mural-data"))
+        self.assertEqual(r.status_code, 200)
+        data = json.loads(r.content)
+        self.assertTrue(data["ok"])
+        cols = data["mural"]["private_columns"]
+        self.assertEqual(len(cols), 7)
+        names = [c["name"] for c in cols]
+        self.assertIn("Rascunho", names)
+        self.assertIn("Concluído", names)
+        self.assertEqual(
+            PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).count(),
+            7,
+        )
+
+    def test_private_cards_only_visible_to_creator(self):
+        self._session_ws(self.member_a, self.ws)
+        r0 = self.client.get(reverse("user-mural-data"))
+        col_id = json.loads(r0.content)["mural"]["private_columns"][0]["id"]
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {
+                    "visibility": "private",
+                    "private_column_id": col_id,
+                    "title": "Segredo A",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r1.status_code, 201)
+        card_id = json.loads(r1.content)["card"]["id"]
+
+        self._session_ws(self.member_b, self.ws)
+        r2 = self.client.get(reverse("user-mural-data"))
+        ids = [c["id"] for c in json.loads(r2.content)["mural"]["private_cards"]]
+        self.assertNotIn(card_id, ids)
+
+        r3 = self.client.patch(
+            reverse("user-mural-card-update", kwargs={"card_id": card_id}),
+            data=json.dumps({"title": "Hack"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r3.status_code, 404)
+
+    def test_public_cards_visible_to_all_members(self):
+        self._session_ws(self.member_a, self.ws)
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "Anúncio"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r1.status_code, 201)
+        cid = json.loads(r1.content)["card"]["id"]
+
+        self._session_ws(self.member_b, self.ws)
+        r2 = self.client.get(reverse("user-mural-data"))
+        pub_ids = [c["id"] for c in json.loads(r2.content)["mural"]["public_cards"]]
+        self.assertIn(cid, pub_ids)
+
+    def test_rename_private_column(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        col = PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).first()
+        assert col is not None
+        r = self.client.patch(
+            reverse("user-mural-column-update", kwargs={"column_id": col.pk}),
+            data=json.dumps({"name": "Ideias"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+        col.refresh_from_db()
+        self.assertEqual(col.name, "Ideias")
+
+    def test_create_private_card_and_move_to_public(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        col = PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).first()
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {
+                    "visibility": "private",
+                    "private_column_id": col.pk,
+                    "title": "Migrar",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r1.status_code, 201)
+        card_id = json.loads(r1.content)["card"]["id"]
+        r2 = self.client.post(reverse("user-mural-card-move-to-public", kwargs={"card_id": card_id}))
+        self.assertEqual(r2.status_code, 200, msg=r2.content.decode())
+        card = BoardCard.objects.get(pk=card_id)
+        self.assertEqual(card.visibility, BoardCard.Visibility.PUBLIC)
+        self.assertIsNone(card.private_column_id)
+
+    def test_reorder_private_card(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        col = PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).first()
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {"visibility": "private", "private_column_id": col.pk, "title": "Um"}
+            ),
+            content_type="application/json",
+        )
+        r2 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {"visibility": "private", "private_column_id": col.pk, "title": "Dois"}
+            ),
+            content_type="application/json",
+        )
+        c1 = json.loads(r1.content)["card"]["id"]
+        c2 = json.loads(r2.content)["card"]["id"]
+        r3 = self.client.post(
+            reverse("user-mural-card-reposition", kwargs={"card_id": c2}),
+            data=json.dumps({"insert_index": 0}),
+            content_type="application/json",
+        )
+        self.assertEqual(r3.status_code, 200)
+        cards = list(
+            BoardCard.objects.filter(
+                workspace=self.ws,
+                visibility=BoardCard.Visibility.PRIVATE,
+                private_column=col,
+            ).order_by("position", "pk")
+        )
+        self.assertEqual([c.pk for c in cards], [c2, c1])
+
+    def test_reorder_public_card(self):
+        self._session_ws(self.member_a, self.ws)
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "P1"}),
+            content_type="application/json",
+        )
+        r2 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "P2"}),
+            content_type="application/json",
+        )
+        id1 = json.loads(r1.content)["card"]["id"]
+        id2 = json.loads(r2.content)["card"]["id"]
+        r3 = self.client.post(
+            reverse("user-mural-card-reposition", kwargs={"card_id": id1}),
+            data=json.dumps({"insert_index": 1}),
+            content_type="application/json",
+        )
+        self.assertEqual(r3.status_code, 200)
+        ordered = list(
+            BoardCard.objects.filter(workspace=self.ws, visibility=BoardCard.Visibility.PUBLIC).order_by(
+                "position", "pk"
+            )
+        )
+        self.assertEqual([c.pk for c in ordered], [id2, id1])
+
+    def test_card_fk_must_belong_to_workspace(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        col = PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).first()
+        r = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {
+                    "visibility": "private",
+                    "private_column_id": col.pk,
+                    "title": "Errado",
+                    "project_id": self.proj_other.pk,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_reorder_private_columns(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        cols = list(
+            PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).order_by("position", "pk")
+        )
+        self.assertGreaterEqual(len(cols), 3)
+        new_order = [cols[2].pk, cols[0].pk, cols[1].pk] + [c.pk for c in cols[3:]]
+        r = self.client.post(
+            reverse("user-mural-columns-reorder"),
+            data=json.dumps({"ordered_column_ids": new_order}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, msg=r.content.decode())
+        refreshed = list(
+            PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).order_by("position", "pk")
+        )
+        self.assertEqual([c.pk for c in refreshed], new_order)
+
+    def test_non_creator_cannot_reposition_public_card(self):
+        self._session_ws(self.member_a, self.ws)
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "Do A"}),
+            content_type="application/json",
+        )
+        card_id = json.loads(r1.content)["card"]["id"]
+        self._session_ws(self.member_b, self.ws)
+        r2 = self.client.post(
+            reverse("user-mural-card-reposition", kwargs={"card_id": card_id}),
+            data=json.dumps({"insert_index": 0}),
+            content_type="application/json",
+        )
+        self.assertEqual(r2.status_code, 403)
+
+    def test_move_private_card_between_columns(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        cols = list(
+            PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).order_by("position", "pk")
+        )
+        self.assertGreaterEqual(len(cols), 2)
+        c0, c1 = cols[0], cols[1]
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {"visibility": "private", "private_column_id": c0.pk, "title": "Na coluna 0"}
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r1.status_code, 201)
+        self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {"visibility": "private", "private_column_id": c1.pk, "title": "Fixo coluna 1"}
+            ),
+            content_type="application/json",
+        )
+        card_id = json.loads(r1.content)["card"]["id"]
+        r3 = self.client.post(
+            reverse("user-mural-card-move-private", kwargs={"card_id": card_id}),
+            data=json.dumps({"private_column_id": c1.pk, "insert_index": 0}),
+            content_type="application/json",
+        )
+        self.assertEqual(r3.status_code, 200, msg=r3.content.decode())
+        card = BoardCard.objects.get(pk=card_id)
+        self.assertEqual(card.private_column_id, c1.pk)
+        self.assertEqual(card.visibility, BoardCard.Visibility.PRIVATE)
+
+    def test_mural_payload_includes_creator_label_for_public(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "Comunicado"}),
+            content_type="application/json",
+        )
+        r = self.client.get(reverse("user-mural-data"))
+        self.assertEqual(r.status_code, 200)
+        pub = json.loads(r.content)["mural"]["public_cards"]
+        self.assertTrue(pub)
+        self.assertIn("creator_label", pub[0])
+        self.assertIn("creator_avatar_url", pub[0])

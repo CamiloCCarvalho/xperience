@@ -1,5 +1,5 @@
 .spaceon-account-page .acc-card {
-    width: 96%;
+    width: 100%;
     overflow: hidden;
 }
 
@@ -26,6 +26,40 @@
 
 .spaceon-account-page .acc-form {
     padding: 12px;
+}
+
+.spaceon-account-page .acc-field--full {
+    grid-column: 1 / -1;
+}
+
+.spaceon-account-page .acc-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.spaceon-account-page .acc-checkbox-row .acc-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.spaceon-account-page .acc-checkbox-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-title);
+    cursor: pointer;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.spaceon-account-page .acc-field-help {
+    margin: 6px 0 0 28px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-text-muted);
 }
 
 .spaceon-account-page .acc-profile {
@@ -109,6 +143,16 @@
 .spaceon-account-page label.acc-photo-btn:hover {
     background: color-mix(in srgb, var(--green-light) 12%, var(--color-bg-secondary));
     border-color: color-mix(in srgb, var(--green-light) 40%, var(--color-border));
+}
+
+.spaceon-account-page .acc-photo-btn--danger {
+    border-color: color-mix(in srgb, #ef4444 35%, var(--color-border));
+    color: #c0392b;
+}
+
+.spaceon-account-page .acc-photo-btn--danger:hover {
+    background: color-mix(in srgb, #ef4444 12%, var(--color-bg-secondary));
+    border-color: color-mix(in srgb, #ef4444 48%, var(--color-border));
 }
 
 .spaceon-account-page .acc-identity--profile {
@@ -360,7 +404,7 @@
     }
 }
 .spaceon-dashboard-page .dash-dashboard-card {
-    width: 96%;
+    width: 100%;
     overflow: hidden;
 }
 

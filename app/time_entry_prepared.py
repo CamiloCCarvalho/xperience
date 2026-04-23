@@ -101,10 +101,7 @@ def create_duration_entry_from_calendar_payload(
         raise ValidationError("Selecione um projeto.")
     if flags["use_task"] and task_id is None:
         raise ValidationError("Selecione uma tarefa.")
-    if flags["use_type"] and entry_type not in (
-        TimeEntry.EntryType.INTERNAL,
-        TimeEntry.EntryType.EXTERNAL,
-    ):
+    if flags["use_type"] and entry_type not in TimeEntry.allowed_entry_type_values():
         raise ValidationError("Selecione o tipo de apontamento.")
 
     department = get_member_primary_department(user, workspace)

@@ -1,0 +1,328 @@
+/* Mural do membro (lousa pública + privada) — alinhado ao SpaceOn / dash-header */
+
+.member-mural-page .member-mural-root {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.member-mural-loading {
+    margin: 0;
+    padding: 16px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.member-mural-board {
+    width: 100%;
+    overflow: hidden;
+}
+
+.member-mural-board .dash-header {
+    flex-wrap: wrap;
+}
+
+.member-mural-board__actions {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.member-mural-board__body {
+    padding: 12px;
+    background: var(--color-bg-primary);
+}
+
+.member-mural-public__list,
+.member-mural-column__cards {
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, transparent);
+}
+
+.member-mural-public__list.member-mural--dragover,
+.member-mural-column__cards.member-mural--dragover {
+    border-color: var(--green-light);
+    background: color-mix(in srgb, var(--green-dark) 12%, var(--color-bg-secondary));
+}
+
+.member-mural-empty {
+    margin: 0;
+    padding: 12px 8px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.member-mural-card {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    padding: 10px 10px 8px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.member-mural-card:active {
+    cursor: grabbing;
+}
+
+.member-mural-card--readonly {
+    cursor: default;
+    opacity: 0.95;
+}
+
+.member-mural-card:not(.member-mural-card--readonly)[draggable="true"] {
+    cursor: grab;
+}
+
+.member-mural-card__title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-title);
+    margin: 0 0 4px;
+    line-height: 1.25;
+}
+
+.member-mural-card__desc {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 0 0 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.member-mural-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: 11px;
+    color: var(--color-text);
+}
+
+.member-mural-pill {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--green-dark) 22%, var(--color-bg-primary));
+    border: 1px solid color-mix(in srgb, var(--green-light) 35%, transparent);
+}
+
+.member-mural-card__public-extra {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.member-mural-card__creator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.member-mural-card__creator img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+}
+
+.member-mural-private__columns {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    align-items: flex-start;
+}
+
+.member-mural-column {
+    flex: 0 0 min(280px, 86vw);
+    max-width: 320px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    display: flex;
+    flex-direction: column;
+    max-height: min(70vh, 620px);
+}
+
+.member-mural-column__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 8px 6px;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--green-dark) 10%, var(--color-bg-secondary));
+}
+
+.member-mural-column__head[draggable="true"] {
+    cursor: grab;
+}
+
+.member-mural-column__title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-title);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.member-mural-icon-btn {
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    line-height: 1;
+    font-size: 14px;
+}
+
+.member-mural-icon-btn:hover {
+    background: color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+    color: var(--green-light);
+}
+
+.member-mural-column__cards {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 100px;
+}
+
+.member-mural-btn {
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.member-mural-btn--primary {
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light));
+    color: #fff;
+}
+
+.member-mural-btn--ghost {
+    background: transparent;
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.member-mural-btn--danger {
+    background: color-mix(in srgb, #b91c1c 85%, var(--color-bg-primary));
+    color: #fff;
+}
+
+.member-mural-btn--small {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+/* Dialog */
+.member-mural-dialog {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0;
+    max-width: min(520px, 94vw);
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+}
+
+.member-mural-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.member-mural-dialog__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    color: #fff;
+}
+
+.member-mural-dialog__title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.member-mural-dialog__close {
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.member-mural-dialog__body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.member-mural-dialog__foot {
+    padding: 12px 14px;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.member-mural-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.member-mural-field input,
+.member-mural-field textarea,
+.member-mural-field select {
+    font: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+}
+
+.member-mural-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 520px) {
+    .member-mural-field-row {
+        grid-template-columns: 1fr;
+    }
+}

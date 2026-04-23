@@ -1,13 +1,12 @@
 {% load static %}
             <!-- menu right -->
             <div class="header-menu-right">
-                <!-- button theme -->
-                {% include "xperience/partials/button_theme.html" %}
                 <details class="header-user-menu" id="header-user-menu">
                     <summary class="header-user-menu__summary" aria-label="Abrir menu do usuário" aria-haspopup="menu">
                         {% include "xperience/partials/user/user_avatar.html" %}
                     </summary>
                     <div class="header-user-menu__dropdown" role="menu" aria-label="Menu do usuário">
+                        {% include "xperience/partials/header_user_menu_theme_row.html" %}
                         {% if active_member_workspace %}
                         <div class="header-user-menu__workspace-slot" role="none">
                             {% include "xperience/partials/user/active_workspace_chip.html" %}

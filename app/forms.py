@@ -499,10 +499,14 @@ class UserDepartmentAssignForm(forms.ModelForm):
 class UserBirthDateForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ("birth_date",)
-        labels = {"birth_date": "Data de nascimento"}
+        fields = ("birth_date", "birthday_public_in_workspace")
+        labels = {
+            "birth_date": "Data de nascimento",
+            "birthday_public_in_workspace": "Mostrar meu aniversário no calendário do workspace",
+        }
         widgets = {
             "birth_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
+            "birthday_public_in_workspace": forms.CheckboxInput(attrs={"class": "acc-checkbox"}),
         }
 
 
@@ -568,6 +572,8 @@ class EmployeeProfileForm(forms.ModelForm):
             user_field.queryset = User.objects.filter(
                 Q(memberships__workspace=workspace) | Q(pk=workspace.owner_id)
             ).order_by("email").distinct()
+        if getattr(self.instance, "pk", None):
+            user_field.disabled = True
 
     def save(self, commit=True):
         obj = super().save(commit=False)
@@ -621,6 +627,8 @@ class CompensationHistoryForm(forms.ModelForm):
             "employee_profile",
             "compensation_type",
             "monthly_salary",
+            "monthly_salary_is_fixed",
+            "monthly_reference_hours",
             "hourly_rate",
             "start_date",
             "end_date",
@@ -628,6 +636,8 @@ class CompensationHistoryForm(forms.ModelForm):
         labels = {
             "compensation_type": "Tipo de remuneração",
             "monthly_salary": "Salário mensal",
+            "monthly_salary_is_fixed": "Salário mensal fixo (usa expediente do mês)",
+            "monthly_reference_hours": "Horas base mensais (não fixo)",
             "hourly_rate": "Valor por hora",
             "start_date": "Início",
             "end_date": "Fim",
@@ -635,6 +645,8 @@ class CompensationHistoryForm(forms.ModelForm):
         widgets = {
             "compensation_type": forms.Select(attrs=_config_field_attrs),
             "monthly_salary": forms.NumberInput(attrs={**_config_field_attrs, "step": "0.01", "min": "0"}),
+            "monthly_salary_is_fixed": forms.NullBooleanSelect(attrs=_config_field_attrs),
+            "monthly_reference_hours": forms.NumberInput(attrs={**_config_field_attrs, "step": "0.01", "min": "0"}),
             "hourly_rate": forms.NumberInput(attrs={**_config_field_attrs, "step": "0.01", "min": "0"}),
             "start_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
             "end_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
@@ -718,6 +730,7 @@ class BudgetGoalForm(forms.ModelForm):
             "minimum_target_amount",
             "minimum_target_date",
             "desired_target_amount",
+            "visibility",
             "desired_target_date",
             "description",
         )
@@ -727,6 +740,7 @@ class BudgetGoalForm(forms.ModelForm):
             "minimum_target_amount": "Meta mínima",
             "minimum_target_date": "Data da meta mínima",
             "desired_target_amount": "Meta desejada",
+            "visibility": "Visibilidade",
             "desired_target_date": "Data da meta desejada",
             "description": "Descrição",
         }
@@ -740,6 +754,7 @@ class BudgetGoalForm(forms.ModelForm):
             "desired_target_amount": forms.NumberInput(
                 attrs={**_config_field_attrs, "step": "0.01", "min": "0.01"}
             ),
+            "visibility": forms.Select(attrs=_config_field_attrs),
             "desired_target_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
             "description": forms.Textarea(attrs={**_config_field_attrs, "rows": 2}),
         }
@@ -879,8 +894,8 @@ class ManualTimeEntryForm(forms.ModelForm):
         if self._flags["use_task"] and not cleaned.get("task"):
             self.add_error("task", "Selecione uma tarefa.")
         if self._flags["use_type"]:
-            et = cleaned.get("entry_type") or ""
-            if et not in (TimeEntry.EntryType.INTERNAL, TimeEntry.EntryType.EXTERNAL):
+            et = (cleaned.get("entry_type") or "").strip()
+            if et not in TimeEntry.allowed_entry_type_values():
                 self.add_error("entry_type", "Selecione o tipo de apontamento.")
 
         if mode == TimeEntry.EntryMode.DURATION:

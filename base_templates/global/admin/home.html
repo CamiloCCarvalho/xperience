@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 {% load static %}
 
@@ -6,9 +6,9 @@
     {% include "xperience/partials/head.html" %}
     <title>{% block title %}{% endblock title %} | Xperience</title>
     <!-- user spaceon home styles -->
-    <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=22">
+    <link rel="stylesheet" href="{% static 'xperience/css/workspaces.css' %}?v=8">
+    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=7">
     <link rel="stylesheet" href="{% static 'xperience/css/calendar.css' %}?v=1">
     <link rel="stylesheet" href="{% static 'xperience/css/admin_time_tracking_home.css' %}?v=11">
 </head>
@@ -16,7 +16,7 @@
 
 
 <!-- body -->
-<body data-theme="dark" class="home-page spaceon-page workspaces-page">
+<body data-theme="dark" class="home-page spaceon-page workspaces-page admin-spaceon-home-page">
 
     <!-- container -->
     <div class="container">
@@ -26,7 +26,6 @@
     </div>
 
     <!-- scripts -->
-    <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
     <script src="{% static 'xperience/js/admin_spaceon_home_tabs.js' %}?v=3"></script>
     <script src="{% static 'xperience/js/admin_template_edit_modal.js' %}?v=2" defer></script>
     <script src="{% static 'xperience/js/admin_tt_schedule_dept_member_modals.js' %}?v=3" defer></script>

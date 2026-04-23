@@ -5,16 +5,25 @@ from typing import Any, Optional
 
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
-from app.avatar import handle_user_avatar_upload, user_avatar_url, workspace_avatar_url
+from app.avatar import (
+    handle_user_avatar_upload,
+    remove_user_avatar,
+    user_avatar_url,
+    workspace_avatar_url,
+)
 from app.decorators import member_active_workspace_required, platform_member_required
 from app.forms import UserBirthDateForm
 from app.models import (
+    BudgetGoal,
     Client,
     CompensationHistory,
+    Department,
     EmployeeProfile,
     JobHistory,
+    Membership,
     Project,
     Task,
     TimeEntry,
@@ -24,6 +33,7 @@ from app.models import (
     UserProject,
     Workspace,
 )
+from app.mural_board_service import load_mural_payload
 from app.workspace_session import (
     member_workspaces_queryset,
     resolve_member_workspace,
@@ -229,7 +239,7 @@ def _member_history_entries(
             selection["task_id"] = tid
     if entry_form.get("use_type"):
         et = (_g("hf_entry_type", "entry_type") or "").strip()
-        if et in (TimeEntry.EntryType.INTERNAL, TimeEntry.EntryType.EXTERNAL):
+        if et in TimeEntry.allowed_entry_type_values():
             selection["entry_type"] = et
     if entry_form.get("use_description"):
         desc = (_g("hf_description", "description_contains") or "").strip()
@@ -442,11 +452,80 @@ def user_home(request):
 @platform_member_required
 @member_active_workspace_required
 def user_dashboard(request):
-    return render(
-        request,
-        page_user + "dashboard.html",
-        context=_member_area_context(request),
-    )
+    ctx = _member_area_context(request)
+    ws = ctx.get("active_member_workspace")
+    assert ws is not None
+    user = request.user
+    assert isinstance(user, User)
+    ctx["mural"] = load_mural_payload(ws, user)
+    entry = _entry_access_querysets(user, ws)
+    clients_meta = [{"id": c.pk, "name": c.name} for c in entry["entry_clients"]]
+    projects_meta = [
+        {"id": p.pk, "name": p.name, "client_id": p.client_id} for p in entry["entry_projects"]
+    ]
+    tasks_meta = [
+        {"id": t.pk, "name": t.name, "project_id": t.project_id} for t in entry["entry_tasks"]
+    ]
+    departments_meta = [
+        {"id": d.pk, "name": d.name}
+        for d in Department.objects.filter(workspace=ws).order_by("name")
+    ]
+    mem_ids = Membership.objects.filter(workspace=ws).values_list("user_id", flat=True)
+    mural_users = User.objects.filter(pk__in=mem_ids).order_by("email")
+    members_meta = [
+        {"id": u.pk, "label": ((u.get_full_name() or "").strip() or u.email)} for u in mural_users
+    ]
+    goals_meta: list[dict[str, Any]] = []
+    for bg in BudgetGoal.public_for_workspace(workspace=ws).select_related("client", "project").order_by(
+        "-created_at",
+        "-pk",
+    ):
+        if bg.project_id:
+            scope = bg.project.name
+        elif bg.client_id:
+            scope = bg.client.name
+        else:
+            scope = "Workspace"
+        goals_meta.append(
+            {
+                "id": bg.pk,
+                "name": f"{scope} · {bg.minimum_target_date.isoformat()}",
+            }
+        )
+    pid = 9_876_543_210
+    ctx["mural_ui"] = {
+        "currentUserId": user.pk,
+        "clients": clients_meta,
+        "projects": projects_meta,
+        "tasks": tasks_meta,
+        "departments": departments_meta,
+        "members": members_meta,
+        "budgetGoals": goals_meta,
+        "urls": {
+            "muralData": reverse("user-mural-data"),
+            "columnCreate": reverse("user-mural-column-create"),
+            "columnsReorder": reverse("user-mural-columns-reorder"),
+            "columnUpdate": reverse("user-mural-column-update", kwargs={"column_id": pid}).replace(
+                str(pid), "{columnId}"
+            ),
+            "columnDelete": reverse("user-mural-column-delete", kwargs={"column_id": pid}).replace(
+                str(pid), "{columnId}"
+            ),
+            "cardCreate": reverse("user-mural-card-create"),
+            "cardUpdate": reverse("user-mural-card-update", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "cardDelete": reverse("user-mural-card-delete", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "cardMoveToPublic": reverse("user-mural-card-move-to-public", kwargs={"card_id": pid}).replace(
+                str(pid), "{cardId}"
+            ),
+            "cardMovePrivate": reverse("user-mural-card-move-private", kwargs={"card_id": pid}).replace(
+                str(pid), "{cardId}"
+            ),
+            "cardReposition": reverse("user-mural-card-reposition", kwargs={"card_id": pid}).replace(
+                str(pid), "{cardId}"
+            ),
+        },
+    }
+    return render(request, page_user + "dashboard.html", context=ctx)
 
 
 @platform_member_required
@@ -471,6 +550,12 @@ def user_account(request):
         action = request.POST.get("action")
         if action == "update_avatar":
             handle_user_avatar_upload(request, user)
+            return redirect("user-account")
+        elif action == "remove_avatar":
+            if remove_user_avatar(user):
+                messages.success(request, "Foto de perfil removida.")
+            else:
+                messages.info(request, "Você ainda não possui foto de perfil.")
             return redirect("user-account")
         elif action == "update_birth_date":
             birth_form = UserBirthDateForm(request.POST, instance=user)

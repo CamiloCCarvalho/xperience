@@ -44,6 +44,13 @@
                             >
                             <label for="acc-avatar-input" class="acc-photo-btn">Editar</label>
                         </form>
+                        {% if request.user.avatar and request.user.avatar.name %}
+                        <form class="acc-photo-form" method="post" action="{% url 'user-account' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove_avatar">
+                            <button type="submit" class="acc-photo-btn acc-photo-btn--danger">Remover</button>
+                        </form>
+                        {% endif %}
                     </div>
                     <div class="acc-identity acc-identity--profile">
                         <div class="acc-field">
@@ -74,6 +81,18 @@
                         <div class="acc-field">
                             <label>Idade (calculada)</label>
                             <input type="text" value="{{ request.user.age|default:'—' }}" readonly>
+                        </div>
+                        <div class="acc-field acc-field--full">
+                            <div class="acc-checkbox-row">
+                                {{ birth_form.birthday_public_in_workspace }}
+                                <label for="{{ birth_form.birthday_public_in_workspace.id_for_label }}" class="acc-checkbox-text">
+                                    {{ birth_form.birthday_public_in_workspace.label }}
+                                </label>
+                            </div>
+                            {% if birth_form.birthday_public_in_workspace.help_text %}
+                            <p class="acc-field-help">{{ birth_form.birthday_public_in_workspace.help_text }}</p>
+                            {% endif %}
+                            {{ birth_form.birthday_public_in_workspace.errors }}
                         </div>
                     </section>
 

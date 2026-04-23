@@ -2,8 +2,32 @@
     margin-top: 6px;
 }
 
+/* Evita `align-items: center` do `.container` global apertar header/main no eixo horizontal. */
+.spaceon-config-page.home-page .container {
+    align-items: stretch;
+}
+
+/* Config do admin: remove visual de sub-card interno dentro das sub abas. */
+.spaceon-config-page .admin-config-ws-main .spaceon-grid > .config-card {
+    width: 100%;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+    margin-bottom: 14px;
+}
+
+.spaceon-config-page .admin-config-ws-main .spaceon-grid > .config-card > .config-card-header {
+    display: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .spaceon-grid > .config-card > .config-form {
+    padding: 0;
+}
+
 .spaceon-config-page .config-card {
-    width: 96%;
+    width: 100%;
     overflow: hidden;
 }
 
@@ -41,6 +65,68 @@
 
 .spaceon-config-page .config-form {
     padding: 12px 14px 14px;
+}
+
+.spaceon-config-page .config-company-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.spaceon-config-page .config-company-logo__avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 85%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.spaceon-config-page .config-company-logo__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.spaceon-config-page .config-company-logo__avatar i {
+    font-size: 28px;
+}
+
+.spaceon-config-page .config-company-logo__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.spaceon-config-page .config-company-logo__btn:hover {
+    border-color: color-mix(in srgb, var(--green-light) 45%, var(--color-border));
+    color: var(--green-dark);
+}
+
+.spaceon-config-page .config-company-logo__btn--danger {
+    border-color: color-mix(in srgb, #ef4444 35%, var(--color-border));
+    color: #c0392b;
+}
+
+.spaceon-config-page .config-company-logo__btn--danger:hover {
+    border-color: color-mix(in srgb, #ef4444 48%, var(--color-border));
+    color: #9f2d22;
+    background: color-mix(in srgb, #ef4444 10%, var(--color-bg-primary));
 }
 
 .spaceon-config-page .config-grid {
@@ -567,9 +653,10 @@
 }
 
 /* Workspace gestor — sub-menu em abas (mesmo padrão admin-tt: cartão + faixa verde) */
+/* Largura: ~80% da área útil do <main> (antes limitado a 960px). */
 .spaceon-config-page .admin-config-ws-main .admin-tt-stack {
-    width: 100%;
-    max-width: min(960px, 100%);
+    width: 80%;
+    max-width: 100%;
     margin: 0 auto;
     padding: 0 12px;
     box-sizing: border-box;
@@ -690,6 +777,11 @@
 }
 
 @media (max-width: 720px) {
+    .spaceon-config-page .admin-config-ws-main .admin-tt-stack {
+        width: 100%;
+        padding: 0 8px;
+    }
+
     .spaceon-config-page .admin-config-ws-main .admin-tt-tabs {
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -1024,6 +1116,7 @@
 .spaceon-config-page .admin-config-ws-main .acf-members__table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: 0.8125rem;
     color: var(--color-text);
 }
@@ -1036,6 +1129,23 @@
     background: color-mix(in srgb, var(--color-bg-primary) 40%, var(--color-bg-secondary));
     white-space: nowrap;
     vertical-align: bottom;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th--member {
+    width: 18%;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th--dept {
+    width: 13%;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th--clients,
+.spaceon-config-page .admin-config-ws-main .acf-members__th--projects {
+    width: 28%;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__th--actions {
+    width: 4.5rem;
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__th-btn {
@@ -1070,8 +1180,14 @@
 
 .spaceon-config-page .admin-config-ws-main .acf-members__td {
     padding: 0.45rem 0.55rem;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid color-mix(in srgb, var(--green-light) 45%, var(--color-border));
     vertical-align: top;
+    min-width: 0;
+}
+
+/* Clientes / Projetos: conteúdo e selects alinhados à esquerda da célula. */
+.spaceon-config-page .admin-config-ws-main .acf-members__td--tags {
+    text-align: left;
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__row {
@@ -1088,9 +1204,11 @@
 
 .spaceon-config-page .admin-config-ws-main .acf-members__member-cell {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 0.55rem;
     min-width: 0;
+    text-align: center;
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__avatar {
@@ -1107,12 +1225,14 @@
     flex-direction: column;
     gap: 0.1rem;
     min-width: 0;
+    align-items: center;
+    width: 100%;
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__member-name {
     font-weight: 600;
     color: var(--color-title);
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -1120,25 +1240,58 @@
 .spaceon-config-page .admin-config-ws-main .acf-members__member-email {
     font-size: 0.75rem;
     color: var(--color-text-muted);
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__tags-wrap {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
+    justify-content: flex-start;
     gap: 0.35rem;
     margin-bottom: 0.35rem;
+    width: 100%;
     min-height: 1.5rem;
+    max-height: 1.6rem;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tags-wrap--collapsed {
+    position: relative;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tags-wrap--collapsed::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0.05rem;
+    width: 42%;
+    height: 1.5rem;
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-bg-secondary) 0%, transparent),
+        var(--color-bg-secondary)
+    );
+    pointer-events: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tags-wrap--expanded {
+    flex-wrap: wrap;
+    max-height: none;
+    overflow: visible;
+    white-space: normal;
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__tag {
     display: inline-flex;
     align-items: center;
+    min-width: 0;
     gap: 0.25rem;
-    max-width: 100%;
+    max-width: 9.5rem;
     padding: 0.15rem 0.45rem 0.15rem 0.5rem;
     border-radius: 999px;
     font-size: 0.72rem;
@@ -1208,10 +1361,12 @@
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__inline-select {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
     max-width: 100%;
-    width: min(14rem, 100%);
     height: 32px;
-    margin-top: 0.1rem;
+    margin: 0.1rem 0 0;
     padding: 0 0.45rem;
     font-size: 0.75rem;
     font-weight: 600;
@@ -1233,6 +1388,29 @@
     font-size: 0.72rem;
     color: var(--color-text-muted);
     font-style: italic;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tags-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1rem;
+    margin: 0 0 0.35rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--green-light);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tags-toggle--placeholder {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-members__tags-toggle:hover {
+    text-decoration: underline;
 }
 
 .spaceon-config-page .admin-config-ws-main .acf-members__td--actions {
@@ -1282,4 +1460,132 @@
 .spaceon-config-page .config-list-inline {
     margin: 0;
     padding-left: 1rem;
+}
+
+/* Tabelas ordenáveis (clientes, projetos, tarefas) */
+.spaceon-config-page .admin-config-ws-main .acf-sort-table {
+    width: 100%;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg-secondary);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    color: var(--color-text);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__table th {
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 40%, var(--color-bg-secondary));
+    white-space: nowrap;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__th-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.55rem 0.65rem;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-weight: 700;
+    color: var(--color-title);
+    cursor: pointer;
+    text-align: left;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__th-btn:hover {
+    color: var(--green-light);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__th-btn:focus-visible {
+    outline: 2px solid var(--green-light);
+    outline-offset: -2px;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__sort-icon {
+    font-size: 0.72rem;
+    opacity: 0.55;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__td {
+    padding: 0.5rem 0.55rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__row:hover {
+    background: color-mix(in srgb, var(--green-light) 6%, var(--color-bg-primary));
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__row:last-child .acf-sort-table__td {
+    border-bottom: none;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__name {
+    font-weight: 600;
+    color: var(--color-title);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__main-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__td--actions {
+    width: 4.75rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__pager {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.85rem;
+    padding-bottom: 0.15rem;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__pager-btn {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__pager-btn--active {
+    border-color: color-mix(in srgb, var(--green-light) 55%, var(--color-border));
+    background: color-mix(in srgb, var(--green-light) 14%, var(--color-bg-primary));
+    color: var(--green-light);
+}
+
+.spaceon-config-page .admin-config-ws-main .acf-sort-table__pager-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }

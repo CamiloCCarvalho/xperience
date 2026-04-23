@@ -425,6 +425,65 @@ body:not([data-theme="dark"]) .header-user-avatar {
     }
 }
 
+/* Linha "Mudar tema" + toggle (primeiro item do menu do avatar) */
+.header-user-menu__theme-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #e8edf5;
+    transition: background 0.15s ease;
+}
+
+body:not([data-theme="dark"]) .header-user-menu__theme-row {
+    color: #1f2937;
+}
+
+.header-user-menu__theme-row:hover {
+    background: color-mix(in srgb, rgba(39, 174, 96, 0.5) 16%, transparent);
+}
+
+.header-user-menu__theme-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.header-user-menu__theme-toggle {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.header-user-menu__theme-toggle .icon-theme {
+    margin-right: 0;
+    font-size: 28px;
+    color: var(--green-light, #27ae60);
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+body:not([data-theme="dark"]) .header-user-menu__theme-toggle .icon-theme {
+    color: var(--green-dark, #219150);
+}
+
+.header-user-menu__theme-toggle:hover .icon-theme,
+.header-user-menu__theme-toggle:focus-visible .icon-theme {
+    color: #ffffff;
+}
+
+.header-user-menu__theme-toggle:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--green-light, #27ae60) 55%, transparent);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
 /* Menu do usuário: clique na foto abre submenu (cabeçalho membro) */
 .header-user-menu {
     position: relative;

@@ -1,5 +1,18 @@
 from django.urls import path
 from app.views import admin, public, time_entry, user
+from app.views.mural_member import (
+    mural_member_card_create,
+    mural_member_card_delete,
+    mural_member_card_move_private,
+    mural_member_card_move_to_public,
+    mural_member_card_reposition,
+    mural_member_card_update,
+    mural_member_column_create,
+    mural_member_column_delete,
+    mural_member_column_update,
+    mural_member_columns_reorder,
+    mural_member_data,
+)
 
 urlpatterns = [
 
@@ -19,6 +32,57 @@ urlpatterns = [
     path("user/workspaces/", user.user_workspaces, name="user-workspaces"),
     path("user/spaceon/home/", user.user_home, name="user-home"),
     path("user/spaceon/dashboard/", user.user_dashboard, name="user-dashboard"),
+    path("user/spaceon/mural/", mural_member_data, name="user-mural-data"),
+    path(
+        "user/spaceon/mural/columns/",
+        mural_member_column_create,
+        name="user-mural-column-create",
+    ),
+    path(
+        "user/spaceon/mural/columns/reorder/",
+        mural_member_columns_reorder,
+        name="user-mural-columns-reorder",
+    ),
+    path(
+        "user/spaceon/mural/columns/<int:column_id>/",
+        mural_member_column_update,
+        name="user-mural-column-update",
+    ),
+    path(
+        "user/spaceon/mural/columns/<int:column_id>/delete/",
+        mural_member_column_delete,
+        name="user-mural-column-delete",
+    ),
+    path(
+        "user/spaceon/mural/cards/",
+        mural_member_card_create,
+        name="user-mural-card-create",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/",
+        mural_member_card_update,
+        name="user-mural-card-update",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/delete/",
+        mural_member_card_delete,
+        name="user-mural-card-delete",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/move-private/",
+        mural_member_card_move_private,
+        name="user-mural-card-move-private",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/move-to-public/",
+        mural_member_card_move_to_public,
+        name="user-mural-card-move-to-public",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/reposition/",
+        mural_member_card_reposition,
+        name="user-mural-card-reposition",
+    ),
     path("user/spaceon/config/", user.user_config, name="user-config"),
     path("user/spaceon/account/", user.user_account, name="user-account"),
     path(
@@ -55,6 +119,11 @@ urlpatterns = [
         "user/spaceon/time-entry/counts/",
         time_entry.time_entry_month_counts,
         name="user-time-entry-month-counts",
+    ),
+    path(
+        "user/spaceon/time-entry/day/",
+        time_entry.time_entry_day_detail,
+        name="user-time-entry-day-detail",
     ),
     path(
         "user/spaceon/time-entry/manual/create/",

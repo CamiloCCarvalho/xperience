@@ -1,4 +1,5 @@
 {% load static %}
+<script src="{% static 'xperience/js/xperience_toast.js' %}"></script>
 {% if messages %}
 <div id="toast-messages-root" class="toast-messages" aria-live="polite" aria-atomic="false">
     {% for message in messages %}
@@ -8,5 +9,11 @@
     </div>
     {% endfor %}
 </div>
-<script src="{% static 'xperience/js/messages_toast.js' %}"></script>
+<script>
+(function () {
+    if (window.xperienceInitServerToastsFromDom) {
+        xperienceInitServerToastsFromDom();
+    }
+})();
+</script>
 {% endif %}

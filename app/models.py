@@ -69,6 +69,13 @@ class User(AbstractUser):
         blank=True,
         help_text="Data de nascimento global da pessoa (não depende de workspace).",
     )
+    birthday_public_in_workspace = models.BooleanField(
+        default=False,
+        help_text=(
+            "Se verdadeiro, colegas do mesmo workspace veem dia e mês do aniversário no calendário "
+            "(sem exibir o ano)."
+        ),
+    )
     platform_join_date = models.DateField(
         default=timezone.localdate,
         help_text="Data de entrada na plataforma (diferente de created_at técnico).",
@@ -304,6 +311,20 @@ class CompensationHistory(models.Model):
         blank=True,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
+    monthly_salary_is_fixed = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name="Salário mensal fixo",
+        help_text="Somente para tipo mensal: se verdadeiro, o valor-hora deriva do salário e das horas previstas no mês.",
+    )
+    monthly_reference_hours = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        help_text="Somente para mensal não fixo: base mensal de horas para calcular o valor-hora (ex.: 160).",
+    )
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -320,13 +341,6 @@ class CompensationHistory(models.Model):
                 predicate=Q(end_date__isnull=True) | Q(end_date__gte=models.F("start_date")),
                 name="app_compensationhistory_end_after_start",
             ),
-            _check_constraint(
-                predicate=(
-                    (Q(compensation_type="monthly") & Q(monthly_salary__isnull=False) & Q(hourly_rate__isnull=True))
-                    | (Q(compensation_type="hourly") & Q(hourly_rate__isnull=False) & Q(monthly_salary__isnull=True))
-                ),
-                name="app_compensationhistory_fields_by_type",
-            ),
         ]
         verbose_name = "Histórico de remuneração"
         verbose_name_plural = "Históricos de remuneração"
@@ -336,16 +350,34 @@ class CompensationHistory(models.Model):
         errors: dict[str, str] = {}
         if self.end_date and self.end_date < self.start_date:
             errors["end_date"] = "A data final não pode ser anterior à data inicial."
-        if self.compensation_type == self.CompensationType.MONTHLY:
-            if self.monthly_salary is None:
-                errors["monthly_salary"] = "Informe o salário mensal para remuneração mensal."
-            if self.hourly_rate is not None:
-                errors["hourly_rate"] = "Não informe valor por hora para remuneração mensal."
-        elif self.compensation_type == self.CompensationType.HOURLY:
+        if self.compensation_type == self.CompensationType.HOURLY:
             if self.hourly_rate is None:
                 errors["hourly_rate"] = "Informe o valor por hora para remuneração por hora."
             if self.monthly_salary is not None:
                 errors["monthly_salary"] = "Não informe salário mensal para remuneração por hora."
+            if self.monthly_salary_is_fixed is not None:
+                errors["monthly_salary_is_fixed"] = "Não use este campo para remuneração por hora."
+            if self.monthly_reference_hours is not None:
+                errors["monthly_reference_hours"] = "Não informe horas base mensais para remuneração por hora."
+        elif self.compensation_type == self.CompensationType.MONTHLY:
+            if self.monthly_salary is None:
+                errors["monthly_salary"] = "Informe o salário mensal para remuneração mensal."
+            if self.hourly_rate is not None:
+                errors["hourly_rate"] = "Não informe valor por hora para remuneração mensal."
+            if self.monthly_salary_is_fixed is True:
+                if self.monthly_reference_hours is not None:
+                    errors["monthly_reference_hours"] = (
+                        "Não informe horas base mensais quando o salário mensal é fixo (usa expediente do mês)."
+                    )
+            elif self.monthly_salary_is_fixed is False:
+                if self.monthly_reference_hours is None or self.monthly_reference_hours <= 0:
+                    errors["monthly_reference_hours"] = (
+                        "Informe as horas base mensais (maior que zero) para remuneração mensal não fixa."
+                    )
+            else:
+                errors["monthly_salary_is_fixed"] = (
+                    "Indique se o salário mensal é fixo (usa expediente) ou não fixo (usa horas base contratuais)."
+                )
         if errors:
             raise ValidationError(errors)
 
@@ -515,6 +547,10 @@ class FinancialEntry(models.Model):
 
 
 class BudgetGoal(models.Model):
+    class Visibility(models.TextChoices):
+        PRIVATE = "private", "Privada"
+        PUBLIC = "public", "Pública"
+
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
@@ -544,6 +580,11 @@ class BudgetGoal(models.Model):
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    visibility = models.CharField(
+        max_length=10,
+        choices=Visibility.choices,
+        default=Visibility.PRIVATE,
     )
     desired_target_date = models.DateField()
     description = models.TextField(blank=True)
@@ -600,6 +641,19 @@ class BudgetGoal(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         super().save(*args, **kwargs)
+
+    @classmethod
+    def visible_for_user(cls, *, workspace: Workspace, user: User):
+        return cls.objects.filter(workspace=workspace).filter(
+            Q(visibility=cls.Visibility.PUBLIC) | Q(created_by=user)
+        )
+
+    @classmethod
+    def public_for_workspace(cls, *, workspace: Workspace):
+        return cls.objects.filter(
+            workspace=workspace,
+            visibility=cls.Visibility.PUBLIC,
+        )
 
     def __str__(self):
         if self.project_id:
@@ -1002,6 +1056,13 @@ class TimeEntry(models.Model):
     class EntryType(models.TextChoices):
         INTERNAL = "internal", "Interno"
         EXTERNAL = "external", "Externo"
+        DISPLACEMENT = "displacement", "Deslocamento"
+        HOME_OFFICE = "home_office", "Home Office"
+
+    @classmethod
+    def allowed_entry_type_values(cls) -> frozenset[str]:
+        """Valores válidos persistidos em ``TimeEntry.entry_type``."""
+        return frozenset(e.value for e in cls.EntryType)
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Rascunho"
@@ -1067,7 +1128,7 @@ class TimeEntry(models.Model):
         related_name="time_entries",
     )
     entry_type = models.CharField(
-        max_length=20,
+        max_length=24,
         choices=EntryType.choices,
         blank=True,
     )
@@ -1082,6 +1143,35 @@ class TimeEntry(models.Model):
             "Após parar o cronômetro: indica que o registro salvo ainda aguarda "
             "'Salvar dados do apontamento' ou descarte explícito."
         ),
+    )
+    pay_amount_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Valor monetário do apontamento congelado no salvamento (remuneração vigente na data).",
+    )
+    effective_hourly_rate_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Valor-hora efetivo usado no cálculo (congelado).",
+    )
+    expected_month_hours_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Horas previstas do mês (fixo) ou horas base contratuais (não fixo) usadas no denominador.",
+    )
+    compensation_history_snapshot = models.ForeignKey(
+        "CompensationHistory",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Registro de remuneração usado no cálculo (congelado).",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1227,6 +1317,9 @@ class TimeEntry(models.Model):
         self.full_clean()
         if not skip_access_check:
             self._assert_user_access()
+        from app.compensation_pay import compute_and_assign_pay_snapshots
+
+        compute_and_assign_pay_snapshots(self)
         with transaction.atomic():
             super().save(*args, **kwargs)
             if sync_financial and self.status == self.Status.SAVED:
@@ -1252,3 +1345,229 @@ class TimeEntry(models.Model):
         if self.hours is not None:
             return f"{self.user.email} {self.date} {self.hours}h"
         return f"{self.user.email} {self.date} {self.duration_minutes}min"
+
+
+class PrivateBoardColumn(models.Model):
+    """
+    Coluna editável da lousa privada (Kanban/Mural) por usuário e workspace.
+    O nome é apenas rótulo; a identidade da coluna é sempre o PK.
+    """
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="private_board_columns",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="private_board_columns",
+    )
+    name = models.CharField(max_length=255)
+    position = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["workspace", "user", "position", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "user", "position"),
+                name="app_privateboardcolumn_workspace_user_position_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["workspace", "user", "position"]),
+        ]
+        verbose_name = "Coluna da lousa privada"
+        verbose_name_plural = "Colunas da lousa privada"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.name is not None and not str(self.name).strip():
+            raise ValidationError({"name": "Informe um nome para a coluna."})
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.user.email} · {self.workspace})"
+
+
+class BoardCard(models.Model):
+    """
+    Card único para lousa pública (uma coluna implícita) ou privada (coluna FK).
+    """
+
+    class Visibility(models.TextChoices):
+        PRIVATE = "private", "Privado"
+        PUBLIC = "public", "Público"
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="board_cards",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="board_cards_created",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="board_cards_updated",
+    )
+    visibility = models.CharField(
+        max_length=10,
+        choices=Visibility.choices,
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    private_column = models.ForeignKey(
+        PrivateBoardColumn,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="cards",
+    )
+    position = models.PositiveIntegerField(default=0)
+    category = models.CharField(max_length=64, blank=True)
+    event_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    client = models.ForeignKey(
+        "Client",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_cards",
+    )
+    project = models.ForeignKey(
+        "Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_cards",
+    )
+    task = models.ForeignKey(
+        "Task",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_cards",
+    )
+    budget_goal = models.ForeignKey(
+        BudgetGoal,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_cards",
+    )
+    assigned_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_cards_assigned",
+    )
+    assigned_department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_cards",
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["workspace", "visibility", "private_column", "position", "pk"]
+        constraints = [
+            _check_constraint(
+                predicate=Q(visibility="private", private_column__isnull=False)
+                | Q(visibility="public", private_column__isnull=True),
+                name="app_boardcard_visibility_private_column_consistency",
+            ),
+            models.UniqueConstraint(
+                fields=("private_column", "position"),
+                condition=Q(visibility="private"),
+                name="app_boardcard_private_column_position_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("workspace", "position"),
+                condition=Q(visibility="public", private_column__isnull=True),
+                name="app_boardcard_public_workspace_position_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["workspace", "visibility", "position"]),
+            models.Index(fields=["private_column", "position"]),
+        ]
+        verbose_name = "Card do mural"
+        verbose_name_plural = "Cards do mural"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+
+        if self.visibility == self.Visibility.PRIVATE:
+            if not self.private_column_id:
+                errors["private_column"] = "Card privado deve estar em uma coluna da lousa privada."
+        elif self.visibility == self.Visibility.PUBLIC:
+            if self.private_column_id:
+                errors["private_column"] = "Card público não pode referenciar coluna privada."
+
+        if self.private_column_id:
+            col = self.private_column
+            if col is not None:
+                if self.workspace_id and col.workspace_id != self.workspace_id:
+                    errors["private_column"] = "A coluna deve pertencer ao mesmo workspace do card."
+                if self.created_by_id and col.user_id != self.created_by_id:
+                    errors["private_column"] = (
+                        "A coluna privada deve pertencer ao mesmo usuário criador do card."
+                    )
+
+        ws_id = self.workspace_id
+
+        if self.client_id and ws_id and self.client.workspace_id != ws_id:
+            errors["client"] = "O cliente deve pertencer ao mesmo workspace do card."
+
+        if self.project_id and ws_id and self.project.workspace_id != ws_id:
+            errors["project"] = "O projeto deve pertencer ao mesmo workspace do card."
+
+        if self.client_id and self.project_id and self.project.client_id != self.client_id:
+            errors["project"] = "O projeto deve pertencer ao cliente informado."
+
+        if self.task_id:
+            if not self.project_id:
+                errors["task"] = "Informe o projeto ao qual a tarefa pertence."
+            elif self.task.project_id != self.project_id:
+                errors["task"] = "A tarefa deve pertencer ao projeto informado."
+
+        if self.budget_goal_id:
+            bg = self.budget_goal
+            if bg is not None and ws_id and bg.workspace_id != ws_id:
+                errors["budget_goal"] = "A meta deve pertencer ao mesmo workspace do card."
+            elif bg is not None and bg.visibility != BudgetGoal.Visibility.PUBLIC:
+                errors["budget_goal"] = "Apenas metas públicas podem ser vinculadas no mural."
+
+        if self.assigned_department_id and ws_id and self.assigned_department.workspace_id != ws_id:
+            errors["assigned_department"] = (
+                "O departamento atribuído deve pertencer ao mesmo workspace do card."
+            )
+
+        if self.assigned_user_id and ws_id:
+            if not Membership.objects.filter(user_id=self.assigned_user_id, workspace_id=ws_id).exists():
+                errors["assigned_user"] = "O usuário atribuído deve ser membro do workspace."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.get_visibility_display()})"
