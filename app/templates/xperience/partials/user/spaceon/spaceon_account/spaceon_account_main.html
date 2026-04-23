@@ -114,11 +114,11 @@
                             </div>
                             <div class="acc-summary-item">
                                 <span>Cargo atual</span>
-                                <strong>{{ employee_profile.current_job_title|default:"—" }}</strong>
+                                <strong>{% if employee_profile.current_job_role %}{{ employee_profile.current_job_role.name }}{% else %}—{% endif %}</strong>
                             </div>
                         </div>
                         {% if current_job %}
-                        <p class="config-empty-hint">Cargo vigente no histórico: <strong>{{ current_job.job_title }}</strong></p>
+                        <p class="config-empty-hint">Cargo vigente no histórico: <strong>{{ current_job.job_role.name }}</strong></p>
                         {% endif %}
                         {% else %}
                         <p class="config-empty-hint">Seu vínculo empregatício ainda não foi configurado pelo gestor neste workspace.</p>

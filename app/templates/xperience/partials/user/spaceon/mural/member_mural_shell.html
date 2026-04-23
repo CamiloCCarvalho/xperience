@@ -74,6 +74,18 @@
                     <option value="">—</option>
                 </select>
             </label>
+            <label class="member-mural-field">
+                <span>Status do mural</span>
+                <select id="member-mural-card-mural-status">
+                    <option value="">—</option>
+                </select>
+            </label>
+            <label class="member-mural-field">
+                <span>Cor do card</span>
+                <select id="member-mural-card-color-key">
+                    <option value="">Padrão</option>
+                </select>
+            </label>
         </div>
         <footer class="member-mural-dialog__foot">
             <button type="button" class="member-mural-btn member-mural-btn--ghost" data-mural-close-card>Cancelar</button>
@@ -95,6 +107,12 @@
                 <span>Nome</span>
                 <input type="text" id="member-mural-column-name" required maxlength="120" />
             </label>
+            <label class="member-mural-field">
+                <span>Cor da coluna</span>
+                <select id="member-mural-column-color-key">
+                    <option value="">Padrão</option>
+                </select>
+            </label>
         </div>
         <footer class="member-mural-dialog__foot">
             <button type="button" class="member-mural-btn member-mural-btn--ghost" data-mural-close-column>Cancelar</button>
@@ -103,4 +121,29 @@
     </form>
 </dialog>
 
-<script src="{% static 'xperience/js/mural_board.js' %}?v=1" defer></script>
+<dialog id="member-mural-status-dialog" class="member-mural-dialog">
+    <form id="member-mural-status-form" class="member-mural-dialog__form" novalidate>
+        <header class="member-mural-dialog__head">
+            <h3 id="member-mural-status-dialog-title" class="member-mural-dialog__title">Status</h3>
+            <button type="button" class="member-mural-dialog__close" data-mural-close-status aria-label="Fechar">×</button>
+        </header>
+        <div class="member-mural-dialog__body">
+            <input type="hidden" id="member-mural-status-id" value="" />
+            <input type="hidden" id="member-mural-status-mode" value="" />
+            <label class="member-mural-field">
+                <span>Nome</span>
+                <input type="text" id="member-mural-status-name" required maxlength="120" />
+            </label>
+            <label class="member-mural-field">
+                <span>Cor</span>
+                <select id="member-mural-status-color-key" required></select>
+            </label>
+        </div>
+        <footer class="member-mural-dialog__foot">
+            <button type="button" class="member-mural-btn member-mural-btn--ghost" data-mural-close-status>Cancelar</button>
+            <button type="submit" class="member-mural-btn member-mural-btn--primary" id="member-mural-status-save">Salvar</button>
+        </footer>
+    </form>
+</dialog>
+
+<script src="{% static 'xperience/js/mural_board.js' %}?v=4" defer></script>

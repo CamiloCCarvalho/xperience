@@ -34,6 +34,7 @@ from app.models import (
     Workspace,
 )
 from app.mural_board_service import load_mural_payload
+from app.mural_palette import mural_palette_for_ui
 from app.workspace_session import (
     member_workspaces_queryset,
     resolve_member_workspace,
@@ -495,6 +496,7 @@ def user_dashboard(request):
     pid = 9_876_543_210
     ctx["mural_ui"] = {
         "currentUserId": user.pk,
+        "colorPalette": mural_palette_for_ui(),
         "clients": clients_meta,
         "projects": projects_meta,
         "tasks": tasks_meta,
@@ -515,6 +517,9 @@ def user_dashboard(request):
             "cardUpdate": reverse("user-mural-card-update", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
             "cardDelete": reverse("user-mural-card-delete", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
             "cardMoveToPublic": reverse("user-mural-card-move-to-public", kwargs={"card_id": pid}).replace(
+                str(pid), "{cardId}"
+            ),
+            "cardCopyToPrivate": reverse("user-mural-card-copy-to-private", kwargs={"card_id": pid}).replace(
                 str(pid), "{cardId}"
             ),
             "cardMovePrivate": reverse("user-mural-card-move-private", kwargs={"card_id": pid}).replace(
@@ -575,12 +580,12 @@ def user_account(request):
         employee_profile = EmployeeProfile.objects.filter(
             user=user,
             workspace=ws,
-        ).first()
+        ).select_related("current_job_role").first()
         if employee_profile is not None:
             current_job = JobHistory.objects.filter(
                 employee_profile=employee_profile,
                 end_date__isnull=True,
-            ).order_by("-start_date", "-pk").first()
+            ).select_related("job_role").order_by("-start_date", "-pk").first()
             compensation_history = CompensationHistory.objects.filter(
                 employee_profile=employee_profile
             ).order_by("-start_date", "-pk")

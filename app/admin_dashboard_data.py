@@ -79,16 +79,15 @@ def resolve_period_bounds(period_key: str, *, today: date) -> tuple[date, date, 
 
 def _balance_through_day(workspace: Workspace, day: date) -> Decimal:
     """Saldo acumulado até o fim do dia ``day`` (entradas − saídas, occurred_on ≤ day)."""
+    effective_qs = FinancialEntry.objects.filter(workspace=workspace).effective_for_balance()
     inf = (
-        FinancialEntry.objects.filter(
-            workspace=workspace,
+        effective_qs.filter(
             flow_type=FinancialEntry.FlowType.INFLOW,
             occurred_on__lte=day,
         ).aggregate(t=Coalesce(Sum("amount"), Decimal("0")))["t"]
     )
     out = (
-        FinancialEntry.objects.filter(
-            workspace=workspace,
+        effective_qs.filter(
             flow_type=FinancialEntry.FlowType.OUTFLOW,
             occurred_on__lte=day,
         ).aggregate(t=Coalesce(Sum("amount"), Decimal("0")))["t"]
@@ -113,14 +112,13 @@ def build_admin_dashboard(workspace: Workspace, period_key: str) -> dict[str, An
     fin_exists = FinancialEntry.objects.filter(workspace=workspace).exists()
     current_balance = calculate_workspace_balance(workspace)
 
-    inflow_qs = FinancialEntry.objects.filter(
-        workspace=workspace,
+    effective_qs = FinancialEntry.objects.filter(workspace=workspace).effective_for_balance()
+    inflow_qs = effective_qs.filter(
         flow_type=FinancialEntry.FlowType.INFLOW,
         occurred_on__gte=start,
         occurred_on__lte=end,
     )
-    outflow_qs = FinancialEntry.objects.filter(
-        workspace=workspace,
+    outflow_qs = effective_qs.filter(
         flow_type=FinancialEntry.FlowType.OUTFLOW,
         occurred_on__gte=start,
         occurred_on__lte=end,

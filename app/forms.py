@@ -13,6 +13,7 @@ from app.models import (
     Department,
     EmployeeProfile,
     FinancialEntry,
+    JobRole,
     JobHistory,
     Membership,
     Project,
@@ -549,19 +550,19 @@ class EmployeeProfileForm(forms.ModelForm):
             "employment_status",
             "hire_date",
             "termination_date",
-            "current_job_title",
+            "current_job_role",
         )
         labels = {
             "employment_status": "Status do vínculo",
             "hire_date": "Admissão",
             "termination_date": "Desligamento",
-            "current_job_title": "Cargo atual",
+            "current_job_role": "Cargo atual",
         }
         widgets = {
             "employment_status": forms.Select(attrs=_config_field_attrs),
             "hire_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
             "termination_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
-            "current_job_title": forms.TextInput(attrs=_config_field_attrs),
+            "current_job_role": forms.Select(attrs=_config_field_attrs),
         }
 
     def __init__(self, *args, workspace: Workspace | None = None, **kwargs):
@@ -572,6 +573,14 @@ class EmployeeProfileForm(forms.ModelForm):
             user_field.queryset = User.objects.filter(
                 Q(memberships__workspace=workspace) | Q(pk=workspace.owner_id)
             ).order_by("email").distinct()
+            role_field = cast(forms.ModelChoiceField, self.fields["current_job_role"])
+            role_qs = JobRole.objects.filter(workspace=workspace, is_active=True)
+            if getattr(self.instance, "current_job_role_id", None):
+                role_qs = role_qs | JobRole.objects.filter(
+                    workspace=workspace,
+                    pk=self.instance.current_job_role_id,
+                )
+            role_field.queryset = role_qs.order_by("name").distinct()
         if getattr(self.instance, "pk", None):
             user_field.disabled = True
 
@@ -593,14 +602,14 @@ class JobHistoryForm(forms.ModelForm):
 
     class Meta:
         model = JobHistory
-        fields = ("employee_profile", "job_title", "start_date", "end_date")
+        fields = ("employee_profile", "job_role", "start_date", "end_date")
         labels = {
-            "job_title": "Cargo",
+            "job_role": "Cargo",
             "start_date": "Início",
             "end_date": "Fim",
         }
         widgets = {
-            "job_title": forms.TextInput(attrs=_config_field_attrs),
+            "job_role": forms.Select(attrs=_config_field_attrs),
             "start_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
             "end_date": forms.DateInput(attrs={**_config_field_attrs, "type": "date"}),
         }
@@ -612,6 +621,49 @@ class JobHistoryForm(forms.ModelForm):
             profile_field.queryset = EmployeeProfile.objects.filter(
                 workspace=workspace
             ).select_related("user").order_by("user__email")
+            role_field = cast(forms.ModelChoiceField, self.fields["job_role"])
+            role_qs = JobRole.objects.filter(workspace=workspace, is_active=True)
+            if getattr(self.instance, "job_role_id", None):
+                role_qs = role_qs | JobRole.objects.filter(
+                    workspace=workspace,
+                    pk=self.instance.job_role_id,
+                )
+            role_field.queryset = role_qs.order_by("name").distinct()
+
+
+class JobRoleForm(forms.ModelForm):
+    class Meta:
+        model = JobRole
+        fields = ("name", "description", "is_active")
+        labels = {
+            "name": "Cargo",
+            "description": "Descrição",
+            "is_active": "Ativo",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs=_config_field_attrs),
+            "description": forms.Textarea(attrs={**_config_field_attrs, "rows": 2}),
+            "is_active": forms.CheckboxInput(attrs={"class": "config-checkbox"}),
+        }
+
+    def save(
+        self,
+        commit=True,
+        *,
+        workspace: Workspace | None = None,
+        created_by: User | None = None,
+        updated_by: User | None = None,
+    ):
+        obj = super().save(commit=False)
+        if workspace is not None:
+            obj.workspace = workspace
+        if created_by is not None:
+            obj.created_by = obj.created_by or created_by
+        if updated_by is not None:
+            obj.updated_by = updated_by
+        if commit:
+            obj.save()
+        return obj
 
 
 class CompensationHistoryForm(forms.ModelForm):
@@ -712,6 +764,14 @@ class FinancialEntryManualForm(forms.ModelForm):
         obj = super().save(commit=False)
         obj.entry_kind = FinancialEntry.EntryKind.MANUAL
         obj.workspace = workspace or self._workspace  # type: ignore[assignment]
+        if obj.flow_type == FinancialEntry.FlowType.INFLOW:
+            obj.approval_status = FinancialEntry.ApprovalStatus.NOT_REQUIRED
+        else:
+            obj.approval_status = FinancialEntry.ApprovalStatus.PENDING
+            obj.approved_by = None
+            obj.approved_at = None
+            obj.rejected_by = None
+            obj.rejected_at = None
         if created_by is not None:
             obj.created_by = obj.created_by or created_by
         if updated_by is not None:

@@ -2,9 +2,19 @@
 
 .member-mural-page .member-mural-root {
     width: 100%;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     gap: 14px;
+    overflow-x: clip;
+}
+
+.member-mural-page,
+.member-mural-page .main-container,
+.member-mural-page .spaceon-grid {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
 }
 
 .member-mural-loading {
@@ -16,6 +26,7 @@
 
 .member-mural-board {
     width: 100%;
+    max-width: 100%;
     overflow: hidden;
 }
 
@@ -32,18 +43,74 @@
 .member-mural-board__body {
     padding: 12px;
     background: var(--color-bg-primary);
+    overflow-x: hidden;
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+}
+
+.member-mural-public {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    align-items: stretch;
+}
+
+.member-mural-public__lane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-bg-secondary) 82%, #050607 18%);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+}
+
+.member-mural-public__lane-head h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--color-title);
+}
+
+.member-mural-public__lane-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    min-height: 44px;
+    padding: 8px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 86%, transparent);
+    background: color-mix(in srgb, var(--green-dark) 11%, var(--color-bg-secondary));
+    overflow: hidden;
+}
+
+.member-mural-public__lane-head h3 {
+    margin: 0;
+}
+
+.member-mural-public__moderation {
+    display: inline-flex;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
 .member-mural-public__list,
 .member-mural-column__cards {
-    min-height: 72px;
+    min-height: 120px;
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 8px;
     border-radius: 8px;
-    border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
-    background: color-mix(in srgb, var(--color-bg-secondary) 88%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--color-border) 92%, transparent);
+    background: color-mix(in srgb, var(--color-bg-secondary) 72%, #090b0e 28%);
+}
+
+.member-mural-public__list {
+    flex: 1;
+    height: 100%;
 }
 
 .member-mural-public__list.member-mural--dragover,
@@ -61,9 +128,9 @@
 }
 
 .member-mural-card {
-    border: 1px solid var(--color-border);
+    border: 1px solid color-mix(in srgb, var(--color-border) 95%, #ffffff 5%);
     border-radius: 8px;
-    background: var(--color-bg-secondary);
+    background: color-mix(in srgb, var(--color-bg-primary) 86%, #11151a 14%);
     padding: 10px 10px 8px;
     cursor: pointer;
     text-align: left;
@@ -71,6 +138,19 @@
     color: inherit;
     width: 100%;
     box-sizing: border-box;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.member-mural-card:hover {
+    border-color: color-mix(in srgb, var(--green-light) 35%, var(--color-border));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+    transform: translateY(-1px);
+}
+
+.member-mural-card:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--green-light) 70%, #ffffff 30%);
+    outline-offset: 1px;
 }
 
 .member-mural-card:active {
@@ -120,6 +200,11 @@
     border: 1px solid color-mix(in srgb, var(--green-light) 35%, transparent);
 }
 
+.member-mural-pill--warn {
+    background: color-mix(in srgb, #f59e0b 20%, var(--color-bg-primary));
+    border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+}
+
 .member-mural-card__public-extra {
     margin-top: 8px;
     padding-top: 8px;
@@ -147,17 +232,19 @@
 .member-mural-private__columns {
     display: flex;
     gap: 10px;
-    overflow-x: auto;
+    overflow-x: clip;
+    flex-wrap: wrap;
     padding-bottom: 6px;
     align-items: flex-start;
 }
 
 .member-mural-column {
-    flex: 0 0 min(280px, 86vw);
-    max-width: 320px;
-    border: 1px solid var(--color-border);
+    flex: 1 1 280px;
+    min-width: min(280px, 100%);
+    max-width: 100%;
+    border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
     border-radius: 8px;
-    background: var(--color-bg-secondary);
+    background: color-mix(in srgb, var(--color-bg-secondary) 82%, #06090c 18%);
     display: flex;
     flex-direction: column;
     max-height: min(70vh, 620px);
@@ -207,6 +294,18 @@
     flex: 1;
     overflow-y: auto;
     min-height: 100px;
+}
+
+@media (max-width: 780px) {
+    .member-mural-public__lane-head {
+        flex-wrap: wrap;
+        min-height: 0;
+    }
+
+    .member-mural-public__moderation {
+        margin-left: 0;
+        width: 100%;
+    }
 }
 
 .member-mural-btn {
@@ -321,7 +420,39 @@
     gap: 10px;
 }
 
+.member-mural-pill--status {
+    background: color-mix(in srgb, var(--color-bg-primary) 88%, #ffffff 12%);
+    font-weight: 600;
+}
+
+.member-mural-status-admin__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.member-mural-status-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-primary) 92%, #11151a 8%);
+}
+
+.member-mural-status-row__name {
+    flex: 1 1 120px;
+    font-weight: 600;
+    color: var(--color-title);
+}
+
 @media (max-width: 520px) {
+    .member-mural-public {
+        grid-template-columns: 1fr;
+    }
+
     .member-mural-field-row {
         grid-template-columns: 1fr;
     }

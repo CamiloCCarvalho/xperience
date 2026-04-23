@@ -11,7 +11,7 @@
     /** @type {Record<string, unknown> | null} */
     let ui = null;
 
-    /** @type {{ id: number, visibility: string, privateColumnId: number | null, createdById: number } | null} */
+    /** @type {{ id: number, visibility: string, privateColumnId: number | null, publicLane: string | null, createdById: number } | null} */
     let dragCard = null;
     /** @type {number | null} */
     let dragColumnId = null;
@@ -94,11 +94,40 @@
         return Number(ui && ui.currentUserId) || 0;
     }
 
+    function isAdminBoard() {
+        return Boolean(ui && ui.isAdminBoard);
+    }
+
+    /**
+     * @returns {Record<string, string>}
+     */
+    function paletteHexByKey() {
+        const out = /** @type {Record<string, string>} */ ({});
+        const pal = /** @type {{key:string, hex:string}[]} */ ((ui && ui.colorPalette) || []);
+        pal.forEach(function (p) {
+            out[p.key] = p.hex;
+        });
+        return out;
+    }
+
+    /**
+     * @param {string | null | undefined} hex
+     */
+    function cardAccentStyle(hex) {
+        const h = hex && String(hex).trim();
+        if (!h) return "";
+        return ' style="--mural-accent:' + esc(h) + ";border-left:4px solid " + esc(h) + ';"';
+    }
+
     /**
      * @param {Record<string, unknown>} card
      */
     function canMutateCard(card) {
         return Number(card.created_by_id) === currentUserId();
+    }
+
+    function publicLaneLabel(lane) {
+        return lane === "management" ? "Gestão" : "Membros";
     }
 
     /**
@@ -139,12 +168,29 @@
         const id = Number(card.id);
         const vis = String(card.visibility || "");
         const colId = card.private_column_id == null ? "" : String(card.private_column_id);
+        const publicLane = card.public_lane ? String(card.public_lane) : "";
         const createdBy = Number(card.created_by_id);
         const mutable = canMutateCard(card);
-        const draggable = vis === "private" || (vis === "public" && mutable);
+        const draggable = vis === "private" || (vis === "public" && (mutable || isAdminBoard()));
         const title = esc(card.title);
         const desc = esc((card.description && String(card.description).trim()) || "");
         const cat = card.category ? '<span class="member-mural-pill">' + esc(card.category) + "</span>" : "";
+        const accentHex = card.color_hex || card.mural_status_color_hex || null;
+        const accentAttr = cardAccentStyle(accentHex ? String(accentHex) : "");
+        const statusName = card.mural_status_name ? String(card.mural_status_name) : "";
+        const statusHex = card.mural_status_color_hex ? String(card.mural_status_color_hex) : "";
+        const statusInactive = card.mural_status_is_active === false;
+        const statusPill =
+            statusName !== ""
+                ? '<span class="member-mural-pill member-mural-pill--status" style="border-color:' +
+                  esc(statusHex) +
+                  ";color:" +
+                  esc(statusHex) +
+                  '">' +
+                  esc(statusName) +
+                  (statusInactive ? " (inativo)" : "") +
+                  "</span>"
+                : "";
         const created = fmtDate(card.created_at);
         const eventD = card.event_date ? fmtDate(card.event_date) : "";
         const dueD = card.due_date ? fmtDate(card.due_date) : "";
@@ -174,7 +220,11 @@
                 img +
                 "<span>" +
                 creatorLabel +
-                "</span></div>" +
+                "</span>" +
+                '<button type="button" class="member-mural-icon-btn" data-action="copy-public-to-private" data-card-id="' +
+                id +
+                '" title="Copiar para minha lousa">⧉</button>' +
+                "</div>" +
                 (lines.length ? '<div class="member-mural-card__meta" style="flex-direction:column;align-items:flex-start">' + lines.join("") + "</div>" : "") +
                 "</div>";
         }
@@ -191,9 +241,12 @@
             esc(vis) +
             '" data-private-column-id="' +
             esc(colId) +
+            '" data-public-lane="' +
+            esc(publicLane) +
             '" data-created-by-id="' +
             createdBy +
             '"' +
+            accentAttr +
             dragAttr +
             ">" +
             '<p class="member-mural-card__title">' +
@@ -203,6 +256,7 @@
             '<div class="member-mural-card__meta">' +
             cat +
             (cat ? " " : "") +
+            (statusPill ? statusPill + " " : "") +
             "<span>Criado " +
             esc(created) +
             "</span>" +
@@ -213,22 +267,102 @@
         );
     }
 
+    function renderMuralStatusAdminHtml() {
+        if (!isAdminBoard() || !mural) return "";
+        const all = /** @type {Record<string, unknown>[]} */ (mural.mural_statuses_all || []);
+        const rows =
+            all.length === 0
+                ? '<p class="member-mural-empty">Nenhum status configurado.</p>'
+                : all
+                      .map(function (s) {
+                          const sid = Number(s.id);
+                          const nm = esc(s.name);
+                          const hx = s.color_hex ? String(s.color_hex) : "#ccc";
+                          const act = Boolean(s.is_active);
+                          return (
+                              '<div class="member-mural-status-row" data-status-id="' +
+                              sid +
+                              '">' +
+                              '<span style="width:12px;height:12px;border-radius:2px;background:' +
+                              esc(hx) +
+                              ';flex-shrink:0"></span>' +
+                              '<span class="member-mural-status-row__name">' +
+                              nm +
+                              "</span>" +
+                              (act
+                                  ? '<span class="member-mural-pill">Ativo</span>'
+                                  : '<span class="member-mural-pill member-mural-pill--warn">Inativo</span>') +
+                              '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--ghost" data-action="mural-status-edit" data-status-id="' +
+                              sid +
+                              '">Editar</button>' +
+                              '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--ghost" data-action="mural-status-up" data-status-id="' +
+                              sid +
+                              '">↑</button>' +
+                              '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--ghost" data-action="mural-status-down" data-status-id="' +
+                              sid +
+                              '">↓</button>' +
+                              '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--ghost" data-action="mural-status-toggle" data-status-id="' +
+                              sid +
+                              '">' +
+                              (act ? "Desativar" : "Ativar") +
+                              "</button>" +
+                              "</div>"
+                          );
+                      })
+                      .join("");
+        return (
+            '<article class="spaceon-card member-mural-board dash-dashboard-card member-mural-status-admin">' +
+            '<header class="dash-header">' +
+            '<div class="dash-title-wrap">' +
+            '<i class="fas fa-tags" aria-hidden="true"></i>' +
+            "<h2>Status do mural</h2>" +
+            "</div>" +
+            '<div class="member-mural-board__actions">' +
+            '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--primary" data-action="mural-status-add">Novo status</button>' +
+            "</div>" +
+            "</header>" +
+            '<div class="member-mural-board__body"><div class="member-mural-status-admin__list">' +
+            rows +
+            "</div></div></article>"
+        );
+    }
+
     function render() {
         if (!root || !mural || !ui) return;
-        const publicCards = /** @type {Record<string, unknown>[]} */ (mural.public_cards || []);
+        const publicCardsByLane = /** @type {Record<string, Record<string, unknown>[]>} */ (mural.public_cards_by_lane || {});
+        const membersCards = /** @type {Record<string, unknown>[]} */ (publicCardsByLane.members || []);
+        const managementCards = /** @type {Record<string, unknown>[]} */ (publicCardsByLane.management || []);
         const privateCols = /** @type {Record<string, unknown>[]} */ (mural.private_columns || []);
         const privateCards = /** @type {Record<string, unknown>[]} */ (mural.private_cards || []);
 
-        const pubList =
-            publicCards.length === 0
-                ? '<p class="member-mural-empty">Nenhum card público ainda. Arraste um card privado para cá ou peça a alguém do workspace para publicar.</p>'
-                : publicCards.map(function (c) {
+        function laneListHtml(cards, lane) {
+            return cards.length === 0
+                ? '<p class="member-mural-empty">Nenhum card na coluna ' + publicLaneLabel(lane) + ".</p>"
+                : cards.map(function (c) {
                       return renderCardHtml(c, true);
                   }).join("");
+        }
+        const pubListMembers = laneListHtml(membersCards, "members");
+        const pubListManagement = laneListHtml(managementCards, "management");
+        const membersLaneLocked = Boolean(mural.members_lane_locked);
+        const createPublicLabel = isAdminBoard() ? "Novo público (Gestão)" : "Novo público";
+        const membersModerationHtml = isAdminBoard()
+            ? '<div class="member-mural-public__moderation">' +
+              '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--ghost" data-action="toggle-members-lock">' +
+              (membersLaneLocked ? "Desbloquear" : "Bloquear") +
+              "</button>" +
+              '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--danger" data-action="clear-members-lane">Excluir todos</button>' +
+              "</div>"
+            : "";
+        const membersLockBadge = membersLaneLocked
+            ? '<span class="member-mural-pill member-mural-pill--warn">Bloqueada para membros</span>'
+            : "";
 
         const colsHtml = privateCols
             .map(function (col) {
                 const cid = Number(col.id);
+                const cHex = col.color_hex ? String(col.color_hex) : "";
+                const colAccent = cHex ? ' style="border-left:4px solid ' + esc(cHex) + ';"' : "";
                 const cardsInCol = privateCards.filter(function (c) {
                     return Number(c.private_column_id) === cid;
                 });
@@ -241,7 +375,9 @@
                 return (
                     '<section class="member-mural-column" data-column-id="' +
                     cid +
-                    '">' +
+                    '"' +
+                    colAccent +
+                    ">" +
                     '<header class="member-mural-column__head" draggable="true" data-column-drag="' +
                     cid +
                     '">' +
@@ -276,17 +412,27 @@
             "<h2>Lousa pública</h2>" +
             "</div>" +
             '<div class="member-mural-board__actions">' +
-            '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--primary" data-action="create-public-card">Novo público</button>' +
+            '<button type="button" class="member-mural-btn member-mural-btn--small member-mural-btn--primary" data-action="create-public-card">' + createPublicLabel + "</button>" +
             "</div>" +
             "</header>" +
             '<div class="member-mural-board__body">' +
             '<div class="member-mural-public" data-mural-public-wrap>' +
-            '<div class="member-mural-public__list" data-mural-drop="public" data-mural-card-list>' +
-            pubList +
+            '<section class="member-mural-public__lane" data-public-lane="members">' +
+            '<header class="member-mural-public__lane-head"><h3>Membros</h3>' + membersLockBadge + membersModerationHtml + "</header>" +
+            '<div class="member-mural-public__list" data-mural-drop="public" data-public-lane="members" data-mural-card-list>' +
+            pubListMembers +
             "</div>" +
+            "</section>" +
+            '<section class="member-mural-public__lane" data-public-lane="management">' +
+            '<header class="member-mural-public__lane-head"><h3>Gestão</h3></header>' +
+            '<div class="member-mural-public__list" data-mural-drop="public" data-public-lane="management" data-mural-card-list>' +
+            pubListManagement +
+            "</div>" +
+            "</section>" +
             "</div>" +
             "</div>" +
             "</article>" +
+            renderMuralStatusAdminHtml() +
             '<article class="spaceon-card member-mural-board dash-dashboard-card">' +
             '<header class="dash-header">' +
             '<div class="dash-title-wrap">' +
@@ -341,6 +487,72 @@
         fill(/** @type {HTMLSelectElement | null} */ (qs("member-mural-card-goal")), goals, "name");
         fill(/** @type {HTMLSelectElement | null} */ (qs("member-mural-card-assign-user")), members, "label");
         fill(/** @type {HTMLSelectElement | null} */ (qs("member-mural-card-assign-dept")), depts, "name");
+        fillMuralPaletteSelects();
+    }
+
+    /**
+     * @param {HTMLSelectElement | null} sel
+     * @param {boolean} includeEmpty
+     */
+    function fillPaletteSelectElement(sel, includeEmpty) {
+        if (!sel || !ui) return;
+        const pal = /** @type {{key:string, hex:string}[]} */ (ui.colorPalette || []);
+        const cur = sel.value;
+        sel.innerHTML = "";
+        if (includeEmpty) {
+            const o0 = document.createElement("option");
+            o0.value = "";
+            o0.textContent = "Padrão";
+            sel.appendChild(o0);
+        }
+        pal.forEach(function (p) {
+            const o = document.createElement("option");
+            o.value = p.key;
+            o.textContent = p.key;
+            o.style.color = "#fff";
+            o.style.backgroundColor = p.hex;
+            sel.appendChild(o);
+        });
+        if (cur && [...sel.options].some(function (x) { return x.value === cur; })) sel.value = cur;
+    }
+
+    function fillMuralPaletteSelects() {
+        fillPaletteSelectElement(/** @type {HTMLSelectElement | null} */ (qs("member-mural-card-color-key")), true);
+        fillPaletteSelectElement(/** @type {HTMLSelectElement | null} */ (qs("member-mural-column-color-key")), true);
+        fillPaletteSelectElement(/** @type {HTMLSelectElement | null} */ (qs("member-mural-status-color-key")), false);
+    }
+
+    /**
+     * @param {Record<string, unknown> | null} card
+     */
+    function fillMuralStatusSelectForCard(card) {
+        const sel = /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-mural-status"));
+        if (!sel) return;
+        const cur = card && card.mural_status_id != null ? String(card.mural_status_id) : "";
+        const base = /** @type {Record<string, unknown>[]} */ ((mural && mural.mural_statuses) || []);
+        sel.innerHTML = "";
+        const o0 = document.createElement("option");
+        o0.value = "";
+        o0.textContent = "—";
+        sel.appendChild(o0);
+        base.forEach(function (s) {
+            const opt = document.createElement("option");
+            opt.value = String(s.id);
+            opt.textContent = String(s.name);
+            sel.appendChild(opt);
+        });
+        if (cur) {
+            const inBase = base.some(function (s) {
+                return String(s.id) === cur;
+            });
+            if (!inBase && card && card.mural_status_name) {
+                const ox = document.createElement("option");
+                ox.value = cur;
+                ox.textContent = String(card.mural_status_name) + " (inativo)";
+                sel.appendChild(ox);
+            }
+            sel.value = cur;
+        }
     }
 
     function filterProjectsByClient() {
@@ -425,6 +637,8 @@
                 "member-mural-card-goal",
                 "member-mural-card-assign-user",
                 "member-mural-card-assign-dept",
+                "member-mural-card-mural-status",
+                "member-mural-card-color-key",
             ].forEach(function (fid) {
                 const el = /** @type {HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null} */ (qs(fid));
                 if (!el) return;
@@ -446,6 +660,10 @@
             /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-goal")).value = "";
             /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-assign-user")).value = "";
             /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-assign-dept")).value = "";
+            fillMuralPaletteSelects();
+            fillMuralStatusSelectForCard(null);
+            const ckNew = /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-color-key"));
+            if (ckNew) ckNew.value = "";
             dlg.dataset.visibility = visibility;
         } else if (card) {
             titleEl.textContent = canMutateCard(card) ? "Editar card" : "Detalhes do card";
@@ -461,6 +679,8 @@
                 "member-mural-card-goal",
                 "member-mural-card-assign-user",
                 "member-mural-card-assign-dept",
+                "member-mural-card-mural-status",
+                "member-mural-card-color-key",
             ].forEach(function (fid) {
                 const el = /** @type {HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null} */ (qs(fid));
                 if (!el) return;
@@ -500,6 +720,10 @@
             /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-assign-dept")).value = card.assigned_department_id
                 ? String(card.assigned_department_id)
                 : "";
+            fillMuralPaletteSelects();
+            fillMuralStatusSelectForCard(card);
+            const ckEd = /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-color-key"));
+            if (ckEd) ckEd.value = card.color_key ? String(card.color_key) : "";
             const readOnly = !canMutateCard(card);
             ["member-mural-card-title", "member-mural-card-description", "member-mural-card-category"].forEach(function (id) {
                 const el = /** @type {HTMLInputElement | HTMLTextAreaElement | null} */ (qs(id));
@@ -514,6 +738,8 @@
                 "member-mural-card-goal",
                 "member-mural-card-assign-user",
                 "member-mural-card-assign-dept",
+                "member-mural-card-mural-status",
+                "member-mural-card-color-key",
             ].forEach(function (id) {
                 const el = /** @type {HTMLInputElement | HTMLSelectElement | null} */ (qs(id));
                 if (el) el.disabled = readOnly;
@@ -530,15 +756,26 @@
         if (dlg) dlg.close();
     }
 
-    function openColumnDialog(mode, columnId, name) {
+    /**
+     * @param {string} mode
+     * @param {number | null} columnId
+     * @param {string} name
+     * @param {string} [colorKey]
+     */
+    function openColumnDialog(mode, columnId, name, colorKey) {
         const dlg = /** @type {HTMLDialogElement | null} */ (qs("member-mural-column-dialog"));
         const title = qs("member-mural-column-dialog-title");
         const idEl = /** @type {HTMLInputElement | null} */ (qs("member-mural-column-id"));
         const nameEl = /** @type {HTMLInputElement | null} */ (qs("member-mural-column-name"));
+        const csel = /** @type {HTMLSelectElement | null} */ (qs("member-mural-column-color-key"));
         if (!dlg || !idEl || !nameEl || !title) return;
         dlg.dataset.mode = mode;
         idEl.value = columnId != null ? String(columnId) : "";
         nameEl.value = name || "";
+        if (csel) {
+            fillPaletteSelectElement(csel, true);
+            csel.value = colorKey && paletteHexByKey()[colorKey] ? colorKey : "";
+        }
         title.textContent = mode === "create" ? "Nova coluna" : "Renomear coluna";
         dlg.showModal();
     }
@@ -548,6 +785,102 @@
         if (dlg) dlg.close();
     }
 
+    /**
+     * @param {string} mode
+     * @param {Record<string, unknown> | null} st
+     */
+    function openStatusDialog(mode, st) {
+        const dlg = /** @type {HTMLDialogElement | null} */ (qs("member-mural-status-dialog"));
+        const title = qs("member-mural-status-dialog-title");
+        const idEl = /** @type {HTMLInputElement | null} */ (qs("member-mural-status-id"));
+        const modeEl = /** @type {HTMLInputElement | null} */ (qs("member-mural-status-mode"));
+        const nameEl = /** @type {HTMLInputElement | null} */ (qs("member-mural-status-name"));
+        const csel = /** @type {HTMLSelectElement | null} */ (qs("member-mural-status-color-key"));
+        if (!dlg || !title || !idEl || !modeEl || !nameEl) return;
+        modeEl.value = mode;
+        fillPaletteSelectElement(csel, false);
+        if (mode === "create") {
+            title.textContent = "Novo status";
+            idEl.value = "";
+            nameEl.value = "";
+            if (csel && csel.options.length) csel.selectedIndex = 0;
+        } else if (st) {
+            title.textContent = "Editar status";
+            idEl.value = String(st.id);
+            nameEl.value = String(st.name || "");
+            if (csel && st.color_key) csel.value = String(st.color_key);
+        }
+        dlg.showModal();
+    }
+
+    function closeStatusDialog() {
+        const dlg = /** @type {HTMLDialogElement | null} */ (qs("member-mural-status-dialog"));
+        if (dlg) dlg.close();
+    }
+
+    async function saveStatusFromForm() {
+        if (!ui) return;
+        const urls = /** @type {Record<string, string>} */ (ui.urls || {});
+        const mode = /** @type {HTMLInputElement | null} */ (qs("member-mural-status-mode")).value;
+        const idVal = /** @type {HTMLInputElement | null} */ (qs("member-mural-status-id")).value;
+        const name = /** @type {HTMLInputElement | null} */ (qs("member-mural-status-name")).value.trim();
+        const ck = /** @type {HTMLSelectElement | null} */ (qs("member-mural-status-color-key"));
+        const color_key = ck && ck.value ? ck.value : "";
+        if (!name) {
+            window.alert("Informe o nome.");
+            return;
+        }
+        if (!color_key) {
+            window.alert("Selecione uma cor.");
+            return;
+        }
+        try {
+            if (mode === "create") {
+                await apiJson(urls.statusCreate, {
+                    method: "POST",
+                    body: JSON.stringify({ name: name, color_key: color_key }),
+                });
+            } else {
+                const sid = Number(idVal);
+                await apiJson(urlFrom(urls.statusUpdate, "statusId", sid), {
+                    method: "PATCH",
+                    body: JSON.stringify({ name: name, color_key: color_key }),
+                });
+            }
+            closeStatusDialog();
+            await syncMuralFromServer();
+        } catch (e) {
+            window.alert(e instanceof Error ? e.message : String(e));
+        }
+    }
+
+    /**
+     * @param {number} statusId
+     * @param {number} delta
+     */
+    async function moveStatusByDelta(statusId, delta) {
+        if (!ui || !mural) return;
+        const urls = /** @type {Record<string, string>} */ (ui.urls || {});
+        const all = /** @type {Record<string, unknown>[]} */ (mural.mural_statuses_all || []);
+        const ids = all.map(function (s) {
+            return Number(s.id);
+        });
+        const idx = ids.indexOf(statusId);
+        if (idx < 0) return;
+        const j = idx + delta;
+        if (j < 0 || j >= ids.length) return;
+        const next = ids.slice();
+        const t = next[idx];
+        next[idx] = next[j];
+        next[j] = t;
+        try {
+            await apiJson(urls.statusReorder, { method: "POST", body: JSON.stringify({ ordered_status_ids: next }) });
+            await syncMuralFromServer();
+        } catch (e) {
+            window.alert(e instanceof Error ? e.message : String(e));
+        }
+    }
+
     async function saveCardFromForm() {
         if (!ui) return;
         const urls = /** @type {Record<string, string>} */ (ui.urls || {});
@@ -555,6 +888,10 @@
         const mode = /** @type {HTMLInputElement | null} */ (qs("member-mural-card-mode")).value;
         const idVal = /** @type {HTMLInputElement | null} */ (qs("member-mural-card-id")).value;
         const visibility = dlg ? String(dlg.dataset.visibility || "private") : "private";
+        const msEl = /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-mural-status"));
+        const cardCkEl = /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-color-key"));
+        const mural_status_raw = msEl && msEl.value ? msEl.value : null;
+        const color_key_raw = cardCkEl && cardCkEl.value ? cardCkEl.value : null;
         const payload = {
             title: /** @type {HTMLInputElement | null} */ (qs("member-mural-card-title")).value.trim(),
             description: /** @type {HTMLTextAreaElement | null} */ (qs("member-mural-card-description")).value,
@@ -568,6 +905,8 @@
             assigned_user_id: /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-assign-user")).value || null,
             assigned_department_id:
                 /** @type {HTMLSelectElement | null} */ (qs("member-mural-card-assign-dept")).value || null,
+            mural_status_id: mural_status_raw ? Number(mural_status_raw) : null,
+            color_key: color_key_raw,
         };
         if (!payload.title) {
             window.alert("Informe o título.");
@@ -579,6 +918,7 @@
                 const body = Object.assign(
                     {
                         visibility: visibility,
+                        public_lane: visibility === "public" ? (isAdminBoard() ? "management" : "members") : null,
                         title: payload.title,
                         description: payload.description,
                         category: payload.category,
@@ -590,6 +930,8 @@
                         budget_goal_id: payload.budget_goal_id,
                         assigned_user_id: payload.assigned_user_id,
                         assigned_department_id: payload.assigned_department_id,
+                        mural_status_id: payload.mural_status_id,
+                        color_key: payload.color_key,
                     },
                     visibility === "private" && defCol ? { private_column_id: Number(defCol) } : {}
                 );
@@ -630,18 +972,20 @@
         const mode = dlg ? String(dlg.dataset.mode || "create") : "create";
         const idVal = /** @type {HTMLInputElement | null} */ (qs("member-mural-column-id")).value;
         const name = /** @type {HTMLInputElement | null} */ (qs("member-mural-column-name")).value.trim();
+        const ckEl = /** @type {HTMLSelectElement | null} */ (qs("member-mural-column-color-key"));
+        const color_key = ckEl && ckEl.value ? ckEl.value : null;
         if (!name) {
             window.alert("Informe o nome.");
             return;
         }
         try {
             if (mode === "create") {
-                await apiJson(urls.columnCreate, { method: "POST", body: JSON.stringify({ name: name }) });
+                await apiJson(urls.columnCreate, { method: "POST", body: JSON.stringify({ name: name, color_key: color_key }) });
             } else {
                 const colId = Number(idVal);
                 await apiJson(urlFrom(urls.columnUpdate, "columnId", colId), {
                     method: "PATCH",
-                    body: JSON.stringify({ name: name }),
+                    body: JSON.stringify({ name: name, color_key: color_key }),
                 });
             }
             closeColumnDialog();
@@ -664,8 +1008,15 @@
 
         try {
             if (publicList && dragCard.visibility === "private") {
+                const lane = String(publicList.dataset.publicLane || "members");
+                if (!isAdminBoard() && lane !== "members") {
+                    throw new Error("Membro não pode mover card para a coluna pública Gestão.");
+                }
                 const idx = insertIndexFromPointer(publicList, ev.clientY);
-                await apiJson(urlFrom(urls.cardMoveToPublic, "cardId", cardId), { method: "POST", body: "{}" });
+                await apiJson(urlFrom(urls.cardMoveToPublic, "cardId", cardId), {
+                    method: "POST",
+                    body: JSON.stringify({ public_lane: lane }),
+                });
                 await apiJson(urlFrom(urls.cardReposition, "cardId", cardId), {
                     method: "POST",
                     body: JSON.stringify({ insert_index: idx }),
@@ -687,7 +1038,8 @@
             } else if (
                 publicList &&
                 dragCard.visibility === "public" &&
-                canMutateCard(/** @type {Record<string, unknown>} */ ({ created_by_id: dragCard.createdById }))
+                String(dragCard.publicLane || "") === String(publicList.dataset.publicLane || "") &&
+                (isAdminBoard() || canMutateCard(/** @type {Record<string, unknown>} */ ({ created_by_id: dragCard.createdById })))
             ) {
                 const idx = insertIndexFromPointer(publicList, ev.clientY);
                 await apiJson(urlFrom(urls.cardReposition, "cardId", cardId), {
@@ -722,12 +1074,19 @@
         const id = Number(cardEl.dataset.cardId);
         const visibility = String(cardEl.dataset.visibility || "");
         const privateColumnId = cardEl.dataset.privateColumnId ? Number(cardEl.dataset.privateColumnId) : null;
+        const publicLane = cardEl.dataset.publicLane ? String(cardEl.dataset.publicLane) : null;
         const createdById = Number(cardEl.dataset.createdById);
-        if (visibility === "public" && createdById !== currentUserId()) {
+        if (visibility === "public" && createdById !== currentUserId() && !isAdminBoard()) {
             ev.preventDefault();
             return;
         }
-        dragCard = { id: id, visibility: visibility, privateColumnId: privateColumnId, createdById: createdById };
+        dragCard = {
+            id: id,
+            visibility: visibility,
+            privateColumnId: privateColumnId,
+            publicLane: publicLane,
+            createdById: createdById,
+        };
         ev.dataTransfer.effectAllowed = "move";
         ev.dataTransfer.setData("text/plain", "card:" + id);
     }
@@ -815,8 +1174,37 @@
             openCardDialog("create", null, "public", null);
             return;
         }
+        if (action === "toggle-members-lock") {
+            if (!ui) return;
+            const urls = /** @type {Record<string, string>} */ (ui.urls || {});
+            const nextLocked = !(mural && mural.members_lane_locked);
+            apiJson(urls.membersLaneLock, {
+                method: "POST",
+                body: JSON.stringify({ locked: nextLocked }),
+            })
+                .then(function () {
+                    return syncMuralFromServer();
+                })
+                .catch(function (e) {
+                    window.alert(e instanceof Error ? e.message : String(e));
+                });
+            return;
+        }
+        if (action === "clear-members-lane") {
+            if (!ui) return;
+            const urls = /** @type {Record<string, string>} */ (ui.urls || {});
+            if (!window.confirm("Excluir todos os cards da coluna pública Membros?")) return;
+            apiJson(urls.membersLaneClear, { method: "POST", body: "{}" })
+                .then(function () {
+                    return syncMuralFromServer();
+                })
+                .catch(function (e) {
+                    window.alert(e instanceof Error ? e.message : String(e));
+                });
+            return;
+        }
         if (action === "create-column") {
-            openColumnDialog("create", null, "");
+            openColumnDialog("create", null, "", "");
             return;
         }
         if (action === "add-card") {
@@ -828,7 +1216,11 @@
             const colId = Number(btn.getAttribute("data-column-id"));
             const colEl = root.querySelector('.member-mural-column[data-column-id="' + colId + '"] .member-mural-column__title');
             const name = colEl ? colEl.textContent || "" : "";
-            openColumnDialog("rename", colId, name.trim());
+            const colMeta = /** @type {Record<string, unknown>[]} */ ((mural && mural.private_columns) || []).find(function (c) {
+                return Number(c.id) === colId;
+            });
+            const ck = colMeta && colMeta.color_key ? String(colMeta.color_key) : "";
+            openColumnDialog("rename", colId, name.trim(), ck);
             return;
         }
         if (action === "delete-column") {
@@ -872,6 +1264,63 @@
                 return Number(c.id) === id;
             });
             if (card) openCardDialog("edit", card, String(card.visibility), null);
+            return;
+        }
+        if (action === "mural-status-add") {
+            openStatusDialog("create", null);
+            return;
+        }
+        if (action === "mural-status-edit") {
+            const sid = Number(btn.getAttribute("data-status-id"));
+            const all = /** @type {Record<string, unknown>[]} */ ((mural && mural.mural_statuses_all) || []);
+            const st = all.find(function (s) {
+                return Number(s.id) === sid;
+            });
+            if (st) openStatusDialog("edit", st);
+            return;
+        }
+        if (action === "mural-status-toggle") {
+            const sid = Number(btn.getAttribute("data-status-id"));
+            const all = /** @type {Record<string, unknown>[]} */ ((mural && mural.mural_statuses_all) || []);
+            const st = all.find(function (s) {
+                return Number(s.id) === sid;
+            });
+            if (!st || !ui) return;
+            const urls = /** @type {Record<string, string>} */ (ui.urls || {});
+            const nextActive = !Boolean(st.is_active);
+            apiJson(urlFrom(urls.statusUpdate, "statusId", sid), {
+                method: "PATCH",
+                body: JSON.stringify({ is_active: nextActive }),
+            })
+                .then(function () {
+                    return syncMuralFromServer();
+                })
+                .catch(function (e) {
+                    window.alert(e instanceof Error ? e.message : String(e));
+                });
+            return;
+        }
+        if (action === "mural-status-up") {
+            const sid = Number(btn.getAttribute("data-status-id"));
+            void moveStatusByDelta(sid, -1);
+            return;
+        }
+        if (action === "mural-status-down") {
+            const sid = Number(btn.getAttribute("data-status-id"));
+            void moveStatusByDelta(sid, 1);
+            return;
+        }
+        if (action === "copy-public-to-private") {
+            const cardId = Number(btn.getAttribute("data-card-id"));
+            if (!cardId || !ui) return;
+            const urls = /** @type {Record<string, string>} */ (ui.urls || {});
+            apiJson(urlFrom(urls.cardCopyToPrivate, "cardId", cardId), { method: "POST", body: "{}" })
+                .then(function () {
+                    return syncMuralFromServer();
+                })
+                .catch(function (e) {
+                    window.alert(e instanceof Error ? e.message : String(e));
+                });
         }
     }
 
@@ -890,6 +1339,16 @@
                 void saveColumnFromForm();
             });
         }
+        const stForm = qs("member-mural-status-form");
+        if (stForm) {
+            stForm.addEventListener("submit", function (e) {
+                e.preventDefault();
+                void saveStatusFromForm();
+            });
+        }
+        document.querySelectorAll("[data-mural-close-status]").forEach(function (b) {
+            b.addEventListener("click", closeStatusDialog);
+        });
         document.querySelectorAll("[data-mural-close-card]").forEach(function (b) {
             b.addEventListener("click", closeCardDialog);
         });

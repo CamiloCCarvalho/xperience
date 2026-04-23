@@ -9,6 +9,7 @@ from .models import (
     EmployeeProfile,
     FinancialEntry,
     JobHistory,
+    JobRole,
     PrivateBoardColumn,
     Project,
     Task,
@@ -106,19 +107,27 @@ class EmployeeProfileAdmin(admin.ModelAdmin):
         "employment_status",
         "hire_date",
         "termination_date",
-        "current_job_title",
+        "current_job_role",
     )
     list_filter = ("workspace", "employment_status")
-    search_fields = ("user__email", "workspace__workspace_name", "current_job_title")
-    autocomplete_fields = ("user", "workspace")
+    search_fields = ("user__email", "workspace__workspace_name", "current_job_role__name")
+    autocomplete_fields = ("user", "workspace", "current_job_role")
 
 
 @admin.register(JobHistory)
 class JobHistoryAdmin(admin.ModelAdmin):
-    list_display = ("employee_profile", "job_title", "start_date", "end_date")
+    list_display = ("employee_profile", "job_role", "start_date", "end_date")
     list_filter = ("employee_profile__workspace",)
-    search_fields = ("employee_profile__user__email", "job_title")
-    autocomplete_fields = ("employee_profile",)
+    search_fields = ("employee_profile__user__email", "job_role__name")
+    autocomplete_fields = ("employee_profile", "job_role")
+
+
+@admin.register(JobRole)
+class JobRoleAdmin(admin.ModelAdmin):
+    list_display = ("name", "workspace", "is_active", "created_at")
+    list_filter = ("workspace", "is_active")
+    search_fields = ("name", "description", "workspace__workspace_name")
+    autocomplete_fields = ("workspace", "created_by", "updated_by")
 
 
 @admin.register(CompensationHistory)

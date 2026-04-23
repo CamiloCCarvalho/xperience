@@ -267,10 +267,7 @@
             if (term) {
                 term.value = d.terminationDate || "";
             }
-            var titleEl = document.getElementById("id_ep_edit-current_job_title");
-            if (titleEl) {
-                titleEl.value = d.currentJobTitle || "";
-            }
+            setSelectValueById("id_ep_edit-current_job_role", d.currentJobRoleId);
             if (dialog) {
                 dialog.showModal();
             }
@@ -292,10 +289,7 @@
                 pkInput.value = d.jhId || "";
             }
             setSelectValueById("id_jh_edit-employee_profile", d.employeeProfileId);
-            var titleEl = document.getElementById("id_jh_edit-job_title");
-            if (titleEl) {
-                titleEl.value = d.jobTitle || "";
-            }
+            setSelectValueById("id_jh_edit-job_role", d.jobRoleId);
             var sd = document.getElementById("id_jh_edit-start_date");
             if (sd) {
                 sd.value = d.startDate || "";
@@ -303,6 +297,39 @@
             var ed = document.getElementById("id_jh_edit-end_date");
             if (ed) {
                 ed.value = d.endDate || "";
+            }
+            if (dialog) {
+                dialog.showModal();
+            }
+        },
+    });
+
+    wireDialogPair({
+        createDialogId: "admin-config-jr-create-dialog",
+        createOpenId: "admin-config-jr-create-open",
+        createCloseId: "admin-config-jr-create-close",
+        editDialogId: "admin-config-jr-edit-dialog",
+        editCloseId: "admin-config-jr-edit-close",
+        editButtonSelector: "[data-admin-config-jr-edit]",
+        openEditFromButton: function (btn) {
+            var d = btn.dataset;
+            var dialog = document.getElementById("admin-config-jr-edit-dialog");
+            var pkInput = document.getElementById("admin-config-jr-edit-pk");
+            if (pkInput) {
+                pkInput.value = d.jrId || "";
+            }
+            var nameEl = document.getElementById("id_jr_edit-name");
+            if (nameEl) {
+                nameEl.value = d.name || "";
+            }
+            var descEl = document.getElementById("id_jr_edit-description");
+            if (descEl) {
+                var desc = d.descriptionRaw;
+                descEl.value = desc == null ? "" : String(desc);
+            }
+            var activeCb = document.getElementById("id_jr_edit-is_active");
+            if (activeCb) {
+                activeCb.checked = d.isActive === "1";
             }
             if (dialog) {
                 dialog.showModal();

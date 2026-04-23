@@ -12,7 +12,7 @@
                     </button>
                 </header>
                 <div class="config-form">
-                    <p class="config-empty-hint config-empty-hint--top">Vínculos dos colaboradores com o workspace (status, datas e cargo atual).</p>
+                    <p class="config-empty-hint config-empty-hint--top">Vínculos dos colaboradores com o workspace (status, datas e cargo atual da lista de cargos).</p>
 
                     {% if employee_profiles %}
                     <ul class="admin-tt-template-list" role="list">
@@ -26,8 +26,8 @@
                                     {% if ep.termination_date %}
                                     <span class="admin-tt-pill admin-tt-pill--muted">Desligamento {{ ep.termination_date|date:"d/m/Y" }}</span>
                                     {% endif %}
-                                    {% if ep.current_job_title %}
-                                    <span class="admin-tt-pill admin-tt-pill--muted">{{ ep.current_job_title }}</span>
+                                    {% if ep.current_job_role %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">{{ ep.current_job_role.name }}</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -43,7 +43,7 @@
                                     data-employment-status="{{ ep.employment_status }}"
                                     data-hire-date="{{ ep.hire_date|date:'Y-m-d' }}"
                                     data-termination-date="{% if ep.termination_date %}{{ ep.termination_date|date:'Y-m-d' }}{% endif %}"
-                                    data-current-job-title="{{ ep.current_job_title|default:''|escape }}"
+                                    data-current-job-role-id="{{ ep.current_job_role_id|default_if_none:'' }}"
                                 >
                                     <i class="fas fa-pen" aria-hidden="true"></i>
                                 </button>

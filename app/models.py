@@ -19,7 +19,7 @@ def _check_constraint(*, predicate, name: str) -> models.CheckConstraint:
     try:
         return models.CheckConstraint(condition=predicate, name=name)
     except TypeError:
-        return models.CheckConstraint(check=predicate, name=name)
+        return models.CheckConstraint(check=predicate, name=name)  # type: ignore[call-arg]
 
 
 class CustomUserManager(BaseUserManager):
@@ -119,6 +119,7 @@ class Workspace(models.Model):
     owner = models.ForeignKey('User', on_delete=models.CASCADE)
     workspace_name = models.CharField(max_length=255)
     workspace_description = models.TextField(blank=True)
+    mural_members_lane_locked = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -200,10 +201,13 @@ class EmployeeProfile(models.Model):
     )
     hire_date = models.DateField()
     termination_date = models.DateField(null=True, blank=True)
-    current_job_title = models.CharField(
-        max_length=255,
+    current_job_role = models.ForeignKey(
+        "JobRole",
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        help_text="Cargo atual para leitura rápida sem depender apenas de histórico.",
+        related_name="employee_profiles_current",
+        help_text="Cargo atual para leitura rápida (sincronizado com histórico vigente).",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -231,15 +235,92 @@ class EmployeeProfile(models.Model):
             errors["termination_date"] = "Informe a data de desligamento para status desligado."
         if self.termination_date and self.employment_status != self.EmploymentStatus.TERMINATED:
             errors["employment_status"] = "Use status desligado quando houver data de desligamento."
+        if self.current_job_role_id and self.workspace_id:
+            role = self.current_job_role
+            if role is not None and role.workspace_id != self.workspace_id:
+                errors["current_job_role"] = "O cargo atual deve pertencer ao mesmo workspace do vínculo."
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         super().save(*args, **kwargs)
+        active_history = (
+            self.job_history_entries.filter(end_date__isnull=True)
+            .order_by("-start_date", "-pk")
+            .first()
+        )
+        if active_history is not None and active_history.job_role_id != self.current_job_role_id:
+            self.current_job_role_id = active_history.job_role_id
+            type(self).objects.filter(pk=self.pk).update(
+                current_job_role_id=active_history.job_role_id,
+                updated_at=timezone.now(),
+            )
 
     def __str__(self):
         return f"{self.user.email} @ {self.workspace.workspace_name}"
+
+    def sync_current_job_role_from_history(self, *, save: bool = True) -> None:
+        current_job = (
+            self.job_history_entries.filter(end_date__isnull=True)
+            .order_by("-start_date", "-pk")
+            .first()
+        )
+        self.current_job_role = current_job.job_role if current_job is not None else None
+        if save:
+            self.save(update_fields=["current_job_role", "updated_at"])
+
+
+class JobRole(models.Model):
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="job_roles",
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_job_roles",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_job_roles",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "name"),
+                name="app_jobrole_workspace_name_uniq",
+            ),
+        ]
+        verbose_name = "Cargo"
+        verbose_name_plural = "Cargos"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.name:
+            self.name = self.name.strip()
+        if not self.name:
+            raise ValidationError({"name": "Informe o nome do cargo."})
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.workspace.workspace_name})"
 
 
 class JobHistory(models.Model):
@@ -250,7 +331,11 @@ class JobHistory(models.Model):
         on_delete=models.CASCADE,
         related_name="job_history_entries",
     )
-    job_title = models.CharField(max_length=255)
+    job_role = models.ForeignKey(
+        JobRole,
+        on_delete=models.PROTECT,
+        related_name="history_entries",
+    )
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -273,15 +358,29 @@ class JobHistory(models.Model):
 
     def clean(self) -> None:
         super().clean()
+        errors: dict[str, str] = {}
         if self.end_date and self.end_date < self.start_date:
-            raise ValidationError({"end_date": "A data final não pode ser anterior à data inicial."})
+            errors["end_date"] = "A data final não pode ser anterior à data inicial."
+        if self.job_role_id and self.employee_profile_id:
+            role = self.job_role
+            if role is not None and role.workspace_id != self.employee_profile.workspace_id:
+                errors["job_role"] = "O cargo deve pertencer ao mesmo workspace do vínculo."
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         super().save(*args, **kwargs)
+        self.employee_profile.sync_current_job_role_from_history()
+
+    def delete(self, *args, **kwargs):
+        employee_profile = self.employee_profile
+        out = super().delete(*args, **kwargs)
+        employee_profile.sync_current_job_role_from_history()
+        return out
 
     def __str__(self):
-        return f"{self.employee_profile.user.email} - {self.job_title}"
+        return f"{self.employee_profile.user.email} - {self.job_role.name}"
 
 
 class CompensationHistory(models.Model):
@@ -396,6 +495,26 @@ class FinancialEntryQuerySet(models.QuerySet):
     def outflows(self):
         return self.filter(flow_type=FinancialEntry.FlowType.OUTFLOW)
 
+    def approved_outflows(self):
+        return self.outflows().filter(approval_status=FinancialEntry.ApprovalStatus.APPROVED)
+
+    def effective_for_balance(self):
+        return self.filter(
+            Q(flow_type=FinancialEntry.FlowType.INFLOW)
+            | Q(
+                flow_type=FinancialEntry.FlowType.OUTFLOW,
+                approval_status=FinancialEntry.ApprovalStatus.APPROVED,
+            )
+        )
+
+    def review_queue(self):
+        return self.outflows().filter(
+            approval_status__in=[
+                FinancialEntry.ApprovalStatus.PENDING,
+                FinancialEntry.ApprovalStatus.PROCESSING,
+            ]
+        )
+
 
 class FinancialEntry(models.Model):
     class EntryKind(models.TextChoices):
@@ -406,6 +525,13 @@ class FinancialEntry(models.Model):
     class FlowType(models.TextChoices):
         INFLOW = "inflow", "Entrada"
         OUTFLOW = "outflow", "Saída"
+
+    class ApprovalStatus(models.TextChoices):
+        NOT_REQUIRED = "not_required", "Não requer aprovação"
+        PENDING = "pending", "Pendente"
+        PROCESSING = "processing", "Processando"
+        APPROVED = "approved", "Aprovado"
+        REJECTED = "rejected", "Reprovado"
 
     workspace = models.ForeignKey(
         Workspace,
@@ -420,6 +546,28 @@ class FinancialEntry(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
+    approval_status = models.CharField(
+        max_length=20,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.NOT_REQUIRED,
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_financial_entries",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="rejected_financial_entries",
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.TextField(blank=True)
     description = models.TextField()
     client = models.ForeignKey(
         "Client",
@@ -494,6 +642,7 @@ class FinancialEntry(models.Model):
             models.Index(fields=["workspace", "occurred_on"]),
             models.Index(fields=["workspace", "flow_type"]),
             models.Index(fields=["workspace", "entry_kind"]),
+            models.Index(fields=["workspace", "approval_status"]),
         ]
         verbose_name = "Lançamento financeiro"
         verbose_name_plural = "Lançamentos financeiros"
@@ -533,10 +682,33 @@ class FinancialEntry(models.Model):
             if original is not None and self.flow_type == original.flow_type:
                 errors["flow_type"] = "O estorno deve ter fluxo oposto ao lançamento original."
 
+        if self.flow_type == self.FlowType.INFLOW:
+            if self.approval_status != self.ApprovalStatus.NOT_REQUIRED:
+                errors["approval_status"] = "Entradas não passam por fluxo de aprovação."
+        else:
+            if self.approval_status == self.ApprovalStatus.NOT_REQUIRED:
+                errors["approval_status"] = "Saídas devem usar status de aprovação."
+
+        if self.approval_status == self.ApprovalStatus.APPROVED:
+            if not self.approved_at:
+                errors["approved_at"] = "Informe a data de aprovação."
+            if self.rejected_by_id or self.rejected_at:
+                errors["rejected_by"] = "Lançamento aprovado não pode ter dados de reprovação."
+
+        if self.approval_status == self.ApprovalStatus.REJECTED:
+            if not self.rejected_at:
+                errors["rejected_at"] = "Informe a data de reprovação."
+            if self.approved_by_id or self.approved_at:
+                errors["approved_by"] = "Lançamento reprovado não pode ter dados de aprovação."
+
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs) -> None:
+        if self.flow_type == self.FlowType.INFLOW:
+            self.approval_status = self.ApprovalStatus.NOT_REQUIRED
+        elif self.approval_status == self.ApprovalStatus.NOT_REQUIRED:
+            self.approval_status = self.ApprovalStatus.PENDING
         if self.time_entry_id and self.source_time_entry_id is None:
             self.source_time_entry_id = self.time_entry_id
         self.full_clean()
@@ -1347,6 +1519,69 @@ class TimeEntry(models.Model):
         return f"{self.user.email} {self.date} {self.duration_minutes}min"
 
 
+class MuralStatusOption(models.Model):
+    """
+    Status configurável do mural por workspace (gestor administra; membros usam os ativos).
+    """
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="mural_status_options",
+    )
+    name = models.CharField(max_length=120)
+    position = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    color_key = models.CharField(
+        max_length=16,
+        help_text="Chave da paleta fixa do mural (ex.: blue, green).",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="mural_status_options_created",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="mural_status_options_updated",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["workspace", "position", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "name"),
+                name="app_muralstatusoption_workspace_name_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["workspace", "position"]),
+            models.Index(fields=["workspace", "is_active", "position"]),
+        ]
+        verbose_name = "Status do mural"
+        verbose_name_plural = "Status do mural"
+
+    def clean(self) -> None:
+        super().clean()
+        from app.mural_palette import validate_mural_color_key
+
+        if self.name is not None:
+            self.name = str(self.name).strip()
+        if not self.name:
+            raise ValidationError({"name": "Informe um nome para o status."})
+        validate_mural_color_key(self.color_key, field_name="color_key")
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.workspace})"
+
+
 class PrivateBoardColumn(models.Model):
     """
     Coluna editável da lousa privada (Kanban/Mural) por usuário e workspace.
@@ -1365,6 +1600,12 @@ class PrivateBoardColumn(models.Model):
     )
     name = models.CharField(max_length=255)
     position = models.PositiveIntegerField(default=0)
+    color_key = models.CharField(
+        max_length=16,
+        blank=True,
+        null=True,
+        help_text="Chave opcional da paleta fixa para realce da coluna.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1384,8 +1625,11 @@ class PrivateBoardColumn(models.Model):
 
     def clean(self) -> None:
         super().clean()
+        from app.mural_palette import validate_mural_color_key
+
         if self.name is not None and not str(self.name).strip():
             raise ValidationError({"name": "Informe um nome para a coluna."})
+        validate_mural_color_key(self.color_key, field_name="color_key")
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
@@ -1403,6 +1647,10 @@ class BoardCard(models.Model):
     class Visibility(models.TextChoices):
         PRIVATE = "private", "Privado"
         PUBLIC = "public", "Público"
+
+    class PublicLane(models.TextChoices):
+        MEMBERS = "members", "Membros"
+        MANAGEMENT = "management", "Gestão"
 
     workspace = models.ForeignKey(
         Workspace,
@@ -1431,6 +1679,12 @@ class BoardCard(models.Model):
         null=True,
         blank=True,
         related_name="cards",
+    )
+    public_lane = models.CharField(
+        max_length=20,
+        choices=PublicLane.choices,
+        null=True,
+        blank=True,
     )
     position = models.PositiveIntegerField(default=0)
     category = models.CharField(max_length=64, blank=True)
@@ -1478,6 +1732,19 @@ class BoardCard(models.Model):
         blank=True,
         related_name="board_cards",
     )
+    mural_status = models.ForeignKey(
+        MuralStatusOption,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_cards",
+    )
+    color_key = models.CharField(
+        max_length=16,
+        blank=True,
+        null=True,
+        help_text="Chave opcional da paleta fixa para realce do card.",
+    )
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1490,19 +1757,24 @@ class BoardCard(models.Model):
                 | Q(visibility="public", private_column__isnull=True),
                 name="app_boardcard_visibility_private_column_consistency",
             ),
+            _check_constraint(
+                predicate=Q(visibility="private", public_lane__isnull=True)
+                | Q(visibility="public", public_lane__isnull=False),
+                name="app_boardcard_visibility_public_lane_consistency",
+            ),
             models.UniqueConstraint(
                 fields=("private_column", "position"),
                 condition=Q(visibility="private"),
                 name="app_boardcard_private_column_position_uniq",
             ),
             models.UniqueConstraint(
-                fields=("workspace", "position"),
-                condition=Q(visibility="public", private_column__isnull=True),
-                name="app_boardcard_public_workspace_position_uniq",
+                fields=("workspace", "public_lane", "position"),
+                condition=Q(visibility="public", private_column__isnull=True, public_lane__isnull=False),
+                name="app_boardcard_public_lane_workspace_position_uniq",
             ),
         ]
         indexes = [
-            models.Index(fields=["workspace", "visibility", "position"]),
+            models.Index(fields=["workspace", "visibility", "public_lane", "position"]),
             models.Index(fields=["private_column", "position"]),
         ]
         verbose_name = "Card do mural"
@@ -1515,9 +1787,13 @@ class BoardCard(models.Model):
         if self.visibility == self.Visibility.PRIVATE:
             if not self.private_column_id:
                 errors["private_column"] = "Card privado deve estar em uma coluna da lousa privada."
+            if self.public_lane:
+                errors["public_lane"] = "Card privado não pode ter coluna pública."
         elif self.visibility == self.Visibility.PUBLIC:
             if self.private_column_id:
                 errors["private_column"] = "Card público não pode referenciar coluna privada."
+            if not self.public_lane:
+                errors["public_lane"] = "Card público deve indicar a coluna pública."
 
         if self.private_column_id:
             col = self.private_column
@@ -1561,6 +1837,27 @@ class BoardCard(models.Model):
         if self.assigned_user_id and ws_id:
             if not Membership.objects.filter(user_id=self.assigned_user_id, workspace_id=ws_id).exists():
                 errors["assigned_user"] = "O usuário atribuído deve ser membro do workspace."
+
+        from app.mural_palette import validate_mural_color_key
+
+        validate_mural_color_key(self.color_key, field_name="color_key")
+
+        if self.mural_status_id:
+            st = self.mural_status
+            if st is None:
+                errors["mural_status"] = "Status inválido."
+            elif ws_id and st.workspace_id != ws_id:
+                errors["mural_status"] = "O status deve pertencer ao mesmo workspace do card."
+            elif not st.is_active:
+                prev_id: int | None = None
+                if self.pk:
+                    prev_id = (
+                        BoardCard.objects.filter(pk=self.pk)
+                        .values_list("mural_status_id", flat=True)
+                        .first()
+                    )
+                if prev_id != self.mural_status_id:
+                    errors["mural_status"] = "Selecione um status ativo do mural."
 
         if errors:
             raise ValidationError(errors)

@@ -2,7 +2,7 @@
 <main class="main admin-config-ws-main">
     <div
         class="admin-tt-stack"
-        {% if task_create_dialog_open or task_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-tarefas"{% elif project_create_dialog_open or project_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-projetos"{% elif client_create_dialog_open or client_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-clientes"{% elif financial_entry_tab_open %}data-admin-config-force-hash="#admin-config-ws-caixa"{% elif budget_goal_create_dialog_open or budget_goal_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-metas"{% elif employee_profile_create_dialog_open or employee_profile_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-vinculo"{% elif job_history_create_dialog_open or job_history_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-cargos"{% elif compensation_history_create_dialog_open or compensation_history_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-remuneracao"{% endif %}
+        {% if task_create_dialog_open or task_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-tarefas"{% elif project_create_dialog_open or project_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-projetos"{% elif client_create_dialog_open or client_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-clientes"{% elif financial_entry_tab_open %}data-admin-config-force-hash="#admin-config-ws-caixa"{% elif budget_goal_create_dialog_open or budget_goal_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-metas"{% elif employee_profile_create_dialog_open or employee_profile_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-vinculo"{% elif job_role_create_dialog_open or job_role_edit_dialog_open or job_history_create_dialog_open or job_history_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-cargos"{% elif compensation_history_create_dialog_open or compensation_history_edit_dialog_open %}data-admin-config-force-hash="#admin-config-ws-remuneracao"{% endif %}
     >
         <div class="admin-tt-tabbed-shell spaceon-card admin-config-tabbed-shell">
             <header class="admin-tt-tabs-strip">
@@ -236,6 +236,11 @@
                     </dialog>
 
                     {% if financial_entries %}
+                    {% if financial_review_entries %}
+                    <p class="config-empty-hint config-empty-hint--top">
+                        Saídas aguardando revisão: <strong>{{ financial_review_entries|length }}</strong>.
+                    </p>
+                    {% endif %}
                     <div class="acf-sort-table" data-acf-sort-table-root data-page-size="8">
                         <div class="acf-sort-table__scroll">
                             <table class="acf-sort-table__table" role="grid" aria-label="Lançamentos financeiros">
@@ -249,11 +254,13 @@
                                         <th scope="col"><button type="button" class="acf-sort-table__th-btn" data-sort-key="client">Cliente <span class="acf-sort-table__sort-icon fas fa-sort" aria-hidden="true"></span></button></th>
                                         <th scope="col"><button type="button" class="acf-sort-table__th-btn" data-sort-key="project">Projeto <span class="acf-sort-table__sort-icon fas fa-sort" aria-hidden="true"></span></button></th>
                                         <th scope="col"><button type="button" class="acf-sort-table__th-btn" data-sort-key="user">Colaborador <span class="acf-sort-table__sort-icon fas fa-sort" aria-hidden="true"></span></button></th>
+                                        <th scope="col"><button type="button" class="acf-sort-table__th-btn" data-sort-key="approval">Aprovação <span class="acf-sort-table__sort-icon fas fa-sort" aria-hidden="true"></span></button></th>
+                                        <th scope="col">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody data-acf-sort-table-tbody>
                                     {% for item in financial_entries %}
-                                    <tr class="acf-sort-table__row" data-original-index="{{ forloop.counter0 }}" data-sort-date="{{ item.occurred_on|date:'Ymd' }}" data-sort-kind="{{ item.get_entry_kind_display|lower }}" data-sort-flow="{{ item.get_flow_type_display|lower }}" data-sort-amount="{{ item.amount }}" data-sort-description="{{ item.description|default:'zzzz'|lower }}" data-sort-client="{% if item.client %}{{ item.client.name|lower }}{% else %}zzzz{% endif %}" data-sort-project="{% if item.project %}{{ item.project.name|lower }}{% else %}zzzz{% endif %}" data-sort-user="{% if item.user %}{{ item.user.email|lower }}{% else %}zzzz{% endif %}">
+                                    <tr class="acf-sort-table__row" data-original-index="{{ forloop.counter0 }}" data-sort-date="{{ item.occurred_on|date:'Ymd' }}" data-sort-kind="{{ item.get_entry_kind_display|lower }}" data-sort-flow="{{ item.get_flow_type_display|lower }}" data-sort-amount="{{ item.amount }}" data-sort-description="{{ item.description|default:'zzzz'|lower }}" data-sort-client="{% if item.client %}{{ item.client.name|lower }}{% else %}zzzz{% endif %}" data-sort-project="{% if item.project %}{{ item.project.name|lower }}{% else %}zzzz{% endif %}" data-sort-user="{% if item.user %}{{ item.user.email|lower }}{% else %}zzzz{% endif %}" data-sort-approval="{{ item.get_approval_status_display|lower }}">
                                         <td class="acf-sort-table__td">{{ item.occurred_on|date:"d/m/Y" }}</td>
                                         <td class="acf-sort-table__td">{{ item.get_entry_kind_display }}</td>
                                         <td class="acf-sort-table__td">{{ item.get_flow_type_display }}</td>
@@ -262,6 +269,57 @@
                                         <td class="acf-sort-table__td">{% if item.client %}{{ item.client.name }}{% else %}—{% endif %}</td>
                                         <td class="acf-sort-table__td">{% if item.project %}{{ item.project.name }}{% else %}—{% endif %}</td>
                                         <td class="acf-sort-table__td">{% if item.user %}{{ item.user.email }}{% else %}—{% endif %}</td>
+                                        <td class="acf-sort-table__td">
+                                            {% if item.approval_status == "approved" %}
+                                                <span class="admin-tt-pill">Aprovado</span>
+                                            {% elif item.approval_status == "pending" %}
+                                                <span class="admin-tt-pill admin-tt-pill--warn">Pendente</span>
+                                            {% elif item.approval_status == "processing" %}
+                                                <span class="admin-tt-pill admin-tt-pill--info">Processando</span>
+                                            {% elif item.approval_status == "rejected" %}
+                                                <span class="admin-tt-pill admin-tt-pill--danger">Reprovado</span>
+                                            {% else %}
+                                                <span class="admin-tt-pill admin-tt-pill--muted">Não requer</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acf-sort-table__td acf-sort-table__td--actions">
+                                            {% if item.flow_type == "outflow" %}
+                                            <div class="acf-sort-table__actions">
+                                                {% if item.approval_status != "processing" and item.approval_status != "approved" %}
+                                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="set_financial_entry_processing">
+                                                    <input type="hidden" name="financial_entry_id" value="{{ item.pk }}">
+                                                    <button type="submit" class="admin-tt-icon-btn" title="Marcar como processando" aria-label="Marcar como processando">
+                                                        <i class="fas fa-clock" aria-hidden="true"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                                {% if item.approval_status != "approved" %}
+                                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="approve_financial_entry">
+                                                    <input type="hidden" name="financial_entry_id" value="{{ item.pk }}">
+                                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--edit" title="Aprovar saída" aria-label="Aprovar saída">
+                                                        <i class="fas fa-check" aria-hidden="true"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                                {% if item.approval_status != "rejected" %}
+                                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="reject_financial_entry">
+                                                    <input type="hidden" name="financial_entry_id" value="{{ item.pk }}">
+                                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Reprovar saída" aria-label="Reprovar saída">
+                                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                            {% else %}
+                                            —
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>

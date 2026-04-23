@@ -1,0 +1,12 @@
+<main class="main member-mural-page">
+    <section class="main-container">
+        {% if active_admin_workspace %}
+            {% include "xperience/partials/user/spaceon/mural/member_mural_shell.html" %}
+        {% else %}
+            <section class="admin-config-intro">
+                <h1>Mural</h1>
+                <p class="admin-config-muted">Selecione um workspace na lista para visualizar e moderar o mural.</p>
+            </section>
+        {% endif %}
+    </section>
+</main>

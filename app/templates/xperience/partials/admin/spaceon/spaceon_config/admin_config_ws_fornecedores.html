@@ -92,7 +92,7 @@
                                                     <td>{{ ep.get_employment_status_display }}</td>
                                                     <td>{{ ep.hire_date|date:"d/m/Y" }}</td>
                                                     <td>{{ ep.termination_date|date:"d/m/Y"|default:"—" }}</td>
-                                                    <td>{{ ep.current_job_title|default:"—" }}</td>
+                                                    <td>{% if ep.current_job_role %}{{ ep.current_job_role.name }}{% else %}—{% endif %}</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
@@ -130,7 +130,7 @@
                             {% for jh in job_history_entries %}
                             <li class="admin-tt-template-row" role="listitem">
                                 <div class="admin-tt-template-row__main">
-                                    <span class="admin-tt-template-row__name">{{ jh.job_title }}</span>
+                                    <span class="admin-tt-template-row__name">{{ jh.job_role.name }}</span>
                                     <p class="admin-tt-entity-meta">{{ jh.employee_profile.user.email }}</p>
                                     <div class="admin-tt-template-row__badges">
                                         <span class="admin-tt-pill admin-tt-pill--muted">Início {{ jh.start_date|date:"d/m/Y" }}</span>
@@ -150,7 +150,7 @@
                                         data-admin-config-jh-edit
                                         data-jh-id="{{ jh.pk }}"
                                         data-employee-profile-id="{{ jh.employee_profile_id }}"
-                                        data-job-title="{{ jh.job_title|escape }}"
+                                        data-job-role-id="{{ jh.job_role_id }}"
                                         data-start-date="{{ jh.start_date|date:'Y-m-d' }}"
                                         data-end-date="{% if jh.end_date %}{{ jh.end_date|date:'Y-m-d' }}{% endif %}"
                                     >

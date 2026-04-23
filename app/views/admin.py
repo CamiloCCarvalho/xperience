@@ -8,6 +8,7 @@ from django.db.models import Q, Sum
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from app.admin_dashboard_data import build_admin_dashboard
@@ -29,6 +30,7 @@ from app.forms import (
     EmployeeProfileForm,
     FinancialEntryManualForm,
     JobHistoryForm,
+    JobRoleForm,
     MemberAddForm,
     ProjectCreateForm,
     TaskCreateForm,
@@ -38,6 +40,8 @@ from app.forms import (
     WorkScheduleForm,
     WorkspaceCreateForm,
 )
+from app.mural_board_service import load_mural_payload
+from app.mural_palette import mural_palette_for_ui
 from app.models import (
     BudgetGoal,
     Client,
@@ -46,6 +50,7 @@ from app.models import (
     EmployeeProfile,
     FinancialEntry,
     JobHistory,
+    JobRole,
     Membership,
     Project,
     Task,
@@ -421,6 +426,73 @@ def admin_dashboard(request):
     return render(request, page_admin + "dashboard.html", context=ctx)
 
 
+@platform_admin_required
+@admin_active_workspace_required
+def admin_mural(request):
+    ctx = _admin_context(request)
+    ws = ctx.get("active_admin_workspace")
+    if ws is None:
+        return render(request, page_admin + "mural.html", context=ctx)
+    user = request.user
+    assert isinstance(user, User)
+    ctx["mural"] = load_mural_payload(ws, user, include_inactive_mural_statuses=True)
+    clients_meta = [{"id": c.pk, "name": c.name} for c in Client.objects.filter(workspace=ws).order_by("name")]
+    projects_meta = [
+        {"id": p.pk, "name": p.name, "client_id": p.client_id}
+        for p in Project.objects.filter(workspace=ws).order_by("name")
+    ]
+    tasks_meta = [
+        {"id": t.pk, "name": t.name, "project_id": t.project_id}
+        for t in Task.objects.filter(project__workspace=ws).select_related("project").order_by("name")
+    ]
+    departments_meta = [{"id": d.pk, "name": d.name} for d in Department.objects.filter(workspace=ws).order_by("name")]
+    mem_ids = Membership.objects.filter(workspace=ws).values_list("user_id", flat=True)
+    mural_users = User.objects.filter(pk__in=mem_ids).order_by("email")
+    members_meta = [{"id": u.pk, "label": ((u.get_full_name() or "").strip() or u.email)} for u in mural_users]
+    goals_meta: list[dict[str, object]] = []
+    for bg in BudgetGoal.public_for_workspace(workspace=ws).select_related("client", "project").order_by("-created_at", "-pk"):
+        if bg.project_id:
+            scope = bg.project.name if bg.project else "Projeto"
+        elif bg.client_id:
+            scope = bg.client.name if bg.client else "Cliente"
+        else:
+            scope = "Workspace"
+        goals_meta.append({"id": bg.pk, "name": f"{scope} · {bg.minimum_target_date.isoformat()}"})
+    pid = 9_876_543_211
+    sid = 9_876_543_212
+    ctx["mural_ui"] = {
+        "currentUserId": user.pk,
+        "isAdminBoard": True,
+        "colorPalette": mural_palette_for_ui(),
+        "clients": clients_meta,
+        "projects": projects_meta,
+        "tasks": tasks_meta,
+        "departments": departments_meta,
+        "members": members_meta,
+        "budgetGoals": goals_meta,
+        "urls": {
+            "muralData": reverse("admin-mural-data"),
+            "membersLaneLock": reverse("admin-mural-members-lane-lock"),
+            "membersLaneClear": reverse("admin-mural-members-lane-clear"),
+            "columnCreate": reverse("admin-mural-column-create"),
+            "columnsReorder": reverse("admin-mural-columns-reorder"),
+            "columnUpdate": reverse("admin-mural-column-update", kwargs={"column_id": pid}).replace(str(pid), "{columnId}"),
+            "columnDelete": reverse("admin-mural-column-delete", kwargs={"column_id": pid}).replace(str(pid), "{columnId}"),
+            "cardCreate": reverse("admin-mural-card-create"),
+            "cardUpdate": reverse("admin-mural-card-update", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "cardDelete": reverse("admin-mural-card-delete", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "cardMoveToPublic": reverse("admin-mural-card-move-to-public", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "cardMovePrivate": reverse("admin-mural-card-move-private", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "cardReposition": reverse("admin-mural-card-reposition", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "cardCopyToPrivate": reverse("admin-mural-card-copy-to-private", kwargs={"card_id": pid}).replace(str(pid), "{cardId}"),
+            "statusCreate": reverse("admin-mural-status-create"),
+            "statusReorder": reverse("admin-mural-status-reorder"),
+            "statusUpdate": reverse("admin-mural-status-update", kwargs={"status_id": sid}).replace(str(sid), "{statusId}"),
+        },
+    }
+    return render(request, page_admin + "mural.html", context=ctx)
+
+
 def _user_in_workspace_admin_context(user: User, ws: Workspace) -> bool:
     if ws.owner_id == user.pk:
         return True
@@ -676,6 +748,9 @@ def admin_config(request):
     job_history_create_dialog_open = False
     job_history_edit_dialog_open = False
     job_history_edit_target_id = ""
+    job_role_create_dialog_open = False
+    job_role_edit_dialog_open = False
+    job_role_edit_target_id = ""
     compensation_history_create_dialog_open = False
     compensation_history_edit_dialog_open = False
     compensation_history_edit_target_id = ""
@@ -686,6 +761,8 @@ def admin_config(request):
     profile_edit_form = EmployeeProfileForm(prefix="ep_edit", workspace=ws)
     job_history_form = JobHistoryForm(prefix="jh_create", workspace=ws)
     job_history_edit_form = JobHistoryForm(prefix="jh_edit", workspace=ws)
+    job_role_form = JobRoleForm(prefix="jr_create")
+    job_role_edit_form = JobRoleForm(prefix="jr_edit")
     compensation_form = CompensationHistoryForm(prefix="ch_create", workspace=ws)
     compensation_history_edit_form = CompensationHistoryForm(prefix="ch_edit", workspace=ws)
     financial_entry_form = FinancialEntryManualForm(workspace=ws)
@@ -749,6 +826,8 @@ def admin_config(request):
                 messages.success(request, "Cargo cadastrado.")
                 return _admin_config_redirect_hash("#admin-config-ws-cargos")
             job_history_edit_form = JobHistoryForm(prefix="jh_edit", workspace=ws)
+            job_role_form = JobRoleForm(prefix="jr_create")
+            job_role_edit_form = JobRoleForm(prefix="jr_edit")
             job_history_create_dialog_open = True
         elif action == "update_job_history":
             jh = (
@@ -770,6 +849,8 @@ def admin_config(request):
                 messages.success(request, "Cargo atualizado.")
                 return _admin_config_redirect_hash("#admin-config-ws-cargos")
             job_history_form = JobHistoryForm(prefix="jh_create", workspace=ws)
+            job_role_form = JobRoleForm(prefix="jr_create")
+            job_role_edit_form = JobRoleForm(prefix="jr_edit")
             job_history_edit_dialog_open = True
             job_history_edit_target_id = str(jh.pk)
         elif action == "delete_job_history":
@@ -780,6 +861,63 @@ def admin_config(request):
             messages.success(request, "Cargo removido.") if deleted else messages.error(
                 request, "Registro de cargo não encontrado."
             )
+            return _admin_config_redirect_hash("#admin-config-ws-cargos")
+        elif action == "create_job_role":
+            job_role_form = JobRoleForm(request.POST, prefix="jr_create")
+            if job_role_form.is_valid():
+                try:
+                    job_role_form.save(
+                        workspace=ws,
+                        created_by=request.user,
+                        updated_by=request.user,
+                    )
+                except IntegrityError:
+                    job_role_form.add_error("name", "Já existe cargo com este nome no workspace.")
+                else:
+                    messages.success(request, "Cargo criado.")
+                    return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            job_history_form = JobHistoryForm(prefix="jh_create", workspace=ws)
+            job_history_edit_form = JobHistoryForm(prefix="jh_edit", workspace=ws)
+            job_role_edit_form = JobRoleForm(prefix="jr_edit")
+            job_role_create_dialog_open = True
+        elif action == "update_job_role":
+            role = JobRole.objects.filter(
+                pk=request.POST.get("job_role_id"),
+                workspace=ws,
+            ).first()
+            if role is None:
+                messages.error(request, "Cargo inválido.")
+                return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            job_role_edit_form = JobRoleForm(request.POST, prefix="jr_edit", instance=role)
+            if job_role_edit_form.is_valid():
+                try:
+                    job_role_edit_form.save(
+                        workspace=ws,
+                        updated_by=request.user,
+                    )
+                except IntegrityError:
+                    job_role_edit_form.add_error("name", "Já existe cargo com este nome no workspace.")
+                else:
+                    messages.success(request, "Cargo atualizado.")
+                    return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            job_history_form = JobHistoryForm(prefix="jh_create", workspace=ws)
+            job_history_edit_form = JobHistoryForm(prefix="jh_edit", workspace=ws)
+            job_role_form = JobRoleForm(prefix="jr_create")
+            job_role_edit_dialog_open = True
+            job_role_edit_target_id = str(role.pk)
+        elif action == "delete_job_role":
+            role = JobRole.objects.filter(
+                pk=request.POST.get("job_role_id"),
+                workspace=ws,
+            ).first()
+            if role is None:
+                messages.error(request, "Cargo não encontrado.")
+                return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            if JobHistory.objects.filter(job_role=role).exists():
+                messages.error(request, "Não é possível excluir cargo que já possui histórico.")
+                return _admin_config_redirect_hash("#admin-config-ws-cargos")
+            role.delete()
+            messages.success(request, "Cargo removido.")
             return _admin_config_redirect_hash("#admin-config-ws-cargos")
         elif action == "create_compensation_history":
             compensation_form = CompensationHistoryForm(request.POST, prefix="ch_create", workspace=ws)
@@ -843,6 +981,46 @@ def admin_config(request):
                 messages.success(request, "Lançamento financeiro cadastrado.")
                 return redirect("admin-config")
             financial_entry_tab_open = True
+        elif action in (
+            "set_financial_entry_processing",
+            "approve_financial_entry",
+            "reject_financial_entry",
+        ):
+            fin = FinancialEntry.objects.filter(
+                pk=request.POST.get("financial_entry_id"),
+                workspace=ws,
+                flow_type=FinancialEntry.FlowType.OUTFLOW,
+            ).first()
+            if fin is None:
+                messages.error(request, "Lançamento financeiro inválido para revisão.")
+                return _admin_config_redirect_hash("#admin-config-ws-caixa")
+            fin.updated_by = request.user
+            fin.decision_note = (request.POST.get("decision_note") or "").strip()
+            if action == "set_financial_entry_processing":
+                fin.approval_status = FinancialEntry.ApprovalStatus.PROCESSING
+                fin.approved_by = None
+                fin.approved_at = None
+                fin.rejected_by = None
+                fin.rejected_at = None
+                fin.save()
+                messages.success(request, "Saída movida para processamento.")
+            elif action == "approve_financial_entry":
+                fin.approval_status = FinancialEntry.ApprovalStatus.APPROVED
+                fin.approved_by = request.user
+                fin.approved_at = timezone.now()
+                fin.rejected_by = None
+                fin.rejected_at = None
+                fin.save()
+                messages.success(request, "Saída aprovada e aplicada ao caixa real.")
+            else:
+                fin.approval_status = FinancialEntry.ApprovalStatus.REJECTED
+                fin.rejected_by = request.user
+                fin.rejected_at = timezone.now()
+                fin.approved_by = None
+                fin.approved_at = None
+                fin.save()
+                messages.success(request, "Saída reprovada.")
+            return _admin_config_redirect_hash("#admin-config-ws-caixa")
         elif action == "create_budget_goal":
             budget_goal_form = BudgetGoalForm(request.POST, prefix="goal_create", workspace=ws)
             if budget_goal_form.is_valid():
@@ -1000,7 +1178,7 @@ def admin_config(request):
         row["linked_project_ids"] = linked_pids
     employee_profiles = (
         EmployeeProfile.objects.filter(workspace=ws)
-        .select_related("user")
+        .select_related("user", "current_job_role")
         .order_by("user__email")
     )
     latest_job_by_profile = {
@@ -1022,20 +1200,27 @@ def admin_config(request):
     ]
     job_history_entries = (
         JobHistory.objects.filter(employee_profile__workspace=ws)
-        .select_related("employee_profile", "employee_profile__user")
+        .select_related("employee_profile", "employee_profile__user", "job_role")
         .order_by("employee_profile__user__email", "-start_date", "-pk")
     )
+    job_roles = JobRole.objects.filter(workspace=ws).order_by("name", "pk")
     financial_entries = (
         FinancialEntry.objects.filter(workspace=ws)
         .select_related("client", "project", "user", "created_by", "updated_by")
         .order_by("-occurred_on", "-pk")
+    )
+    financial_review_entries = (
+        FinancialEntry.objects.filter(workspace=ws)
+        .review_queue()
+        .select_related("client", "project", "user")
+        .order_by("occurred_on", "pk")
     )
     budget_goals = (
         BudgetGoal.visible_for_user(workspace=ws, user=request.user)
         .select_related("client", "project", "created_by", "updated_by")
         .order_by("-created_at", "-pk")
     )
-    financial_summary = financial_entries.aggregate(
+    financial_summary = FinancialEntry.objects.filter(workspace=ws).effective_for_balance().aggregate(
         inflows=Sum("amount", filter=Q(flow_type=FinancialEntry.FlowType.INFLOW)),
         outflows=Sum("amount", filter=Q(flow_type=FinancialEntry.FlowType.OUTFLOW)),
     )
@@ -1081,6 +1266,7 @@ def admin_config(request):
             "latest_job_by_profile": latest_job_by_profile,
             "compensation_history": compensation_history_visible,
             "financial_entries": financial_entries[:50],
+            "financial_review_entries": financial_review_entries[:50],
             "budget_goals": budget_goals[:50],
             "workspace_cash_balance": _format_brl_money(workspace_cash_balance),
             "workspace_cash_inflows": _format_brl_money(workspace_cash_inflows),
@@ -1096,6 +1282,12 @@ def admin_config(request):
             "job_history_create_dialog_open": job_history_create_dialog_open,
             "job_history_edit_dialog_open": job_history_edit_dialog_open,
             "job_history_edit_target_id": job_history_edit_target_id,
+            "job_role_form": job_role_form,
+            "job_role_edit_form": job_role_edit_form,
+            "job_roles": job_roles,
+            "job_role_create_dialog_open": job_role_create_dialog_open,
+            "job_role_edit_dialog_open": job_role_edit_dialog_open,
+            "job_role_edit_target_id": job_role_edit_target_id,
             "compensation_history_form": compensation_form,
             "compensation_history_edit_form": compensation_history_edit_form,
             "compensation_history_create_dialog_open": compensation_history_create_dialog_open,

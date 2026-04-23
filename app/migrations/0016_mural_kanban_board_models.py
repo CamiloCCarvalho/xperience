@@ -5,6 +5,13 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def _check_constraint(*, predicate, name: str) -> models.CheckConstraint:
+    try:
+        return models.CheckConstraint(condition=predicate, name=name)
+    except TypeError:
+        return models.CheckConstraint(check=predicate, name=name)  # type: ignore[call-arg]
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -216,8 +223,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="boardcard",
-            constraint=models.CheckConstraint(
-                condition=models.Q(
+            constraint=_check_constraint(
+                predicate=models.Q(
                     models.Q(
                         ("private_column__isnull", False), ("visibility", "private")
                     ),

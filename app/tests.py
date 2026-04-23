@@ -13,6 +13,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from app.financial import calculate_workspace_balance
 from app.models import (
     BoardCard,
     Client as AppClient,
@@ -21,7 +22,9 @@ from app.models import (
     Department,
     EmployeeProfile,
     FinancialEntry,
+    JobRole,
     Membership,
+    MuralStatusOption,
     PrivateBoardColumn,
     Project,
     Task,
@@ -47,12 +50,17 @@ User = get_user_model()
 
 
 def create_hourly_compensation(user, workspace, *, hourly_rate=Decimal("100.00")):
+    role, _ = JobRole.objects.get_or_create(
+        workspace=workspace,
+        name="Contributor",
+        defaults={"description": ""},
+    )
     profile = EmployeeProfile.objects.create(
         user=user,
         workspace=workspace,
         employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
         hire_date=date(2024, 1, 1),
-        current_job_title="Contributor",
+        current_job_role=role,
     )
     CompensationHistory.objects.create(
         employee_profile=profile,
@@ -1081,6 +1089,7 @@ class FinancialFlowTests(TestCase):
             entry_kind=FinancialEntry.EntryKind.TIME_ENTRY_COST,
         )
         self.assertEqual(fin.flow_type, FinancialEntry.FlowType.OUTFLOW)
+        self.assertEqual(fin.approval_status, FinancialEntry.ApprovalStatus.PENDING)
         self.assertEqual(fin.amount, Decimal("100.00"))
         self.assertEqual(fin.user, self.member)
         self.assertEqual(fin.project, self.project)
@@ -1123,14 +1132,38 @@ class FinancialFlowTests(TestCase):
             source_time_entry_id=entry.pk,
             entry_kind=FinancialEntry.EntryKind.TIME_ENTRY_COST,
         )
+        original.approval_status = FinancialEntry.ApprovalStatus.APPROVED
+        original.approved_by = self.owner
+        original.approved_at = timezone.now()
+        original.updated_by = self.owner
+        original.save()
         source_entry_id = entry.pk
         entry.delete(financial_actor=self.owner)
         original.refresh_from_db()
         reversal = FinancialEntry.objects.get(reversal_of=original)
         self.assertEqual(reversal.flow_type, FinancialEntry.FlowType.INFLOW)
+        self.assertEqual(reversal.approval_status, FinancialEntry.ApprovalStatus.NOT_REQUIRED)
         self.assertEqual(reversal.amount, original.amount)
         self.assertEqual(reversal.source_time_entry_id, source_entry_id)
         self.assertEqual(reversal.created_by, self.owner)
+
+    def test_deleting_saved_time_entry_pending_does_not_create_reversal(self):
+        entry = TimeEntry.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            department=self.dept,
+            date=date(2026, 7, 13),
+            status=TimeEntry.Status.SAVED,
+            entry_mode=TimeEntry.EntryMode.DURATION,
+            hours=Decimal("1.00"),
+        )
+        original = FinancialEntry.objects.get(
+            source_time_entry_id=entry.pk,
+            entry_kind=FinancialEntry.EntryKind.TIME_ENTRY_COST,
+        )
+        self.assertEqual(original.approval_status, FinancialEntry.ApprovalStatus.PENDING)
+        entry.delete(financial_actor=self.owner)
+        self.assertFalse(FinancialEntry.objects.filter(reversal_of=original).exists())
 
     def test_budget_goal_accepts_workspace_client_and_project_scope(self):
         workspace_goal = BudgetGoal.objects.create(
@@ -1215,6 +1248,77 @@ class AdminConfigFinancialTests(TestCase):
         fin = FinancialEntry.objects.get(entry_kind=FinancialEntry.EntryKind.MANUAL)
         self.assertEqual(fin.created_by, self.admin_user)
         self.assertEqual(fin.client, self.client_ref)
+        self.assertEqual(fin.approval_status, FinancialEntry.ApprovalStatus.NOT_REQUIRED)
+
+    def test_manual_outflow_starts_pending(self):
+        response = self.client.post(
+            reverse("admin-config"),
+            {
+                "action": "create_financial_entry",
+                "flow_type": FinancialEntry.FlowType.OUTFLOW,
+                "occurred_on": "2026-08-01",
+                "amount": "450.00",
+                "description": "Compra",
+                "client": self.client_ref.pk,
+                "project": self.project.pk,
+                "user": self.member.pk,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        fin = FinancialEntry.objects.get(entry_kind=FinancialEntry.EntryKind.MANUAL)
+        self.assertEqual(fin.approval_status, FinancialEntry.ApprovalStatus.PENDING)
+
+    def test_approve_manual_outflow_impacts_balance(self):
+        fin = FinancialEntry.objects.create(
+            workspace=self.ws,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.OUTFLOW,
+            occurred_on=date(2026, 8, 1),
+            amount=Decimal("300.00"),
+            description="Compra pendente",
+            created_by=self.admin_user,
+            updated_by=self.admin_user,
+            approval_status=FinancialEntry.ApprovalStatus.PENDING,
+        )
+        self.assertEqual(calculate_workspace_balance(self.ws), Decimal("0.00"))
+        response = self.client.post(
+            reverse("admin-config"),
+            {
+                "action": "approve_financial_entry",
+                "financial_entry_id": fin.pk,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        fin.refresh_from_db()
+        self.assertEqual(fin.approval_status, FinancialEntry.ApprovalStatus.APPROVED)
+        self.assertEqual(calculate_workspace_balance(self.ws), Decimal("-300.00"))
+
+    def test_reject_manual_outflow_does_not_impact_balance(self):
+        fin = FinancialEntry.objects.create(
+            workspace=self.ws,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.OUTFLOW,
+            occurred_on=date(2026, 8, 1),
+            amount=Decimal("120.00"),
+            description="Compra pendente",
+            created_by=self.admin_user,
+            updated_by=self.admin_user,
+            approval_status=FinancialEntry.ApprovalStatus.PENDING,
+        )
+        response = self.client.post(
+            reverse("admin-config"),
+            {
+                "action": "reject_financial_entry",
+                "financial_entry_id": fin.pk,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        fin.refresh_from_db()
+        self.assertEqual(fin.approval_status, FinancialEntry.ApprovalStatus.REJECTED)
+        self.assertEqual(calculate_workspace_balance(self.ws), Decimal("0.00"))
 
     def test_admin_config_creates_budget_goal(self):
         response = self.client.post(
@@ -1515,10 +1619,150 @@ class BudgetGoalVisibilityTests(TestCase):
                 created_by=self.creator,
                 updated_by=self.creator,
                 visibility=BoardCard.Visibility.PUBLIC,
+                public_lane=BoardCard.PublicLane.MEMBERS,
                 title="Card com meta privada",
                 budget_goal=private_goal,
                 position=0,
             )
+
+
+class JobRoleRefactorTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="owner-jobrole@example.com",
+            password="x",
+            first_name="Owner",
+            last_name="Role",
+        )
+        self.member = User.objects.create_user(
+            email="member-jobrole@example.com",
+            password="x",
+            first_name="Member",
+            last_name="Role",
+        )
+        self.member.platform_role = User.PlatformRole.MEMBER
+        self.member.save(update_fields=["platform_role"])
+
+        self.ws = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WS JobRole",
+            workspace_description="",
+        )
+        self.ws_other = Workspace.objects.create(
+            owner=self.owner,
+            workspace_name="WS JobRole Other",
+            workspace_description="",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws, role="user")
+
+        self.role_dev = JobRole.objects.create(workspace=self.ws, name="Dev")
+        self.role_qa = JobRole.objects.create(workspace=self.ws, name="QA")
+        self.role_other_ws = JobRole.objects.create(workspace=self.ws_other, name="Other WS Role")
+
+    def test_create_job_role_for_workspace(self):
+        role = JobRole.objects.create(
+            workspace=self.ws,
+            name="Analista",
+            description="Cargo novo",
+            is_active=True,
+            created_by=self.owner,
+            updated_by=self.owner,
+        )
+        self.assertEqual(role.workspace, self.ws)
+        self.assertEqual(role.name, "Analista")
+        self.assertTrue(role.is_active)
+
+    def test_employee_profile_uses_job_role_fk(self):
+        profile = EmployeeProfile.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_role=self.role_dev,
+        )
+        self.assertEqual(profile.current_job_role, self.role_dev)
+
+    def test_job_history_uses_job_role_fk(self):
+        profile = EmployeeProfile.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_role=self.role_dev,
+        )
+        history = JobHistory.objects.create(
+            employee_profile=profile,
+            job_role=self.role_dev,
+            start_date=date(2024, 1, 1),
+        )
+        self.assertEqual(history.job_role, self.role_dev)
+
+    def test_prevents_using_role_from_other_workspace(self):
+        profile = EmployeeProfile(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_role=self.role_other_ws,
+        )
+        with self.assertRaises(ValidationError):
+            profile.full_clean()
+
+        profile_ok = EmployeeProfile.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_role=self.role_dev,
+        )
+        history = JobHistory(
+            employee_profile=profile_ok,
+            job_role=self.role_other_ws,
+            start_date=date(2024, 2, 1),
+        )
+        with self.assertRaises(ValidationError):
+            history.full_clean()
+
+    def test_sync_between_active_history_and_profile_current_role(self):
+        profile = EmployeeProfile.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_role=self.role_dev,
+        )
+        JobHistory.objects.create(
+            employee_profile=profile,
+            job_role=self.role_qa,
+            start_date=date(2024, 3, 1),
+        )
+        profile.refresh_from_db()
+        self.assertEqual(profile.current_job_role, self.role_qa)
+
+        active = JobHistory.objects.get(employee_profile=profile, end_date__isnull=True)
+        active.end_date = date(2024, 3, 31)
+        active.save()
+        profile.refresh_from_db()
+        self.assertIsNone(profile.current_job_role)
+
+    def test_deactivating_role_does_not_break_existing_history(self):
+        profile = EmployeeProfile.objects.create(
+            user=self.member,
+            workspace=self.ws,
+            employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
+            hire_date=date(2024, 1, 1),
+            current_job_role=self.role_dev,
+        )
+        history = JobHistory.objects.create(
+            employee_profile=profile,
+            job_role=self.role_dev,
+            start_date=date(2024, 1, 1),
+        )
+        self.role_dev.is_active = False
+        self.role_dev.save(update_fields=["is_active", "updated_at"])
+        history.refresh_from_db()
+        self.assertEqual(history.job_role_id, self.role_dev.pk)
+        self.assertFalse(self.role_dev.is_active)
 
 
 class UserAccountAvatarTests(TestCase):
@@ -1672,12 +1916,13 @@ class CompensationPayCalculationTests(TestCase):
             workspace_name="WSCPay",
             workspace_description="",
         )
+        role = JobRole.objects.create(workspace=self.ws, name="Dev")
         self.profile = EmployeeProfile.objects.create(
             user=self.member,
             workspace=self.ws,
             employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
             hire_date=date(2024, 1, 1),
-            current_job_title="Dev",
+            current_job_role=role,
         )
         self.sched = WorkSchedule.objects.create(
             workspace=self.ws,
@@ -1837,12 +2082,13 @@ class AdminDashboardDataTests(TestCase):
             last_name="Dash",
         )
         Membership.objects.create(user=self.member, workspace=self.ws, role="user")
+        role = JobRole.objects.create(workspace=self.ws, name="Dev")
         self.profile = EmployeeProfile.objects.create(
             user=self.member,
             workspace=self.ws,
             employment_status=EmployeeProfile.EmploymentStatus.ACTIVE,
             hire_date=date(2024, 1, 1),
-            current_job_title="Dev",
+            current_job_role=role,
         )
         self.sched = WorkSchedule.objects.create(
             workspace=self.ws,
@@ -1915,12 +2161,41 @@ class AdminDashboardDataTests(TestCase):
             amount=Decimal("500.00"),
             description="Out",
             created_by=self.admin,
+            updated_by=self.admin,
+            approval_status=FinancialEntry.ApprovalStatus.APPROVED,
+            approved_by=self.admin,
+            approved_at=timezone.now(),
         )
         dash = build_admin_dashboard(self.ws, "7d")
         row = next(d for d in dash["daily_series"] if d["day"] == today.isoformat())
         self.assertEqual(row["pct_in"] + row["pct_out"], 100)
         self.assertEqual(row["pct_in"], 67)
         self.assertEqual(row["pct_out"], 33)
+
+    def test_dashboard_ignores_pending_outflow_in_real_cash(self):
+        today = self._today()
+        FinancialEntry.objects.create(
+            workspace=self.ws,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.INFLOW,
+            occurred_on=today,
+            amount=Decimal("1000.00"),
+            description="In",
+            created_by=self.admin,
+        )
+        FinancialEntry.objects.create(
+            workspace=self.ws,
+            entry_kind=FinancialEntry.EntryKind.MANUAL,
+            flow_type=FinancialEntry.FlowType.OUTFLOW,
+            occurred_on=today,
+            amount=Decimal("500.00"),
+            description="Out pending",
+            created_by=self.admin,
+            updated_by=self.admin,
+            approval_status=FinancialEntry.ApprovalStatus.PENDING,
+        )
+        dash = build_admin_dashboard(self.ws, "7d")
+        self.assertEqual(dash["current_balance"], Decimal("1000.00"))
 
     def test_build_dashboard_counts_saved_time_only(self):
         today = self._today()
@@ -2342,3 +2617,542 @@ class MuralMemberApiTests(TestCase):
         self.assertTrue(pub)
         self.assertIn("creator_label", pub[0])
         self.assertIn("creator_avatar_url", pub[0])
+
+    def test_member_cannot_create_public_card_in_management_lane(self):
+        self._session_ws(self.member_a, self.ws)
+        r = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {
+                    "visibility": "public",
+                    "public_lane": BoardCard.PublicLane.MANAGEMENT,
+                    "title": "Não pode",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_member_moves_private_to_public_only_members_lane(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        col = PrivateBoardColumn.objects.filter(workspace=self.ws, user=self.member_a).first()
+        assert col is not None
+        r1 = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "private", "private_column_id": col.pk, "title": "Mover"}),
+            content_type="application/json",
+        )
+        card_id = json.loads(r1.content)["card"]["id"]
+        r2 = self.client.post(reverse("user-mural-card-move-to-public", kwargs={"card_id": card_id}))
+        self.assertEqual(r2.status_code, 200, msg=r2.content.decode())
+        card = BoardCard.objects.get(pk=card_id)
+        self.assertEqual(card.public_lane, BoardCard.PublicLane.MEMBERS)
+
+    def test_member_visualizes_public_cards_from_both_lanes(self):
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.member_a,
+            updated_by=self.member_a,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MEMBERS,
+            title="Publico membros",
+            position=0,
+        )
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.owner,
+            updated_by=self.owner,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MANAGEMENT,
+            title="Publico gestão",
+            position=0,
+        )
+        self._session_ws(self.member_b, self.ws)
+        r = self.client.get(reverse("user-mural-data"))
+        self.assertEqual(r.status_code, 200)
+        mural = json.loads(r.content)["mural"]
+        self.assertEqual(len(mural["public_cards_by_lane"]["members"]), 1)
+        self.assertEqual(len(mural["public_cards_by_lane"]["management"]), 1)
+
+    def test_member_cannot_edit_or_delete_public_card_from_other_author(self):
+        card = BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.member_a,
+            updated_by=self.member_a,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MEMBERS,
+            title="Do outro",
+            position=0,
+        )
+        self._session_ws(self.member_b, self.ws)
+        r_upd = self.client.patch(
+            reverse("user-mural-card-update", kwargs={"card_id": card.pk}),
+            data=json.dumps({"title": "Hack"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r_upd.status_code, 403)
+        r_del = self.client.delete(reverse("user-mural-card-delete", kwargs={"card_id": card.pk}))
+        self.assertEqual(r_del.status_code, 403)
+
+    def test_copy_public_card_to_private_creates_copy_and_preserves_original(self):
+        card = BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.member_a,
+            updated_by=self.member_a,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MEMBERS,
+            title="Original público",
+            description="Desc",
+            position=0,
+        )
+        self._session_ws(self.member_b, self.ws)
+        self.client.get(reverse("user-mural-data"))
+        r = self.client.post(
+            reverse("user-mural-card-copy-to-private", kwargs={"card_id": card.pk}),
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201, msg=r.content.decode())
+        copied_id = json.loads(r.content)["card"]["id"]
+        copied = BoardCard.objects.get(pk=copied_id)
+        card.refresh_from_db()
+        self.assertEqual(copied.visibility, BoardCard.Visibility.PRIVATE)
+        self.assertIsNotNone(copied.private_column_id)
+        self.assertIsNone(copied.public_lane)
+        self.assertEqual(copied.created_by, self.member_b)
+        self.assertEqual(card.visibility, BoardCard.Visibility.PUBLIC)
+        self.assertEqual(card.public_lane, BoardCard.PublicLane.MEMBERS)
+
+    def test_mural_payload_returns_public_cards_grouped_by_lane(self):
+        self._session_ws(self.member_a, self.ws)
+        self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "Comum"}),
+            content_type="application/json",
+        )
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.owner,
+            updated_by=self.owner,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MANAGEMENT,
+            title="Gestão",
+            position=0,
+        )
+        r = self.client.get(reverse("user-mural-data"))
+        self.assertEqual(r.status_code, 200)
+        mural = json.loads(r.content)["mural"]
+        self.assertIn("public_cards_by_lane", mural)
+        self.assertIn("members", mural["public_cards_by_lane"])
+        self.assertIn("management", mural["public_cards_by_lane"])
+
+
+class AdminMuralApiTests(TestCase):
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=False)
+        self.admin = User.objects.create_user(
+            email="admin-mural@example.com",
+            password="x",
+            first_name="Admin",
+            last_name="Mural",
+        )
+        self.admin.platform_role = User.PlatformRole.ADMIN
+        self.admin.save(update_fields=["platform_role"])
+        self.member = User.objects.create_user(
+            email="member-mural-admin@example.com",
+            password="x",
+            first_name="Member",
+            last_name="Board",
+        )
+        self.member.platform_role = User.PlatformRole.MEMBER
+        self.member.save(update_fields=["platform_role"])
+        self.ws = Workspace.objects.create(
+            owner=self.admin,
+            workspace_name="WS Admin Mural",
+            workspace_description="",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws, role="user")
+
+        self.ws_other = Workspace.objects.create(
+            owner=self.admin,
+            workspace_name="WS Outro",
+            workspace_description="",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws_other, role="user")
+
+    def _session_admin(self):
+        self.client.force_login(self.admin)
+        s = self.client.session
+        s[SESSION_ADMIN_WORKSPACE_KEY] = self.ws.pk
+        s.save()
+
+    def _session_member(self, ws: Workspace):
+        self.client.force_login(self.member)
+        s = self.client.session
+        s[SESSION_MEMBER_WORKSPACE_KEY] = ws.pk
+        s.save()
+
+    def _member_first_private_column(self) -> int:
+        self._session_member(self.ws)
+        r = self.client.get(reverse("user-mural-data"))
+        self.assertEqual(r.status_code, 200)
+        return int(json.loads(r.content)["mural"]["private_columns"][0]["id"])
+
+    def test_admin_mural_route_and_menu(self):
+        self._session_admin()
+        r = self.client.get(reverse("admin-mural"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, reverse("admin-mural"))
+
+    def test_admin_mural_data_has_two_public_lanes_and_private_board(self):
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.admin,
+            updated_by=self.admin,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MANAGEMENT,
+            title="Gestão",
+            position=0,
+        )
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.member,
+            updated_by=self.member,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MEMBERS,
+            title="Membros",
+            position=0,
+        )
+        self._session_admin()
+        r = self.client.get(reverse("admin-mural-data"))
+        self.assertEqual(r.status_code, 200)
+        mural = json.loads(r.content)["mural"]
+        self.assertIn("members", mural["public_cards_by_lane"])
+        self.assertIn("management", mural["public_cards_by_lane"])
+        self.assertGreaterEqual(len(mural["private_columns"]), 1)
+
+    def test_admin_lock_members_lane_blocks_member_publish_and_move(self):
+        col_id = self._member_first_private_column()
+        self._session_admin()
+        r_lock = self.client.post(
+            reverse("admin-mural-members-lane-lock"),
+            data=json.dumps({"locked": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(r_lock.status_code, 200)
+
+        self._session_member(self.ws)
+        r_create_public = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "Pub bloqueado"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r_create_public.status_code, 403)
+
+        r_private = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "private", "private_column_id": col_id, "title": "Privado"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r_private.status_code, 201)
+        private_id = json.loads(r_private.content)["card"]["id"]
+        r_move = self.client.post(reverse("user-mural-card-move-to-public", kwargs={"card_id": private_id}))
+        self.assertEqual(r_move.status_code, 403)
+
+    def test_admin_unlock_members_lane_restores_member_publish(self):
+        self._session_admin()
+        self.client.post(
+            reverse("admin-mural-members-lane-lock"),
+            data=json.dumps({"locked": True}),
+            content_type="application/json",
+        )
+        self.client.post(
+            reverse("admin-mural-members-lane-lock"),
+            data=json.dumps({"locked": False}),
+            content_type="application/json",
+        )
+        self._session_member(self.ws)
+        r = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps({"visibility": "public", "title": "Liberado"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+
+    def test_admin_clear_members_lane_only_affects_members_public(self):
+        member_col = self._member_first_private_column()
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.member,
+            updated_by=self.member,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MEMBERS,
+            title="m1",
+            position=0,
+        )
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.admin,
+            updated_by=self.admin,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MANAGEMENT,
+            title="g1",
+            position=0,
+        )
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.member,
+            updated_by=self.member,
+            visibility=BoardCard.Visibility.PRIVATE,
+            private_column_id=member_col,
+            title="privado",
+            position=0,
+        )
+        self._session_admin()
+        r = self.client.post(reverse("admin-mural-members-lane-clear"), data=json.dumps({}), content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(
+            BoardCard.objects.filter(
+                workspace=self.ws,
+                visibility=BoardCard.Visibility.PUBLIC,
+                public_lane=BoardCard.PublicLane.MEMBERS,
+            ).exists()
+        )
+        self.assertTrue(
+            BoardCard.objects.filter(
+                workspace=self.ws,
+                visibility=BoardCard.Visibility.PUBLIC,
+                public_lane=BoardCard.PublicLane.MANAGEMENT,
+            ).exists()
+        )
+        self.assertTrue(
+            BoardCard.objects.filter(
+                workspace=self.ws,
+                visibility=BoardCard.Visibility.PRIVATE,
+                created_by=self.member,
+            ).exists()
+        )
+
+    def test_admin_lock_is_workspace_isolated(self):
+        self._session_admin()
+        self.client.post(
+            reverse("admin-mural-members-lane-lock"),
+            data=json.dumps({"locked": True}),
+            content_type="application/json",
+        )
+        self.ws.refresh_from_db()
+        self.ws_other.refresh_from_db()
+        self.assertTrue(self.ws.mural_members_lane_locked)
+        self.assertFalse(self.ws_other.mural_members_lane_locked)
+
+
+class MuralStatusPaletteTests(TestCase):
+    """Status configuráveis e paleta fixa (colunas/cards)."""
+
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=False)
+        self.admin = User.objects.create_user(
+            email="mural-palette-admin@example.com",
+            password="x",
+            first_name="Ad",
+            last_name="Min",
+        )
+        self.admin.platform_role = User.PlatformRole.ADMIN
+        self.admin.save(update_fields=["platform_role"])
+        self.member = User.objects.create_user(
+            email="mural-palette-member@example.com",
+            password="x",
+            first_name="Mem",
+            last_name="Ber",
+        )
+        self.member.platform_role = User.PlatformRole.MEMBER
+        self.member.save(update_fields=["platform_role"])
+        self.ws = Workspace.objects.create(
+            owner=self.admin,
+            workspace_name="WS Palette",
+            workspace_description="",
+        )
+        self.ws_other = Workspace.objects.create(
+            owner=self.admin,
+            workspace_name="WS Palette Outro",
+            workspace_description="",
+        )
+        Membership.objects.create(user=self.member, workspace=self.ws, role="user")
+        Membership.objects.create(user=self.member, workspace=self.ws_other, role="user")
+
+    def _session_admin(self, ws: Workspace | None = None):
+        self.client.force_login(self.admin)
+        s = self.client.session
+        s[SESSION_ADMIN_WORKSPACE_KEY] = (ws or self.ws).pk
+        s.save()
+
+    def _session_member(self, ws: Workspace):
+        self.client.force_login(self.member)
+        s = self.client.session
+        s[SESSION_MEMBER_WORKSPACE_KEY] = ws.pk
+        s.save()
+
+    def test_admin_creates_status_and_mural_payload_includes_palette_fields(self):
+        self._session_admin()
+        r = self.client.post(
+            reverse("admin-mural-status-create"),
+            data=json.dumps({"name": "Em revisão", "color_key": "blue"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201, msg=r.content.decode())
+        body = json.loads(r.content)
+        self.assertEqual(body["status"]["color_hex"], "#2772cd")
+        r2 = self.client.get(reverse("admin-mural-data"))
+        mural = json.loads(r2.content)["mural"]
+        self.assertIn("mural_statuses_all", mural)
+        self.assertEqual(len(mural["mural_statuses_all"]), 1)
+        self.assertEqual(len(mural["mural_statuses"]), 1)
+
+    def test_member_payload_only_lists_active_statuses(self):
+        MuralStatusOption.objects.create(
+            workspace=self.ws,
+            name="Ativo",
+            position=0,
+            is_active=True,
+            color_key="green",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+        MuralStatusOption.objects.create(
+            workspace=self.ws,
+            name="Legado",
+            position=1,
+            is_active=False,
+            color_key="red",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+        self._session_member(self.ws)
+        r = self.client.get(reverse("user-mural-data"))
+        mural = json.loads(r.content)["mural"]
+        self.assertEqual(len(mural["mural_statuses"]), 1)
+        self.assertEqual(mural["mural_statuses"][0]["name"], "Ativo")
+        self.assertNotIn("mural_statuses_all", mural)
+
+    def test_admin_reorders_statuses(self):
+        self._session_admin()
+        a = json.loads(
+            self.client.post(
+                reverse("admin-mural-status-create"),
+                data=json.dumps({"name": "A", "color_key": "red"}),
+                content_type="application/json",
+            ).content
+        )["status"]["id"]
+        b = json.loads(
+            self.client.post(
+                reverse("admin-mural-status-create"),
+                data=json.dumps({"name": "B", "color_key": "blue"}),
+                content_type="application/json",
+            ).content
+        )["status"]["id"]
+        r = self.client.post(
+            reverse("admin-mural-status-reorder"),
+            data=json.dumps({"ordered_status_ids": [b, a]}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, msg=r.content.decode())
+        mural = json.loads(self.client.get(reverse("admin-mural-data")).content)["mural"]
+        names = [s["name"] for s in mural["mural_statuses_all"]]
+        self.assertEqual(names, ["B", "A"])
+
+    def test_card_rejects_mural_status_from_other_workspace(self):
+        st_other = MuralStatusOption.objects.create(
+            workspace=self.ws_other,
+            name="Outro WS",
+            position=0,
+            is_active=True,
+            color_key="aqua",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+        self._session_member(self.ws)
+        r0 = self.client.get(reverse("user-mural-data"))
+        col_id = json.loads(r0.content)["mural"]["private_columns"][0]["id"]
+        r = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {
+                    "visibility": "private",
+                    "private_column_id": col_id,
+                    "title": "X",
+                    "mural_status_id": st_other.pk,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_column_rejects_invalid_color_key(self):
+        self._session_member(self.ws)
+        r0 = self.client.get(reverse("user-mural-data"))
+        col_id = json.loads(r0.content)["mural"]["private_columns"][0]["id"]
+        r = self.client.patch(
+            reverse("user-mural-column-update", kwargs={"column_id": col_id}),
+            data=json.dumps({"name": "Renomeado", "color_key": "not-a-palette-key"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_member_cannot_assign_inactive_status_on_new_card(self):
+        st = MuralStatusOption.objects.create(
+            workspace=self.ws,
+            name="Inativo",
+            position=0,
+            is_active=False,
+            color_key="purple",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+        self._session_member(self.ws)
+        r0 = self.client.get(reverse("user-mural-data"))
+        col_id = json.loads(r0.content)["mural"]["private_columns"][0]["id"]
+        r = self.client.post(
+            reverse("user-mural-card-create"),
+            data=json.dumps(
+                {
+                    "visibility": "private",
+                    "private_column_id": col_id,
+                    "title": "Novo",
+                    "mural_status_id": st.pk,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_public_card_serializes_status_and_color_for_display(self):
+        st = MuralStatusOption.objects.create(
+            workspace=self.ws,
+            name="Publicado",
+            position=0,
+            is_active=True,
+            color_key="orange",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+        BoardCard.objects.create(
+            workspace=self.ws,
+            created_by=self.member,
+            updated_by=self.member,
+            visibility=BoardCard.Visibility.PUBLIC,
+            public_lane=BoardCard.PublicLane.MEMBERS,
+            title="Com status",
+            position=0,
+            mural_status=st,
+            color_key="green",
+        )
+        self._session_member(self.ws)
+        r = self.client.get(reverse("user-mural-data"))
+        self.assertEqual(r.status_code, 200)
+        cards = json.loads(r.content)["mural"]["public_cards"]
+        self.assertTrue(cards)
+        c0 = cards[0]
+        self.assertEqual(c0["mural_status_name"], "Publicado")
+        self.assertEqual(c0["mural_status_color_hex"], "#e15319")
+        self.assertEqual(c0["color_hex"], "#20b153")
