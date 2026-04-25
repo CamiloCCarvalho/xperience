@@ -2,23 +2,34 @@
 <main class="main">
     <div class="main-container">
         <section class="workspace-selector" aria-label="Seleção de workspace">
-            <header class="workspace-selector-header">
-                <p class="workspace-area-hint workspace-area-hint--member">Área de membro · escolha o workspace</p>
-                <h1>Selecione um workspace</h1>
-                {% if workspace_count == 0 %}
-                <p class="workspace-selector-lead">Você ainda não está vinculado a nenhum workspace. Solicite a um <strong>gestor da plataforma</strong> (administrador da empresa) que adicione seu email ao workspace correto.</p>
-                {% elif workspace_count > 1 %}
-                <p class="workspace-selector-lead">Sua conta tem acesso a <strong>{{ workspace_count }} workspaces</strong> — por exemplo, empresas ou equipes diferentes (cada um pode ter um gestor distinto). Escolha qual deseja usar agora.</p>
-                {% else %}
-                <p class="workspace-selector-lead">Confirme o workspace abaixo para entrar na área de uso.</p>
-                {% endif %}
-                {% if active_member_workspace and workspace_count > 0 %}
-                <p class="workspace-current-pill">Workspace atual na sessão: <strong>{{ active_member_workspace.workspace_name }}</strong> — você pode trocar escolhendo outro abaixo.</p>
-                {% endif %}
-            </header>
-            {% if workspace_count > 0 %}
-            {% include "xperience/partials/user/workspaces/elements/list_workspaces.html" %}
-            {% endif %}
+            <div class="workspace-panel">
+                <header class="workspace-selector-header">
+                    <span class="workspace-area-hint workspace-area-hint--member">Área de membro</span>
+                    {% if workspace_count == 0 %}
+                    <h1>Nenhum workspace disponível</h1>
+                    {% elif workspace_count > 1 %}
+                    <h1>Selecione um workspace</h1>
+                    {% else %}
+                    <h1>Seu workspace</h1>
+                    {% endif %}
+                    {% if workspace_count == 0 %}
+                    <p class="workspace-selector-lead">Você ainda não está vinculado a nenhum workspace. Solicite a um <strong>gestor da plataforma</strong> que adicione seu email ao workspace correto.</p>
+                    {% elif workspace_count > 1 %}
+                    <p class="workspace-selector-lead">Sua conta tem acesso a <strong>{{ workspace_count }} workspaces</strong>. Escolha qual deseja usar agora.</p>
+                    {% else %}
+                    <p class="workspace-selector-lead">Confirme o workspace abaixo para entrar na área de uso.</p>
+                    {% endif %}
+                    {% if active_member_workspace and workspace_count > 0 %}
+                    <p class="workspace-current-pill">Workspace atual: <strong>{{ active_member_workspace.workspace_name }}</strong></p>
+                    {% endif %}
+                </header>
+
+                <div class="workspace-list-section">
+                    {% if workspace_count > 0 %}
+                    {% include "xperience/partials/user/workspaces/elements/list_workspaces.html" %}
+                    {% endif %}
+                </div>
+            </div>
         </section>
     </div>
 </main>

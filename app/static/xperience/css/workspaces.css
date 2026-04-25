@@ -70,6 +70,12 @@
     margin-bottom: 8px;
 }
 
+/* Badge diferenciado para área de membro */
+.workspaces-page .workspace-selector-header .workspace-area-hint--member {
+    color: rgba(96, 165, 250, 0.9);
+    background: rgba(96, 165, 250, 0.12);
+}
+
 .workspaces-page .workspace-selector-header .workspace-selector-lead,
 .workspaces-page .workspace-selector-header .workspace-current-pill {
     font-size: clamp(0.88rem, 1.9vw, 0.98rem);
@@ -439,6 +445,11 @@
 .workspaces-page:not([data-theme="dark"]) .workspace-selector-header .workspace-area-hint {
     color: rgba(33, 145, 80, 0.95);
     background: rgba(39, 174, 96, 0.1);
+}
+
+.workspaces-page:not([data-theme="dark"]) .workspace-selector-header .workspace-area-hint--member {
+    color: rgba(37, 99, 235, 0.95);
+    background: rgba(59, 130, 246, 0.1);
 }
 
 .workspaces-page:not([data-theme="dark"]) .workspace-selector-header p.workspace-selector-lead,
