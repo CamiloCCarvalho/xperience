@@ -14,8 +14,10 @@
             </div>
             <!-- menu right -->
             <div class="header-menu-right">
+                {% if not hide_auth_buttons %}
                 <button type="button" class="header-auth-btn" data-auth-target="login-modal">Login</button>
-                <button type="button" class="header-auth-btn" data-auth-target="register-modal">Cadastro</button>
+                <button type="button" class="header-auth-btn" onclick="window.location.href='{% url 'public-register-admin-plan' %}'">Cadastro</button>
+                {% endif %}
                 <!-- button theme -->
                 <!-- {% include "xperience/partials/button_theme.html" %} -->
                 <button

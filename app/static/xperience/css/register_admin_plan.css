@@ -1,0 +1,200 @@
+/* -------------------------------------------------------
+   register_admin_plan.css
+   Estilos para a página de cadastro de administrador + plano
+   Prefixo: rap-
+------------------------------------------------------- */
+
+/* Layout da página */
+.rap-page-main {
+    padding: 2.5rem 0;
+}
+
+.rap-form-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.rap-form-col {
+    flex: 1;
+    min-width: 300px;
+    max-width: 460px;
+}
+
+/* Rótulo de seção */
+.rap-section-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.65rem;
+    color: var(--color-text-muted);
+    opacity: 0.85;
+}
+
+.rap-section-label--spaced {
+    margin-top: 1.5rem;
+}
+
+/* Linha dupla (validade + CVV) */
+.rap-input-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.rap-input-row > div {
+    flex: 1;
+}
+
+/* -------------------------------------------------------
+   Planos — accordion
+------------------------------------------------------- */
+.rap-plans {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.rap-plan-disclaimer {
+    text-align: left;
+    margin-bottom: 1.5rem;
+}
+
+.rap-plan-entry {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: box-shadow 0.18s ease;
+}
+
+.rap-plan-entry.is-open {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* Header do card */
+.rap-plan-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    background: rgba(255, 255, 255, 0.07);
+    cursor: pointer;
+    user-select: none;
+    border-radius: 8px;
+    transition: background 0.18s ease;
+}
+
+.rap-plan-header:hover {
+    background: rgba(255, 255, 255, 0.11);
+}
+
+.rap-plan-entry.is-open .rap-plan-header {
+    border-radius: 8px 8px 0 0;
+    background: rgba(39, 174, 96, 0.18);
+    border-bottom: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+/* Info: nome e preço (ocupa o espaço central) */
+.rap-plan-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.rap-plan-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-title);
+    text-align: center;
+}
+
+.rap-plan-price {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.rap-plan-entry.is-open .rap-plan-name {
+    color: var(--green-light);
+}
+
+/* Chevron */
+.rap-plan-chevron {
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+    transition: transform 0.22s ease;
+    flex-shrink: 0;
+}
+
+.rap-plan-entry.is-open .rap-plan-chevron {
+    transform: rotate(180deg);
+    color: var(--green-light);
+}
+
+/* Radio — à direita, compacto */
+.rap-plan-radio {
+    flex-shrink: 0;
+    accent-color: var(--green-light);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* Conteúdo expansível */
+.rap-plan-content {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.28s ease, opacity 0.22s ease, padding 0.22s ease;
+    padding: 0 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 0 0 8px 8px;
+}
+
+.rap-plan-entry.is-open .rap-plan-content {
+    max-height: 300px;
+    opacity: 1;
+    padding: 0.75rem 1rem 0.9rem;
+}
+
+.rap-plan-content ul {
+    list-style: disc;
+    margin-left: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.rap-plan-content ul li {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    list-style: disc;
+}
+
+/* -------------------------------------------------------
+   Tema claro
+------------------------------------------------------- */
+.home-page:not([data-theme="dark"]) .rap-plan-entry {
+    border-color: rgba(17, 24, 39, 0.12);
+}
+
+.home-page:not([data-theme="dark"]) .rap-plan-header {
+    background: rgba(17, 24, 39, 0.04);
+}
+
+.home-page:not([data-theme="dark"]) .rap-plan-header:hover {
+    background: rgba(17, 24, 39, 0.07);
+}
+
+.home-page:not([data-theme="dark"]) .rap-plan-entry.is-open .rap-plan-header {
+    background: rgba(39, 174, 96, 0.1);
+    border-bottom-color: rgba(39, 174, 96, 0.25);
+}
+
+.home-page:not([data-theme="dark"]) .rap-plan-content {
+    background: rgba(17, 24, 39, 0.02);
+}

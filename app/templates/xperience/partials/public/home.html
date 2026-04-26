@@ -55,10 +55,10 @@
         <form class="auth-form" method="post" action="{% url 'public-home' %}">
             {% csrf_token %}
             <input type="hidden" name="form" value="register">
-            <label for="{{ register_form.username.id_for_label }}">{{ register_form.username.label }}</label>
-            {{ register_form.username }}
-            {% if register_form.username.errors %}
-            <p class="error">{{ register_form.username.errors|striptags }}</p>
+            <label for="{{ register_form.full_name.id_for_label }}">{{ register_form.full_name.label }}</label>
+            {{ register_form.full_name }}
+            {% if register_form.full_name.errors %}
+            <p class="error">{{ register_form.full_name.errors|striptags }}</p>
             {% endif %}
 
             <label for="{{ register_form.email.id_for_label }}">{{ register_form.email.label }}</label>

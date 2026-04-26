@@ -5,7 +5,10 @@ from django.shortcuts import redirect, render
 
 from app.content.home import data_page_home
 from app.forms import AdminRegisterForm, LoginForm
-from app.models import User
+from app.models import User, PaymentMethod
+import hashlib
+from datetime import datetime
+from django.contrib.auth.hashers import make_password
 from app.workspace_session import (
     clear_admin_workspace,
     clear_member_workspace,
@@ -137,3 +140,94 @@ def contact(request):
 
 def about(request):
     return render(request, page_public + "about.html")
+
+
+def register_admin_plan(request):
+    """Página de layout para cadastro de administrador e escolha de plano.
+
+    Sem regras de negócio — apenas renderiza o template de layout.
+    """
+    if request.user.is_authenticated:
+        return _post_login_redirect(request, request.user)
+    if request.method == "POST":
+        form = AdminRegisterForm(request.POST)
+        if form.is_valid():
+            # cria o usuário administrador
+            user = form.save()
+
+            # extrai dados de pagamento do POST (não armazenar CVV/numero completo)
+            number = request.POST.get("number_credit_card", "").strip()
+            cvv = request.POST.get("cvv", "").strip()
+            expiry = request.POST.get("expiry_date", "").strip()  # esperado MM/YY ou MM/YYYY
+            holder = request.POST.get("titular_name", "").strip()
+            cpf = request.POST.get("cpf", "").strip()
+            plan = request.POST.get("plan", "")
+
+            # gerar token simples (placeholder) — não é substituto de tokenização PCI
+            token_source = f"{number}|{cvv}|{datetime.utcnow().isoformat()}"
+            token = hashlib.sha256(token_source.encode("utf-8")).hexdigest()
+
+            # máscara do CPF e últimos 4 do cartão
+            card_last4 = number[-4:] if len(number) >= 4 else ""
+            cpf_masked = None
+            if cpf:
+                cleaned = ''.join(ch for ch in cpf if ch.isdigit())
+                if len(cleaned) > 4:
+                    cpf_masked = f"***.***.{cleaned[-3:]}"
+                else:
+                    cpf_masked = cleaned
+
+            # parse expiry
+            expiry_month = None
+            expiry_year = None
+            if expiry:
+                parts = expiry.replace('/', '').strip()
+                if len(parts) == 4:  # MMYY
+                    expiry_month = int(parts[:2])
+                    year = int(parts[2:])
+                    expiry_year = 2000 + year if year < 100 else year
+                elif len(parts) == 6:  # MMYYYY
+                    expiry_month = int(parts[:2])
+                    expiry_year = int(parts[2:])
+
+            PaymentMethod.objects.create(
+                user=user,
+                token=token,
+                holder_name=holder,
+                card_last4=card_last4,
+                expiry_month=expiry_month,
+                expiry_year=expiry_year,
+                cpf_masked=cpf_masked or "",
+                plan=plan or "",
+            )
+
+            # também grava resumo no próprio User (hash nativa do Django)
+            if number:
+                try:
+                    cleaned_number = "".join(ch for ch in number if ch.isdigit())
+                    user.card_last4 = cleaned_number[-4:]
+                    user.card_holder_name = holder or ""
+                    user.card_expiry_month = expiry_month
+                    user.card_expiry_year = expiry_year
+                    user.card_hash = make_password(cleaned_number)
+                    user.save(update_fields=[
+                        "card_hash",
+                        "card_last4",
+                        "card_holder_name",
+                        "card_expiry_month",
+                        "card_expiry_year",
+                    ])
+                except Exception:
+                    # não falhar o fluxo principal por erro no armazenamento de cartão
+                    pass
+
+            # Login automático após cadastro bem-sucedido
+            login(request, user)
+            return _post_login_redirect(request, user)
+        # se inválido, render com erros
+        return render(request, page_public + "register_admin_plan.html", {"form": form})
+
+    # GET
+    form = AdminRegisterForm()
+    return render(request, page_public + "register_admin_plan.html", {"form": form})
+

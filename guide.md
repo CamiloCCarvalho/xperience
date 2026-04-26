@@ -15,8 +15,12 @@
   - [9] Criar tela admin para cadastro de "Clintes" > "Projetos"
   - [10] Criar tela admin para cadastro de "Fornecedores"
   - [11] Ajustar CSS de todos Cabeçalhos (Public, User, Admin)
+  - [12] Ajustar CSS de telas public/admin
+  - [13] Criar nova tela de cadastro de admin sendo liberada apenas com o Pagamento
 
 # WIP
   - [12] Ajustar CSS de telas public/admin (Camilo) 2h
+  - [13] Criar nova tela de cadastro de admin sendo liberada apenas com o Pagamento - 4h
+  -
 
 # Finished (with Hours)
