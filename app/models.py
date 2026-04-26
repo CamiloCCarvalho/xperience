@@ -559,8 +559,6 @@ class PaymentMethod(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        verbose_name = "Método de pagamento"
-        verbose_name_plural = "Métodos de pagamento"
 
     def __str__(self):
         last4 = self.card_last4 or "----"

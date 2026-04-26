@@ -8,6 +8,7 @@ urlpatterns = [
     # public routes
     path("", public.home, name="public-home"),
     path("register/", public.register, name="public-register"),
+    path("register-admin-plan/", public.register_admin_plan, name="public-register-admin-plan"),
     path("login/", public.login_view, name="public-login"),
     path("logout/", public.logout_view, name="public-logout"),
     path("plataform/", public.plataform, name="public-plataform"),
