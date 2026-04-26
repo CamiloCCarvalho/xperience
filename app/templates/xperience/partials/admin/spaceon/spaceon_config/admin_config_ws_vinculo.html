@@ -1,0 +1,155 @@
+<article class="admin-tt-panel" id="admin-config-ws-vinculo" role="tabpanel" aria-labelledby="tab-admin-config-ws-vinculo" aria-hidden="true">
+    <div class="admin-tt-body">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-building" aria-hidden="true"></i>
+                        <h2>Vínculo empregatício</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div class="config-form">
+                    <p class="config-empty-hint config-empty-hint--top">Vínculos dos colaboradores com o workspace (status, datas e cargo atual da lista de cargos).</p>
+
+                    {% if employee_profiles %}
+                    <ul class="admin-tt-template-list" role="list">
+                        {% for ep in employee_profiles %}
+                        <li class="admin-tt-template-row" role="listitem">
+                            <div class="admin-tt-template-row__main">
+                                <span class="admin-tt-template-row__name">{{ ep.user.email }}</span>
+                                <div class="admin-tt-template-row__badges">
+                                    <span class="admin-tt-pill">{{ ep.get_employment_status_display }}</span>
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Admissão {{ ep.hire_date|date:"d/m/Y" }}</span>
+                                    {% if ep.termination_date %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Desligamento {{ ep.termination_date|date:"d/m/Y" }}</span>
+                                    {% endif %}
+                                    {% if ep.current_job_role %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">{{ ep.current_job_role.name }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="admin-tt-template-row__actions">
+                                <button
+                                    type="button"
+                                    class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                                    title="Editar vínculo"
+                                    aria-label="Editar vínculo"
+                                    data-admin-config-ep-edit
+                                    data-ep-id="{{ ep.pk }}"
+                                    data-user-id="{{ ep.user_id }}"
+                                    data-employment-status="{{ ep.employment_status }}"
+                                    data-hire-date="{{ ep.hire_date|date:'Y-m-d' }}"
+                                    data-termination-date="{% if ep.termination_date %}{{ ep.termination_date|date:'Y-m-d' }}{% endif %}"
+                                    data-current-job-role-id="{{ ep.current_job_role_id|default_if_none:'' }}"
+                                >
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </button>
+                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_employee_profile">
+                                    <input type="hidden" name="employee_profile_id" value="{{ ep.pk }}">
+                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir vínculo" aria-label="Excluir vínculo">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum vínculo empregatício cadastrado ainda.</p>
+                    {% endif %}
+
+                    <div class="admin-tt-create-actions">
+                        <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-config-ep-create-open" aria-haspopup="dialog" aria-controls="admin-config-ep-create-dialog">
+                            Novo vínculo
+                        </button>
+                    </div>
+
+                    <dialog
+                        id="admin-config-ep-create-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-ep-create-title"
+                        data-auto-open="{% if employee_profile_create_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-ep-create-title">Novo vínculo</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-ep-create-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="create_employee_profile">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in employee_profile_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+
+                    <dialog
+                        id="admin-config-ep-edit-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-ep-edit-title"
+                        data-auto-open="{% if employee_profile_edit_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-ep-edit-title">Editar vínculo</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-ep-edit-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_employee_profile">
+                                    <input type="hidden" name="employee_profile_id" value="{{ employee_profile_edit_target_id }}" id="admin-config-ep-edit-pk" />
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in employee_profile_edit_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar alterações</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+
+                    {% if birthdays_preview %}
+                    <h3 class="config-subheading">Próximos aniversários (prévia)</h3>
+                    <ul class="config-list-inline">
+                        {% for item in birthdays_preview %}
+                        <li>
+                            {{ item.user.email }} — {{ item.next_birthday|date:"d/m" }} (em {{ item.days_until }} dias)
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </article>
+        </div>
+    </div>
+</article>

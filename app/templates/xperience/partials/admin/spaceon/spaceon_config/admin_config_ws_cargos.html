@@ -1,0 +1,266 @@
+<article class="admin-tt-panel" id="admin-config-ws-cargos" role="tabpanel" aria-labelledby="tab-admin-config-ws-cargos" aria-hidden="true">
+    <div class="admin-tt-body">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-briefcase" aria-hidden="true"></i>
+                        <h2>Cargos</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div class="config-form">
+                    <p class="config-empty-hint config-empty-hint--top">Cadastre cargos do workspace e use-os no histórico por colaborador. Apenas um cargo vigente (sem data fim) por vínculo.</p>
+
+                    {% if job_roles %}
+                    <ul class="admin-tt-template-list" role="list">
+                        {% for role in job_roles %}
+                        <li class="admin-tt-template-row" role="listitem">
+                            <div class="admin-tt-template-row__main">
+                                <span class="admin-tt-template-row__name">{{ role.name }}</span>
+                                {% if role.description %}
+                                <p class="admin-tt-entity-meta">{{ role.description }}</p>
+                                {% endif %}
+                                <div class="admin-tt-template-row__badges">
+                                    {% if role.is_active %}
+                                    <span class="admin-tt-pill">Ativo</span>
+                                    {% else %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Inativo</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="admin-tt-template-row__actions">
+                                <button
+                                    type="button"
+                                    class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                                    title="Editar cargo da lista"
+                                    aria-label="Editar cargo da lista"
+                                    data-admin-config-jr-edit
+                                    data-jr-id="{{ role.pk }}"
+                                    data-name="{{ role.name|escape }}"
+                                    data-description-raw="{{ role.description|default:''|escape }}"
+                                    data-is-active="{% if role.is_active %}1{% else %}0{% endif %}"
+                                >
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </button>
+                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_job_role">
+                                    <input type="hidden" name="job_role_id" value="{{ role.pk }}">
+                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir cargo da lista" aria-label="Excluir cargo da lista">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum cargo cadastrado ainda.</p>
+                    {% endif %}
+
+                    <div class="admin-tt-create-actions">
+                        <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-config-jr-create-open" aria-haspopup="dialog" aria-controls="admin-config-jr-create-dialog">
+                            Novo cargo da lista
+                        </button>
+                    </div>
+
+                    <dialog
+                        id="admin-config-jr-create-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-jr-create-title"
+                        data-auto-open="{% if job_role_create_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-jr-create-title">Novo cargo da lista</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-jr-create-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="create_job_role">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in job_role_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar cargo</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+
+                    <dialog
+                        id="admin-config-jr-edit-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-jr-edit-title"
+                        data-auto-open="{% if job_role_edit_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-jr-edit-title">Editar cargo da lista</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-jr-edit-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_job_role">
+                                    <input type="hidden" name="job_role_id" value="{{ job_role_edit_target_id }}" id="admin-config-jr-edit-pk" />
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in job_role_edit_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar alterações</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+
+                    <h3 class="config-subheading">Histórico de cargos por colaborador</h3>
+                    <p class="config-empty-hint config-empty-hint--top">Apenas um cargo vigente (sem data fim) por vínculo.</p>
+                    {% if job_history_entries %}
+                    <ul class="admin-tt-template-list" role="list">
+                        {% for jh in job_history_entries %}
+                        <li class="admin-tt-template-row" role="listitem">
+                            <div class="admin-tt-template-row__main">
+                                <span class="admin-tt-template-row__name">{{ jh.job_role.name }}</span>
+                                <p class="admin-tt-entity-meta">{{ jh.employee_profile.user.email }}</p>
+                                <div class="admin-tt-template-row__badges">
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Início {{ jh.start_date|date:"d/m/Y" }}</span>
+                                    {% if jh.end_date %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Fim {{ jh.end_date|date:"d/m/Y" }}</span>
+                                    {% else %}
+                                    <span class="admin-tt-pill">Vigente</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="admin-tt-template-row__actions">
+                                <button
+                                    type="button"
+                                    class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                                    title="Editar cargo"
+                                    aria-label="Editar cargo"
+                                    data-admin-config-jh-edit
+                                    data-jh-id="{{ jh.pk }}"
+                                    data-employee-profile-id="{{ jh.employee_profile_id }}"
+                                    data-job-role-id="{{ jh.job_role_id }}"
+                                    data-start-date="{{ jh.start_date|date:'Y-m-d' }}"
+                                    data-end-date="{% if jh.end_date %}{{ jh.end_date|date:'Y-m-d' }}{% endif %}"
+                                >
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </button>
+                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_job_history">
+                                    <input type="hidden" name="job_history_id" value="{{ jh.pk }}">
+                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir cargo" aria-label="Excluir cargo">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum registro de cargo ainda.</p>
+                    {% endif %}
+
+                    <div class="admin-tt-create-actions">
+                        <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-config-jh-create-open" aria-haspopup="dialog" aria-controls="admin-config-jh-create-dialog">
+                            Novo cargo
+                        </button>
+                    </div>
+
+                    <dialog
+                        id="admin-config-jh-create-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-jh-create-title"
+                        data-auto-open="{% if job_history_create_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-jh-create-title">Novo cargo</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-jh-create-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="create_job_history">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in job_history_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+
+                    <dialog
+                        id="admin-config-jh-edit-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-jh-edit-title"
+                        data-auto-open="{% if job_history_edit_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-jh-edit-title">Editar cargo</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-jh-edit-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_job_history">
+                                    <input type="hidden" name="job_history_id" value="{{ job_history_edit_target_id }}" id="admin-config-jh-edit-pk" />
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in job_history_edit_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar alterações</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+                </div>
+            </article>
+        </div>
+    </div>
+</article>

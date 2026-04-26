@@ -10,109 +10,88 @@
                     </div>
                 </header>
 
-                <form class="acc-form" action="#" method="post">
-                    <section class="acc-profile">
-                        <div class="acc-photo-box" aria-label="Foto do funcionário">
-                            <div class="acc-photo-circle">
-                                <i class="fas fa-user" aria-hidden="true"></i>
-                            </div>
-                            <button type="button" class="acc-photo-btn">Alterar foto</button>
+                <div class="acc-profile" aria-label="Foto e identificação">
+                    <div class="acc-photo-box">
+                        <div class="acc-photo-circle{% if request.user.avatar and request.user.avatar.name %} acc-photo-circle--image{% endif %}">
+                            {% if request.user.avatar and request.user.avatar.name %}
+                            <img
+                                class="acc-photo-img"
+                                src="{{ request.user.avatar.url }}"
+                                alt="Foto de perfil"
+                                width="84"
+                                height="84"
+                            >
+                            {% else %}
+                            <i class="fas fa-user acc-photo-placeholder-icon" aria-hidden="true"></i>
+                            <span class="sr-only">Sem foto de perfil</span>
+                            {% endif %}
                         </div>
-
-                        <div class="acc-identity">
-                            <div class="acc-field">
-                                <label for="acc-fullname">Nome completo</label>
-                                <input id="acc-fullname" type="text" value="Nome do usuário">
-                            </div>
-                            <div class="acc-field">
-                                <label for="acc-role">Cargo</label>
-                                <input id="acc-role" type="text" value="Desenvolvedor Python RPA">
-                            </div>
-                            <div class="acc-field">
-                                <label for="acc-team">Equipe / Área</label>
-                                <input id="acc-team" type="text" value="Automação e Time Tracking">
-                            </div>
+                        <form
+                            class="acc-photo-form"
+                            method="post"
+                            action="{% url 'admin-account' %}"
+                            enctype="multipart/form-data"
+                        >
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_avatar">
+                            <input
+                                type="file"
+                                id="acc-admin-avatar-input"
+                                name="avatar"
+                                class="sr-only"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                onchange="if (this.files.length) { this.form.submit(); }"
+                            >
+                            <label for="acc-admin-avatar-input" class="acc-photo-btn">Editar</label>
+                        </form>
+                        {% if request.user.avatar and request.user.avatar.name %}
+                        <form class="acc-photo-form" method="post" action="{% url 'admin-account' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove_avatar">
+                            <button type="submit" class="acc-photo-btn acc-photo-btn--danger">Remover</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div class="acc-identity acc-identity--profile">
+                        <div class="acc-field">
+                            <label for="acc-admin-readonly-name">Nome</label>
+                            <input
+                                id="acc-admin-readonly-name"
+                                type="text"
+                                value="{{ request.user.get_full_name|default:request.user.email }}"
+                                readonly
+                            >
                         </div>
-                    </section>
+                        <div class="acc-field">
+                            <label for="acc-admin-readonly-email">E-mail</label>
+                            <input id="acc-admin-readonly-email" type="text" value="{{ request.user.email }}" readonly>
+                        </div>
+                    </div>
+                </div>
 
+                <div class="acc-form">
                     <section class="acc-grid">
                         <div class="acc-field">
-                            <label for="acc-phone">Telefone</label>
-                            <input id="acc-phone" type="text" value="+55 (11) 99999-9999">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-email">E-mail de acesso</label>
-                            <input id="acc-email" type="email" value="camilo@empresa.com">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-address">Endereço</label>
-                            <input id="acc-address" type="text" value="Rua Exemplo, 123 - São Paulo/SP">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-project-main">Plano Contratado</label>
-                            <input id="acc-project-main" type="text" value="Premium">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-projects">Data primeira contratação</label>
-                            <input id="acc-projects" type="text" value="15/05/2023">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-permission">Nível de acesso</label>
-                            <input id="acc-permission" type="text" value="Administrador">
-                        </div>
-
-                        <div class="acc-field">
-                            <label for="acc-project-main">Expiração do Plano</label>
-                            <input id="acc-project-main" type="text" value="15/05/2023">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-projects">Dias restantes</label>
-                            <input id="acc-projects" type="text" value="333">
-                        </div>
-                        <div class="acc-field">
-                            <label for="acc-permission">Data da ultima renovação</label>
-                            <input id="acc-permission" type="text" value="15/05/2023">
+                            <label for="acc-admin-role">Papel na plataforma</label>
+                            <input
+                                id="acc-admin-role"
+                                type="text"
+                                value="{{ request.user.get_platform_role_display }}"
+                                readonly
+                            >
                         </div>
                     </section>
 
                     <section class="acc-security">
                         <h3>Segurança e acesso</h3>
+                        <p class="config-empty-hint">Troca de senha e demais opções de segurança serão integradas em versões futuras.</p>
                         <div class="acc-security-actions">
-                            <button type="button" class="acc-btn acc-btn-outline">Ver/Trocar senha</button>
-                            <button type="button" class="acc-btn acc-btn-outline">Solicitar troca de e-mail</button>
-                            <button type="button" class="acc-btn acc-btn-outline">Renovar assinatura</button>
+                            <button type="button" class="acc-btn acc-btn-outline" disabled>Ver/Trocar senha</button>
+                            <button type="button" class="acc-btn acc-btn-outline" disabled>Solicitar troca de e-mail</button>
+                            <button type="button" class="acc-btn acc-btn-outline" disabled>Renovar assinatura</button>
                         </div>
                     </section>
-
-                    <section class="acc-summary" style="display: none;">
-                        <h3>Resumo de atuação</h3>
-                        <div class="acc-summary-grid">
-                            <div class="acc-summary-item">
-                                <span>Horas no mês</span>
-                                <strong>160h</strong>
-                            </div>
-                            <div class="acc-summary-item">
-                                <span>Horas esta semana</span>
-                                <strong>38h</strong>
-                            </div>
-                            <div class="acc-summary-item">
-                                <span>Projetos em andamento</span>
-                                <strong>4</strong>
-                            </div>
-                            <div class="acc-summary-item">
-                                <span>Valor/hora</span>
-                                <strong>R$ 25,57</strong>
-                            </div>
-                        </div>
-                    </section>
-
-                    <div class="acc-actions">
-                        <button type="submit" class="acc-btn acc-btn-primary">
-                            <i class="fas fa-save" aria-hidden="true"></i>
-                            Salvar alterações
-                        </button>
-                    </div>
-                </form>
+                </div>
             </article>
         </div>
     </section>

@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('app', '0005_client_project_access'),
+        ('app', '0023_remove_boardcard_app_boardca_workspa_16890a_idx_and_more'),
     ]
 
     operations = [

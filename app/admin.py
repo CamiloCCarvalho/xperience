@@ -1,8 +1,16 @@
 from django.contrib import admin
 
 from .models import (
+    BoardCard,
+    BudgetGoal,
     Client,
+    CompensationHistory,
     Department,
+    EmployeeProfile,
+    FinancialEntry,
+    JobHistory,
+    JobRole,
+    PrivateBoardColumn,
     Project,
     Task,
     TimeEntry,
@@ -19,7 +27,7 @@ from .models import (
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
-    list_display = ("email", "first_name", "platform_role", "is_staff", "is_active")
+    list_display = ("email", "first_name", "platform_role", "platform_join_date", "is_staff", "is_active")
     list_filter = ("platform_role", "is_staff", "is_active")
     search_fields = ("email", "first_name", "last_name")
     readonly_fields = ("created_at", "updated_at", "last_login", "date_joined")
@@ -27,7 +35,19 @@ class UserAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {"fields": ("email",)}),
         ("Plataforma", {"fields": ("platform_role",)}),
-        ("Perfil", {"fields": ("first_name", "last_name", "avatar")}),
+        (
+            "Perfil",
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "avatar",
+                    "birth_date",
+                    "birthday_public_in_workspace",
+                    "platform_join_date",
+                )
+            },
+        ),
         (
             "Permissões Django",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
@@ -79,6 +99,97 @@ class UserDepartmentAdmin(admin.ModelAdmin):
     list_filter = ("workspace",)
 
 
+@admin.register(EmployeeProfile)
+class EmployeeProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "workspace",
+        "employment_status",
+        "hire_date",
+        "termination_date",
+        "current_job_role",
+    )
+    list_filter = ("workspace", "employment_status")
+    search_fields = ("user__email", "workspace__workspace_name", "current_job_role__name")
+    autocomplete_fields = ("user", "workspace", "current_job_role")
+
+
+@admin.register(JobHistory)
+class JobHistoryAdmin(admin.ModelAdmin):
+    list_display = ("employee_profile", "job_role", "start_date", "end_date")
+    list_filter = ("employee_profile__workspace",)
+    search_fields = ("employee_profile__user__email", "job_role__name")
+    autocomplete_fields = ("employee_profile", "job_role")
+
+
+@admin.register(JobRole)
+class JobRoleAdmin(admin.ModelAdmin):
+    list_display = ("name", "workspace", "is_active", "created_at")
+    list_filter = ("workspace", "is_active")
+    search_fields = ("name", "description", "workspace__workspace_name")
+    autocomplete_fields = ("workspace", "created_by", "updated_by")
+
+
+@admin.register(CompensationHistory)
+class CompensationHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        "employee_profile",
+        "compensation_type",
+        "monthly_salary",
+        "monthly_salary_is_fixed",
+        "monthly_reference_hours",
+        "hourly_rate",
+        "start_date",
+        "end_date",
+    )
+    list_filter = ("employee_profile__workspace", "compensation_type")
+    search_fields = ("employee_profile__user__email",)
+    autocomplete_fields = ("employee_profile",)
+
+
+@admin.register(FinancialEntry)
+class FinancialEntryAdmin(admin.ModelAdmin):
+    list_display = (
+        "workspace",
+        "entry_kind",
+        "flow_type",
+        "occurred_on",
+        "amount",
+        "client",
+        "project",
+        "user",
+    )
+    list_filter = ("workspace", "entry_kind", "flow_type")
+    search_fields = ("description", "user__email", "client__name", "project__name")
+    autocomplete_fields = (
+        "workspace",
+        "client",
+        "project",
+        "user",
+        "time_entry",
+        "reversal_of",
+        "created_by",
+        "updated_by",
+    )
+
+
+@admin.register(BudgetGoal)
+class BudgetGoalAdmin(admin.ModelAdmin):
+    list_display = (
+        "workspace",
+        "visibility",
+        "client",
+        "project",
+        "minimum_target_amount",
+        "minimum_target_date",
+        "desired_target_amount",
+        "desired_target_date",
+    )
+    list_filter = ("workspace", "visibility")
+    search_fields = ("description", "client__name", "project__name")
+    autocomplete_fields = ("workspace", "client", "project", "created_by", "updated_by")
+
+
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ("name", "workspace", "is_active", "created_at", "created_by")
@@ -103,6 +214,41 @@ class TaskAdmin(admin.ModelAdmin):
     autocomplete_fields = ("project",)
 
 
+@admin.register(PrivateBoardColumn)
+class PrivateBoardColumnAdmin(admin.ModelAdmin):
+    list_display = ("name", "workspace", "user", "position", "updated_at")
+    list_filter = ("workspace",)
+    search_fields = ("name", "user__email")
+    autocomplete_fields = ("workspace", "user")
+
+
+@admin.register(BoardCard)
+class BoardCardAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "workspace",
+        "visibility",
+        "private_column",
+        "position",
+        "created_by",
+        "updated_at",
+    )
+    list_filter = ("workspace", "visibility")
+    search_fields = ("title", "description", "created_by__email")
+    autocomplete_fields = (
+        "workspace",
+        "created_by",
+        "updated_by",
+        "private_column",
+        "client",
+        "project",
+        "task",
+        "budget_goal",
+        "assigned_user",
+        "assigned_department",
+    )
+
+
 @admin.register(UserClient)
 class UserClientAdmin(admin.ModelAdmin):
     list_display = ("user", "client", "workspace")
@@ -121,10 +267,21 @@ class UserProjectAdmin(admin.ModelAdmin):
 
 @admin.register(TimeEntry)
 class TimeEntryAdmin(admin.ModelAdmin):
-    list_display = ("user", "workspace", "department", "date", "hours", "client", "project", "task")
+    list_display = ("user", "workspace", "department", "date", "hours", "is_overtime", "client", "project", "task")
     list_filter = ("workspace", "department")
     date_hierarchy = "date"
+    search_fields = ("user__email", "project__name", "client__name", "description")
     autocomplete_fields = ("user", "workspace", "department", "client", "project", "task")
 
     def save_model(self, request, obj, form, change):
-        obj.save(skip_access_check=request.user.is_superuser)
+        obj.save(
+            skip_access_check=request.user.is_superuser,
+            financial_actor=request.user,
+        )
+
+    def delete_model(self, request, obj):
+        obj.delete(financial_actor=request.user)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            obj.delete(financial_actor=request.user)

@@ -25,6 +25,16 @@ def _post_login_redirect(request, user: User):
 
 
 def home(request):
+    # Admin autenticado nunca permanece na home pública: vai direto pro painel.
+    # (defesa em profundidade: a logo do admin já aponta pra admin-workspaces,
+    # mas qualquer link/bookmark que caia em "/" também redireciona.)
+    if (
+        request.user.is_authenticated
+        and isinstance(request.user, User)
+        and request.user.platform_role == User.PlatformRole.ADMIN
+    ):
+        return redirect("admin-workspaces")
+
     login_form = LoginForm(prefix="login")
     register_form = AdminRegisterForm(prefix="register")
 
@@ -65,8 +75,13 @@ def home(request):
 
 
 def register(request):
-    if request.user.is_authenticated:
-        return _post_login_redirect(request, request.user)
+    """Cadastro simples de administrador (sem plano/pagamento).
+
+    Independente da sessão: nunca redireciona usuários autenticados pra fora.
+    Cada GET abre form limpo; cada POST tenta criar um NOVO admin.
+    Diferente do register_admin_plan, esta view NÃO faz auto-login —
+    o novo admin precisa logar manualmente em /login/.
+    """
     if request.method == "POST":
         form = AdminRegisterForm(request.POST)
         if form.is_valid():
@@ -143,12 +158,13 @@ def about(request):
 
 
 def register_admin_plan(request):
-    """Página de layout para cadastro de administrador e escolha de plano.
+    """Cadastro de administrador (com plano e pagamento).
 
-    Sem regras de negócio — apenas renderiza o template de layout.
+    A view é INDEPENDENTE da sessão: nunca redireciona um usuário já
+    autenticado pra fora. Cada request abre formulário limpo no GET
+    (sem reaproveitar dados do usuário logado), e cada POST tenta
+    criar um NOVO admin — independente de quem está logado.
     """
-    if request.user.is_authenticated:
-        return _post_login_redirect(request, request.user)
     if request.method == "POST":
         form = AdminRegisterForm(request.POST)
         if form.is_valid():
@@ -221,7 +237,15 @@ def register_admin_plan(request):
                     # não falhar o fluxo principal por erro no armazenamento de cartão
                     pass
 
-            # Login automático após cadastro bem-sucedido
+            # Limpa qualquer sessão pré-existente antes de autenticar como o novo
+            # admin. Isso garante que cadastros sucessivos NÃO confundam contexto:
+            # se um admin A estava logado e cadastrou admin B, a sessão vira B,
+            # nunca um híbrido. Sem este logout, futuras visitas à página de
+            # cadastro herdariam estado da sessão anterior.
+            if request.user.is_authenticated:
+                clear_admin_workspace(request)
+                clear_member_workspace(request)
+                logout(request)
             login(request, user)
             return _post_login_redirect(request, user)
         # se inválido, render com erros

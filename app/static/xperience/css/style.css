@@ -1,4 +1,62 @@
 /* medidas padrão para preencher a tela - header, main, footer*/
+.home-page {
+    overflow-x: clip;
+}
+
+/* Landing pública: evita faixa no topo e overflow lateral */
+body.public-landing-page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body.public-landing-page .container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+html:has(body.public-landing-page[data-theme="dark"]) {
+    background-color: #111827;
+}
+
+html:has(body.public-landing-page:not([data-theme="dark"])) {
+    background-color: #ebebeb;
+}
+
+/* Admin/User específicas: remove faixa superior e scroll lateral */
+body.admin-workspaces-page,
+body.admin-spaceon-dashboard-page,
+body.admin-spaceon-home-page,
+body.user-spaceon-home-page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body.admin-workspaces-page .container,
+body.admin-spaceon-dashboard-page .container,
+body.admin-spaceon-home-page .container,
+body.user-spaceon-home-page .container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+html:has(body.admin-workspaces-page[data-theme="dark"]),
+html:has(body.admin-spaceon-dashboard-page[data-theme="dark"]),
+html:has(body.admin-spaceon-home-page[data-theme="dark"]),
+html:has(body.user-spaceon-home-page[data-theme="dark"]) {
+    background-color: #242729;
+}
+
+html:has(body.admin-workspaces-page:not([data-theme="dark"])),
+html:has(body.admin-spaceon-dashboard-page:not([data-theme="dark"])),
+html:has(body.admin-spaceon-home-page:not([data-theme="dark"])),
+html:has(body.user-spaceon-home-page:not([data-theme="dark"])) {
+    background-color: #ebebeb;
+}
+
 .header{
     width: 100%;
     height: 60px;
@@ -174,7 +232,6 @@
 }
 
 .home-page .header-container,
-.home-page .main-container,
 .home-page .footer-container {
     width: min(1280px, 92%);
 }
@@ -283,7 +340,27 @@
 }
 
 .home-page .main-container {
+    min-width: 80%;
+    max-width: 100%;
     justify-content: center;
+}
+
+@media (max-width: 1280px) {
+    .home-page .main-container {
+        width: 88%;
+    }
+}
+
+@media (max-width: 900px) {
+    .home-page .main-container {
+        width: 94%;
+    }
+}
+
+@media (max-width: 640px) {
+    .home-page .main-container {
+        width: 96%;
+    }
 }
 
 .home-page .home-brand-center {

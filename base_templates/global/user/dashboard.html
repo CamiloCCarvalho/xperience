@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 {% load static %}
 
@@ -6,10 +6,11 @@
     {% include "xperience/partials/head.html" %}
     <title>{% block title %}{% endblock title %} | Xperience</title>
     <!-- user spaceon dashboard styles -->
-    <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_dashboard.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=22">
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_dashboard.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'xperience/css/mural_board.css' %}?v=5">
     <link rel="stylesheet" href="{% static 'xperience/css/button_logout.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=7">
 </head>
 
 
@@ -25,6 +26,6 @@
     </div>
 
     <!-- scripts -->
-    <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
+    <script src="{% static 'xperience/js/header_user_menu.js' %}?v=1" defer></script>
 </body>
 </html>

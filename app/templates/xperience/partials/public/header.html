@@ -10,6 +10,7 @@
                     <li><a href="{% url 'public-plataform' %}">Plataforma</a></li>
                     <li><a href="{% url 'public-solutions' %}">Soluções</a></li>
                     <li><a href="{% url 'public-resources' %}">Recursos</a></li>
+                    <li><a href="{% url 'public-resources' %}">Planos</a></li>
                 </ul>
             </div>
             <!-- menu right -->
@@ -17,19 +18,9 @@
                 {% if not hide_auth_buttons %}
                 <button type="button" class="header-auth-btn" data-auth-target="login-modal">Login</button>
                 <button type="button" class="header-auth-btn" onclick="window.location.href='{% url 'public-register-admin-plan' %}'">Cadastro</button>
+                {% include "xperience/partials/button_theme.html" %}
                 {% endif %}
-                <!-- button theme -->
-                <!-- {% include "xperience/partials/button_theme.html" %} -->
-                <button
-                type="button"
-                class="theme-toggle-btn"
-                id="theme-toggle-btn"
-                aria-label="Alternar tema"
-                title="Alternar tema">
-                <i class="fas fa-toggle-off icon-theme" id="theme-toggle-icon" aria-hidden="true"></i>
-                </button>
             </div>
         </nav>
     </div>
-    <script src="{% static 'xperience/js/switch_theme.js' %}"></script>
 </header>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static %}
+
+<head>
+    {% include "xperience/partials/head.html" %}
+    <title>{% block title %}{% endblock title %} | Xperience</title>
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon.css' %}?v=22">
+    <link rel="stylesheet" href="{% static 'xperience/css/spaceon_dashboard.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'xperience/css/mural_board.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'xperience/css/user_avatar.css' %}?v=7">
+</head>
+
+<body data-theme="dark" class="home-page spaceon-page spaceon-dashboard-page admin-spaceon-dashboard-page">
+    <div class="container">
+        {% include "xperience/partials/messages.html" %}
+        {% block admin_mural_content %}
+        {% endblock admin_mural_content %}
+    </div>
+
+    <script src="{% static 'xperience/js/header_user_menu.js' %}?v=1" defer></script>
+</body>
+</html>

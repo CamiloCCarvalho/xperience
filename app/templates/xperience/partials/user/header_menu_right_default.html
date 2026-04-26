@@ -1,10 +1,35 @@
+{% load static %}
             <!-- menu right -->
             <div class="header-menu-right">
-                {% include "xperience/partials/user/active_workspace_chip.html" %}
-                <!-- button theme -->
-                {% include "xperience/partials/button_theme.html" %}
-                <!-- button logout -->
-                {% include "xperience/partials/button_logout.html" %}
-                <!-- circulo com avatar do usuario -->
-                {% include "xperience/partials/user/user_avatar.html" %}
+                <details class="header-user-menu" id="header-user-menu">
+                    <summary class="header-user-menu__summary" aria-label="Abrir menu do usuário" aria-haspopup="menu">
+                        {% include "xperience/partials/user/user_avatar.html" %}
+                    </summary>
+                    <div class="header-user-menu__dropdown" role="menu" aria-label="Menu do usuário">
+                        {% include "xperience/partials/header_user_menu_theme_row.html" %}
+                        {% if active_member_workspace %}
+                        <div class="header-user-menu__workspace-slot" role="none">
+                            {% include "xperience/partials/user/active_workspace_chip.html" %}
+                        </div>
+                        <div class="header-user-menu__sep" role="separator" aria-hidden="true"></div>
+                        {% endif %}
+                        <a
+                            href="{% url 'user-account' %}"
+                            class="header-user-menu__item header-user-menu__account{% if request.resolver_match and request.resolver_match.url_name == 'user-account' %} header-user-menu__item--current{% endif %}"
+                            role="menuitem"
+                        >
+                            <i class="fas fa-id-badge" aria-hidden="true"></i>
+                            <span>Conta</span>
+                        </a>
+                        <div class="header-user-menu__sep" role="separator" aria-hidden="true"></div>
+                        <a
+                            href="{% url 'public-logout' %}"
+                            class="header-user-menu__item header-user-menu__logout"
+                            role="menuitem"
+                        >
+                            <i class="fas fa-power-off" aria-hidden="true"></i>
+                            <span>Sair</span>
+                        </a>
+                    </div>
+                </details>
             </div>

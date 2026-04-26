@@ -1,5 +1,5 @@
 .spaceon-account-page .acc-card {
-    width: 96%;
+    width: 100%;
     overflow: hidden;
 }
 
@@ -28,11 +28,47 @@
     padding: 12px;
 }
 
+.spaceon-account-page .acc-field--full {
+    grid-column: 1 / -1;
+}
+
+.spaceon-account-page .acc-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.spaceon-account-page .acc-checkbox-row .acc-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.spaceon-account-page .acc-checkbox-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-title);
+    cursor: pointer;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.spaceon-account-page .acc-field-help {
+    margin: 6px 0 0 28px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
 .spaceon-account-page .acc-profile {
     display: grid;
     grid-template-columns: 160px 1fr;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 14px;
+    margin: 0;
+    padding: 14px 16px 10px;
+    box-sizing: border-box;
 }
 
 .spaceon-account-page .acc-photo-box {
@@ -58,6 +94,32 @@
     justify-content: center;
     color: var(--color-text-muted);
     font-size: 28px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.spaceon-account-page .acc-photo-circle--image {
+    border-color: color-mix(in srgb, var(--green-light) 55%, var(--color-border));
+    padding: 0;
+}
+
+.spaceon-account-page .acc-photo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.spaceon-account-page .acc-photo-placeholder-icon {
+    opacity: 0.85;
+}
+
+.spaceon-account-page .acc-photo-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
 }
 
 .spaceon-account-page .acc-photo-btn {
@@ -70,6 +132,32 @@
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.spaceon-account-page label.acc-photo-btn:hover {
+    background: color-mix(in srgb, var(--green-light) 12%, var(--color-bg-secondary));
+    border-color: color-mix(in srgb, var(--green-light) 40%, var(--color-border));
+}
+
+.spaceon-account-page .acc-photo-btn--danger {
+    border-color: color-mix(in srgb, #ef4444 35%, var(--color-border));
+    color: #c0392b;
+}
+
+.spaceon-account-page .acc-photo-btn--danger:hover {
+    background: color-mix(in srgb, #ef4444 12%, var(--color-bg-secondary));
+    border-color: color-mix(in srgb, #ef4444 48%, var(--color-border));
+}
+
+.spaceon-account-page .acc-identity--profile {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
 }
 
 .spaceon-account-page .acc-identity,
@@ -158,6 +246,72 @@
     color: var(--color-title);
 }
 
+/* Histórico de remuneração — tabela com colunas bem delimitadas (página de conta) */
+.spaceon-account-page .acc-comp-table-wrap {
+    margin-top: 6px;
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-primary);
+}
+
+.spaceon-account-page .acc-comp-table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.spaceon-account-page .acc-comp-table th,
+.spaceon-account-page .acc-comp-table td {
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border);
+}
+
+.spaceon-account-page .acc-comp-table th:last-child,
+.spaceon-account-page .acc-comp-table td:last-child {
+    border-right: 0;
+}
+
+.spaceon-account-page .acc-comp-table thead th {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(90deg, var(--green-dark), var(--green-light) 100%);
+    border-bottom: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.spaceon-account-page .acc-comp-table thead th:first-child {
+    border-top-left-radius: 7px;
+}
+
+.spaceon-account-page .acc-comp-table thead th:last-child {
+    border-top-right-radius: 7px;
+    border-right: 0;
+}
+
+.spaceon-account-page .acc-comp-table .acc-comp-th-num,
+.spaceon-account-page .acc-comp-table .acc-comp-td-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.spaceon-account-page .acc-comp-table tbody tr:nth-child(even) td {
+    background: color-mix(in srgb, var(--color-bg-primary) 72%, var(--color-bg-secondary));
+}
+
+.spaceon-account-page .acc-comp-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
 .spaceon-account-page .acc-actions {
     margin-top: 10px;
     display: flex;
@@ -201,6 +355,20 @@
     background: #232a33;
 }
 
+[data-theme="dark"] .spaceon-account-page .acc-comp-table-wrap {
+    background: #232a33;
+    border-color: color-mix(in srgb, var(--color-border) 88%, #fff 12%);
+}
+
+[data-theme="dark"] .spaceon-account-page .acc-comp-table th,
+[data-theme="dark"] .spaceon-account-page .acc-comp-table td {
+    border-color: color-mix(in srgb, var(--color-border) 82%, #171c22);
+}
+
+[data-theme="dark"] .spaceon-account-page .acc-comp-table tbody tr:nth-child(even) td {
+    background: #1a2128;
+}
+
 @media (max-width: 1100px) {
     .spaceon-account-page .acc-identity,
     .spaceon-account-page .acc-grid {
@@ -216,6 +384,7 @@
 @media (max-width: 760px) {
     .spaceon-account-page .acc-profile {
         grid-template-columns: 1fr;
+        padding: 12px 12px 8px;
     }
 
     .spaceon-account-page .acc-identity,
@@ -235,7 +404,7 @@
     }
 }
 .spaceon-dashboard-page .dash-dashboard-card {
-    width: 96%;
+    width: 100%;
     overflow: hidden;
 }
 

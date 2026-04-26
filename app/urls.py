@@ -1,7 +1,38 @@
-"app/urls.py"
-
 from django.urls import path
-from app.views import public, user, admin
+from app.views import admin, public, time_entry, user
+from app.views.mural_admin import (
+    mural_admin_card_copy_to_private,
+    mural_admin_card_create,
+    mural_admin_card_delete,
+    mural_admin_card_move_private,
+    mural_admin_card_move_to_public,
+    mural_admin_card_reposition,
+    mural_admin_card_update,
+    mural_admin_column_create,
+    mural_admin_column_delete,
+    mural_admin_column_update,
+    mural_admin_columns_reorder,
+    mural_admin_data,
+    mural_admin_members_lane_clear,
+    mural_admin_members_lane_lock,
+    mural_admin_status_create,
+    mural_admin_status_reorder,
+    mural_admin_status_update,
+)
+from app.views.mural_member import (
+    mural_member_card_create,
+    mural_member_card_copy_to_private,
+    mural_member_card_delete,
+    mural_member_card_move_private,
+    mural_member_card_move_to_public,
+    mural_member_card_reposition,
+    mural_member_card_update,
+    mural_member_column_create,
+    mural_member_column_delete,
+    mural_member_column_update,
+    mural_member_columns_reorder,
+    mural_member_data,
+)
 
 urlpatterns = [
 
@@ -22,8 +53,119 @@ urlpatterns = [
     path("user/workspaces/", user.user_workspaces, name="user-workspaces"),
     path("user/spaceon/home/", user.user_home, name="user-home"),
     path("user/spaceon/dashboard/", user.user_dashboard, name="user-dashboard"),
+    path("user/spaceon/mural/", mural_member_data, name="user-mural-data"),
+    path(
+        "user/spaceon/mural/columns/",
+        mural_member_column_create,
+        name="user-mural-column-create",
+    ),
+    path(
+        "user/spaceon/mural/columns/reorder/",
+        mural_member_columns_reorder,
+        name="user-mural-columns-reorder",
+    ),
+    path(
+        "user/spaceon/mural/columns/<int:column_id>/",
+        mural_member_column_update,
+        name="user-mural-column-update",
+    ),
+    path(
+        "user/spaceon/mural/columns/<int:column_id>/delete/",
+        mural_member_column_delete,
+        name="user-mural-column-delete",
+    ),
+    path(
+        "user/spaceon/mural/cards/",
+        mural_member_card_create,
+        name="user-mural-card-create",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/",
+        mural_member_card_update,
+        name="user-mural-card-update",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/delete/",
+        mural_member_card_delete,
+        name="user-mural-card-delete",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/move-private/",
+        mural_member_card_move_private,
+        name="user-mural-card-move-private",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/move-to-public/",
+        mural_member_card_move_to_public,
+        name="user-mural-card-move-to-public",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/copy-to-private/",
+        mural_member_card_copy_to_private,
+        name="user-mural-card-copy-to-private",
+    ),
+    path(
+        "user/spaceon/mural/cards/<int:card_id>/reposition/",
+        mural_member_card_reposition,
+        name="user-mural-card-reposition",
+    ),
     path("user/spaceon/config/", user.user_config, name="user-config"),
     path("user/spaceon/account/", user.user_account, name="user-account"),
+    path(
+        "user/spaceon/time-entry/timer/draft/",
+        time_entry.timer_active_draft,
+        name="user-time-entry-timer-draft",
+    ),
+    path(
+        "user/spaceon/time-entry/timer/start/",
+        time_entry.timer_start,
+        name="user-time-entry-timer-start",
+    ),
+    path(
+        "user/spaceon/time-entry/timer/stop/",
+        time_entry.timer_stop,
+        name="user-time-entry-timer-stop",
+    ),
+    path(
+        "user/spaceon/time-entry/timer/complete/",
+        time_entry.timer_saved_complete_fields,
+        name="user-time-entry-timer-complete",
+    ),
+    path(
+        "user/spaceon/time-entry/timer/discard-pending/",
+        time_entry.timer_discard_pending,
+        name="user-time-entry-timer-discard-pending",
+    ),
+    path(
+        "user/spaceon/time-entry/prepared-submit/",
+        time_entry.prepared_entry_submit,
+        name="user-time-entry-prepared-submit",
+    ),
+    path(
+        "user/spaceon/time-entry/counts/",
+        time_entry.time_entry_month_counts,
+        name="user-time-entry-month-counts",
+    ),
+    path(
+        "user/spaceon/time-entry/day/",
+        time_entry.time_entry_day_detail,
+        name="user-time-entry-day-detail",
+    ),
+    path(
+        "user/spaceon/time-entry/manual/create/",
+        time_entry.manual_time_entry_create,
+        name="user-time-entry-manual-create",
+    ),
+    path(
+        "user/spaceon/time-entry/manual/<int:pk>/update/",
+        time_entry.manual_time_entry_update,
+        name="user-time-entry-manual-update",
+    ),
+    path(
+        "user/spaceon/time-entry/manual/<int:pk>/delete/",
+        time_entry.manual_time_entry_delete,
+        name="user-time-entry-manual-delete",
+    ),
 
     # admin routes (administrador da plataforma, não Django admin)
     path("user_admin/workspaces/", admin.admin_workspaces, name="admin-workspaces"),
@@ -31,6 +173,113 @@ urlpatterns = [
     path("user_admin/members/add/", admin.admin_members_add, name="admin-members-add"),
     path("user_admin/spaceon/home/", admin.admin_home, name="admin-home"),
     path("user_admin/spaceon/dashboard/", admin.admin_dashboard, name="admin-dashboard"),
+    path("user_admin/spaceon/mural/", admin.admin_mural, name="admin-mural"),
+    path("user_admin/spaceon/mural/data/", mural_admin_data, name="admin-mural-data"),
+    path(
+        "user_admin/spaceon/mural/members-lane/lock/",
+        mural_admin_members_lane_lock,
+        name="admin-mural-members-lane-lock",
+    ),
+    path(
+        "user_admin/spaceon/mural/members-lane/clear/",
+        mural_admin_members_lane_clear,
+        name="admin-mural-members-lane-clear",
+    ),
+    path(
+        "user_admin/spaceon/mural/columns/",
+        mural_admin_column_create,
+        name="admin-mural-column-create",
+    ),
+    path(
+        "user_admin/spaceon/mural/columns/reorder/",
+        mural_admin_columns_reorder,
+        name="admin-mural-columns-reorder",
+    ),
+    path(
+        "user_admin/spaceon/mural/columns/<int:column_id>/",
+        mural_admin_column_update,
+        name="admin-mural-column-update",
+    ),
+    path(
+        "user_admin/spaceon/mural/columns/<int:column_id>/delete/",
+        mural_admin_column_delete,
+        name="admin-mural-column-delete",
+    ),
+    path(
+        "user_admin/spaceon/mural/cards/",
+        mural_admin_card_create,
+        name="admin-mural-card-create",
+    ),
+    path(
+        "user_admin/spaceon/mural/cards/<int:card_id>/",
+        mural_admin_card_update,
+        name="admin-mural-card-update",
+    ),
+    path(
+        "user_admin/spaceon/mural/cards/<int:card_id>/delete/",
+        mural_admin_card_delete,
+        name="admin-mural-card-delete",
+    ),
+    path(
+        "user_admin/spaceon/mural/cards/<int:card_id>/move-private/",
+        mural_admin_card_move_private,
+        name="admin-mural-card-move-private",
+    ),
+    path(
+        "user_admin/spaceon/mural/cards/<int:card_id>/move-to-public/",
+        mural_admin_card_move_to_public,
+        name="admin-mural-card-move-to-public",
+    ),
+    path(
+        "user_admin/spaceon/mural/cards/<int:card_id>/reposition/",
+        mural_admin_card_reposition,
+        name="admin-mural-card-reposition",
+    ),
+    path(
+        "user_admin/spaceon/mural/cards/<int:card_id>/copy-to-private/",
+        mural_admin_card_copy_to_private,
+        name="admin-mural-card-copy-to-private",
+    ),
+    path(
+        "user_admin/spaceon/mural/statuses/",
+        mural_admin_status_create,
+        name="admin-mural-status-create",
+    ),
+    path(
+        "user_admin/spaceon/mural/statuses/reorder/",
+        mural_admin_status_reorder,
+        name="admin-mural-status-reorder",
+    ),
+    path(
+        "user_admin/spaceon/mural/statuses/<int:status_id>/",
+        mural_admin_status_update,
+        name="admin-mural-status-update",
+    ),
     path("user_admin/spaceon/config/", admin.admin_config, name="admin-config"),
+    path(
+        "user_admin/spaceon/config/members/access/link-client/",
+        admin.admin_config_member_link_client,
+        name="admin-config-member-link-client",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/unlink-client/",
+        admin.admin_config_member_unlink_client,
+        name="admin-config-member-unlink-client",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/link-project/",
+        admin.admin_config_member_link_project,
+        name="admin-config-member-link-project",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/unlink-project/",
+        admin.admin_config_member_unlink_project,
+        name="admin-config-member-unlink-project",
+    ),
+    path(
+        "user_admin/spaceon/config/members/access/remove-membership/",
+        admin.admin_config_member_remove_membership,
+        name="admin-config-member-remove-membership",
+    ),
     path("user_admin/spaceon/account/", admin.admin_account, name="admin-account"),
 ]

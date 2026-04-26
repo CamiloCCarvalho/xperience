@@ -1,0 +1,150 @@
+<article class="admin-tt-panel" id="admin-config-ws-remuneracao" role="tabpanel" aria-labelledby="tab-admin-config-ws-remuneracao" aria-hidden="true">
+    <div class="admin-tt-body">
+        <div class="spaceon-grid">
+            <article class="spaceon-card config-card">
+                <header class="config-card-header">
+                    <div class="config-card-title">
+                        <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
+                        <h2>Remuneração</h2>
+                    </div>
+                    <button type="button" class="config-visibility-btn" aria-label="Ocultar ou mostrar painel" data-config-toggle>
+                        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div class="config-form">
+                    <p class="config-empty-hint config-empty-hint--top">Dados sensíveis: visíveis conforme permissão no workspace.</p>
+                    {% if compensation_history %}
+                    <ul class="admin-tt-template-list" role="list">
+                        {% for ch in compensation_history %}
+                        <li class="admin-tt-template-row" role="listitem">
+                            <div class="admin-tt-template-row__main">
+                                <span class="admin-tt-template-row__name">{{ ch.get_compensation_type_display }}</span>
+                                <p class="admin-tt-entity-meta">{{ ch.employee_profile.user.email }}</p>
+                                <div class="admin-tt-template-row__badges">
+                                    {% if ch.compensation_type == "monthly" %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Mensal {{ ch.monthly_salary|default:"—" }}</span>
+                                    {% else %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Hora {{ ch.hourly_rate|default:"—" }}</span>
+                                    {% endif %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Início {{ ch.start_date|date:"d/m/Y" }}</span>
+                                    {% if ch.end_date %}
+                                    <span class="admin-tt-pill admin-tt-pill--muted">Fim {{ ch.end_date|date:"d/m/Y" }}</span>
+                                    {% else %}
+                                    <span class="admin-tt-pill">Vigente</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="admin-tt-template-row__actions">
+                                <button
+                                    type="button"
+                                    class="admin-tt-icon-btn admin-tt-icon-btn--edit"
+                                    title="Editar remuneração"
+                                    aria-label="Editar remuneração"
+                                    data-admin-config-ch-edit
+                                    data-ch-id="{{ ch.pk }}"
+                                    data-employee-profile-id="{{ ch.employee_profile_id }}"
+                                    data-compensation-type="{{ ch.compensation_type }}"
+                                    data-monthly-salary="{% if ch.monthly_salary != None %}{{ ch.monthly_salary }}{% endif %}"
+                                    data-hourly-rate="{% if ch.hourly_rate != None %}{{ ch.hourly_rate }}{% endif %}"
+                                    data-monthly-salary-is-fixed="{% if ch.monthly_salary_is_fixed == True %}true{% elif ch.monthly_salary_is_fixed == False %}false{% endif %}"
+                                    data-monthly-reference-hours="{% if ch.monthly_reference_hours != None %}{{ ch.monthly_reference_hours }}{% endif %}"
+                                    data-start-date="{{ ch.start_date|date:'Y-m-d' }}"
+                                    data-end-date="{% if ch.end_date %}{{ ch.end_date|date:'Y-m-d' }}{% endif %}"
+                                >
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </button>
+                                <form method="post" action="{% url 'admin-config' %}" class="admin-tt-template-del-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_compensation_history">
+                                    <input type="hidden" name="compensation_history_id" value="{{ ch.pk }}">
+                                    <button type="submit" class="admin-tt-icon-btn admin-tt-icon-btn--danger" title="Excluir remuneração" aria-label="Excluir remuneração">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="config-empty-hint">Nenhum histórico de remuneração cadastrado.</p>
+                    {% endif %}
+
+                    <div class="admin-tt-create-actions">
+                        <button type="button" class="btn-primary admin-tt-create-open-btn" id="admin-config-ch-create-open" aria-haspopup="dialog" aria-controls="admin-config-ch-create-dialog">
+                            Nova remuneração
+                        </button>
+                    </div>
+
+                    <dialog
+                        id="admin-config-ch-create-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-ch-create-title"
+                        data-auto-open="{% if compensation_history_create_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-ch-create-title">Nova remuneração</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-ch-create-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form admin-tt-create-dialog-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="create_compensation_history">
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in compensation_history_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+
+                    <dialog
+                        id="admin-config-ch-edit-dialog"
+                        class="admin-tt-edit-dialog"
+                        aria-labelledby="admin-config-ch-edit-title"
+                        data-auto-open="{% if compensation_history_edit_dialog_open %}1{% else %}0{% endif %}"
+                    >
+                        <div class="admin-tt-edit-dialog__panel">
+                            <div class="admin-tt-edit-dialog__head">
+                                <h3 id="admin-config-ch-edit-title">Editar remuneração</h3>
+                                <button type="button" class="admin-tt-edit-dialog__close" id="admin-config-ch-edit-close" aria-label="Fechar">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="admin-tt-edit-dialog__body">
+                                <form method="post" action="{% url 'admin-config' %}" class="config-form admin-tt-edit-dialog__form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_compensation_history">
+                                    <input type="hidden" name="compensation_history_id" value="{{ compensation_history_edit_target_id }}" id="admin-config-ch-edit-pk" />
+                                    <div class="config-grid config-grid-two">
+                                        {% for field in compensation_history_edit_form %}
+                                        <div class="config-field">
+                                            {{ field.errors }}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="config-actions">
+                                        <button type="submit" class="config-btn-save">Salvar alterações</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+                </div>
+            </article>
+        </div>
+    </div>
+</article>
