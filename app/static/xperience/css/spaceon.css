@@ -1,14 +1,14 @@
 .spaceon-page .main {
     min-height: calc(100vh - 72px);
     justify-content: flex-start;
-    padding: 24px 20px 32px;
+    padding: 24px 0 32px;
     box-sizing: border-box;
     overflow-x: clip;
 }
 
 .spaceon-page .main-container {
-    width: min(1380px, calc(100% - 8px));
-    max-width: 100%;
+    width: 90%;
+    max-width: 1380px;
     justify-content: flex-start;
     gap: 14px;
 }

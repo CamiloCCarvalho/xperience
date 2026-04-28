@@ -81,6 +81,14 @@ class User(AbstractUser):
         help_text="Data de entrada na plataforma (diferente de created_at técnico).",
     )
 
+    # Payment/card fields (stored minimally). Card numbers are NOT stored in plain text.
+    card_hash = models.CharField(max_length=128, blank=True)
+    card_last4 = models.CharField(max_length=4, blank=True)
+    card_brand = models.CharField(max_length=50, blank=True)
+    card_holder_name = models.CharField(max_length=255, blank=True)
+    card_expiry_month = models.PositiveSmallIntegerField(null=True, blank=True)
+    card_expiry_year = models.PositiveSmallIntegerField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1868,3 +1876,35 @@ class BoardCard(models.Model):
 
     def __str__(self) -> str:
         return f"{self.title} ({self.get_visibility_display()})"
+
+
+class PaymentMethod(models.Model):
+    """
+    Método de pagamento associado a um usuário.
+
+    Não armazena CVV nem o número completo do cartão em texto plano.
+    Guarda um token (placeholder, NÃO substitui tokenização PCI),
+    os últimos 4 dígitos e metadados auxiliares (validade, titular,
+    plano contratado e CPF mascarado).
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="payment_methods",
+    )
+    token = models.CharField(max_length=128)
+    holder_name = models.CharField(max_length=255, blank=True)
+    card_last4 = models.CharField(max_length=4, blank=True)
+    expiry_month = models.PositiveSmallIntegerField(null=True, blank=True)
+    expiry_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    cpf_masked = models.CharField(max_length=32, blank=True)
+    plan = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        last4 = self.card_last4 or "----"
+        return f"{self.user.email} ****{last4}"

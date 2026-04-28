@@ -36,10 +36,10 @@ _auth_password_attrs = {**_auth_input_attrs, "autocomplete": "new-password"}
 
 
 class AdminRegisterForm(forms.Form):
-    username = forms.CharField(
-        label="Usuário",
+    full_name = forms.CharField(
+        label="Nome Completo",
         max_length=150,
-        widget=forms.TextInput(attrs={**_auth_input_attrs, "autocomplete": "username"}),
+        widget=forms.TextInput(attrs={**_auth_input_attrs, "autocomplete": "name"}),
     )
     email = forms.EmailField(
         label="Email",
@@ -54,11 +54,41 @@ class AdminRegisterForm(forms.Form):
         widget=forms.PasswordInput(attrs=_auth_password_attrs, render_value=False),
     )
 
+
+    # Payment fields (CVV MUST NOT be stored) - we will hash the card number
+    card_number = forms.CharField(
+        label="Número do cartão",
+        required=False,
+        widget=forms.TextInput(attrs=_auth_input_attrs),
+    )
+    expiry_month = forms.IntegerField(
+        label="Mês (MM)", required=False, min_value=1, max_value=12, widget=forms.NumberInput(attrs=_auth_input_attrs)
+    )
+    expiry_year = forms.IntegerField(
+        label="Ano (YYYY)", required=False, min_value=2023, widget=forms.NumberInput(attrs=_auth_input_attrs)
+    )
+    card_holder_name = forms.CharField(label="Nome do titular", required=False, widget=forms.TextInput(attrs=_auth_input_attrs))
+    
+    plan = forms.ChoiceField(
+        label="Plano",
+        required=False,
+        choices=[("free", "Grátis"), ("standard", "Padrão"), ("premium", "Premium")],
+    )
+    
+    
+
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("Já existe uma conta com este email.")
         return email
+
+    def clean_card_number(self):
+        num = self.cleaned_data.get("card_number") or ""
+        digits = "".join([c for c in num if c.isdigit()])
+        if digits and not (12 <= len(digits) <= 19):
+            raise forms.ValidationError("Número do cartão inválido.")
+        return digits
 
     def clean(self):
         data = super().clean()
@@ -73,12 +103,30 @@ class AdminRegisterForm(forms.Form):
         return data
 
     def save(self) -> User:
-        return User.objects.create_user(
+        from django.contrib.auth.hashers import make_password
+
+        user = User.objects.create_user(
             email=self.cleaned_data["email"],
             password=self.cleaned_data["password"],
-            first_name=self.cleaned_data["username"],
+            first_name=self.cleaned_data["full_name"],
             platform_role=User.PlatformRole.ADMIN,
         )
+
+        # store minimal payment metadata on the user
+        card_number = self.cleaned_data.get("card_number") or ""
+        if card_number:
+            last4 = card_number[-4:]
+            # use Django's password hasher to store a hash of the card number
+            card_hash = make_password(card_number)
+            user.card_hash = card_hash
+            user.card_last4 = last4
+            user.card_holder_name = self.cleaned_data.get("card_holder_name", "") or ""
+            user.card_expiry_month = self.cleaned_data.get("expiry_month")
+            user.card_expiry_year = self.cleaned_data.get("expiry_year")
+            user.card_brand = ""  # brand detection could be added later
+            user.save(update_fields=["card_hash", "card_last4", "card_holder_name", "card_expiry_month", "card_expiry_year", "card_brand"])
+
+        return user
 
 
 class LoginForm(forms.Form):

@@ -1,0 +1,139 @@
+{% extends "global/public/public_page.html" %}
+{% load static %}
+{% block title %}Criar conta{% endblock title %}
+
+{% block public_page_content %}
+<link rel="stylesheet" href="{% static 'xperience/css/register_admin_plan.css' %}">
+
+{% with hide_auth_buttons=True %}
+{% include "xperience/partials/public/header.html" %}
+{% endwith %}
+
+<main class="main">
+    <div class="main-container rap-page-main">
+
+        <form class="auth-form" method="post" action="{% url 'public-register-admin-plan' %}" style="width: 100%;">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <p class="error" style="text-align:center; margin-bottom: 1rem;">{{ form.non_field_errors|striptags }}</p>
+            {% endif %}
+
+            <div class="rap-form-row">
+
+                <!-- Coluna esquerda: dados pessoais + pagamento -->
+                <div class="auth-panel rap-form-col">
+
+                    <h1>Criar conta</h1>
+
+                    <!-- Dados pessoais -->
+                    <p class="rap-section-label">Dados pessoais</p>
+
+                    <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                    {{ form.full_name }}
+                    {% if form.full_name.errors %}<p class="error">{{ form.full_name.errors|striptags }}</p>{% endif %}
+
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}<p class="error">{{ form.email.errors|striptags }}</p>{% endif %}
+
+                    <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}<p class="error">{{ form.password.errors|striptags }}</p>{% endif %}
+
+                    <label for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }}</label>
+                    {{ form.password_confirm }}
+                    {% if form.password_confirm.errors %}<p class="error">{{ form.password_confirm.errors|striptags }}</p>{% endif %}
+
+                    <!-- Dados de pagamento -->
+                    <p class="rap-section-label rap-section-label--spaced">Pagamento</p>
+
+                    <label for="number_credit_card">Número do Cartão</label>
+                    <input type="text" id="number_credit_card" name="number_credit_card" class="auth-input"
+                        placeholder="0000 0000 0000 0000" inputmode="numeric" autocomplete="cc-number">
+
+                    <div class="rap-input-row">
+                        <div>
+                            <label for="expiry_date">Validade</label>
+                            <input type="text" id="expiry_date" name="expiry_date" class="auth-input"
+                                placeholder="MM/AA" inputmode="numeric" autocomplete="cc-exp">
+                        </div>
+                        <div>
+                            <label for="cvv">CVV</label>
+                            <input type="text" id="cvv" name="cvv" class="auth-input"
+                                placeholder="123" inputmode="numeric" maxlength="4" autocomplete="cc-csc">
+                        </div>
+                    </div>
+
+                    <label for="titular_name">Nome no Cartão</label>
+                    <input type="text" id="titular_name" name="titular_name" class="auth-input" autocomplete="cc-name">
+
+                    <label for="cpf">CPF do Titular</label>
+                    <input type="text" id="cpf" name="cpf" class="auth-input"
+                        placeholder="000.000.000-00" inputmode="numeric">
+
+                    <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Criar conta</button>
+                    <p class="auth-disclaimer"><a href="{% url 'public-home' %}">Voltar ao início</a></p>
+
+                </div>
+
+                <!-- Coluna direita: planos -->
+                <div class="auth-panel rap-form-col">
+
+                    <h2>Escolha seu plano</h2>
+                    <p class="auth-disclaimer rap-plan-disclaimer">Selecione o plano que melhor se adapta à sua empresa.</p>
+
+                    <div class="rap-plans">
+
+                        <div class="rap-plan-entry" data-plan="standard">
+                            <label class="rap-plan-header">
+                                <div class="rap-plan-info">
+                                    <span class="rap-plan-name">Padrão</span>
+                                    <span class="rap-plan-price">R$ 49,90/mês</span>
+                                </div>
+                                <span class="rap-plan-chevron">▾</span>
+                                <input type="radio" name="plan" value="standard" class="rap-plan-radio">
+                            </label>
+                            <div class="rap-plan-content" aria-hidden="true">
+                                <ul>
+                                    <li>Até 50 usuários</li>
+                                    <li>Suporte por email</li>
+                                    <li>Relatórios básicos</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="rap-plan-entry" data-plan="premium">
+                            <label class="rap-plan-header">
+                                <div class="rap-plan-info">
+                                    <span class="rap-plan-name">Premium</span>
+                                    <span class="rap-plan-price">R$ 99,90/mês</span>
+                                </div>
+                                <span class="rap-plan-chevron">▾</span>
+                                <input type="radio" name="plan" value="premium" class="rap-plan-radio">
+                            </label>
+                            <div class="rap-plan-content" aria-hidden="true">
+                                <ul>
+                                    <li>Usuários ilimitados</li>
+                                    <li>Suporte prioritário 24/7</li>
+                                    <li>Relatórios avançados</li>
+                                    <li>Integração com APIs</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div><!-- /rap-plans -->
+
+                </div><!-- /coluna direita -->
+
+            </div><!-- /rap-form-row -->
+
+        </form>
+
+    </div>
+</main>
+
+<script src="{% static 'xperience/js/register_admin_plan.js' %}"></script>
+
+{% include "xperience/partials/public/footer.html" %}
+{% endblock public_page_content %}

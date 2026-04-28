@@ -5,7 +5,10 @@ from django.shortcuts import redirect, render
 
 from app.content.home import data_page_home
 from app.forms import AdminRegisterForm, LoginForm
-from app.models import User
+from app.models import User, PaymentMethod
+import hashlib
+from datetime import datetime
+from django.contrib.auth.hashers import make_password
 from app.workspace_session import (
     clear_admin_workspace,
     clear_member_workspace,
@@ -22,6 +25,16 @@ def _post_login_redirect(request, user: User):
 
 
 def home(request):
+    # Admin autenticado nunca permanece na home pública: vai direto pro painel.
+    # (defesa em profundidade: a logo do admin já aponta pra admin-workspaces,
+    # mas qualquer link/bookmark que caia em "/" também redireciona.)
+    if (
+        request.user.is_authenticated
+        and isinstance(request.user, User)
+        and request.user.platform_role == User.PlatformRole.ADMIN
+    ):
+        return redirect("admin-workspaces")
+
     login_form = LoginForm(prefix="login")
     register_form = AdminRegisterForm(prefix="register")
 
@@ -62,8 +75,13 @@ def home(request):
 
 
 def register(request):
-    if request.user.is_authenticated:
-        return _post_login_redirect(request, request.user)
+    """Cadastro simples de administrador (sem plano/pagamento).
+
+    Independente da sessão: nunca redireciona usuários autenticados pra fora.
+    Cada GET abre form limpo; cada POST tenta criar um NOVO admin.
+    Diferente do register_admin_plan, esta view NÃO faz auto-login —
+    o novo admin precisa logar manualmente em /login/.
+    """
     if request.method == "POST":
         form = AdminRegisterForm(request.POST)
         if form.is_valid():
@@ -137,3 +155,103 @@ def contact(request):
 
 def about(request):
     return render(request, page_public + "about.html")
+
+
+def register_admin_plan(request):
+    """Cadastro de administrador (com plano e pagamento).
+
+    A view é INDEPENDENTE da sessão: nunca redireciona um usuário já
+    autenticado pra fora. Cada request abre formulário limpo no GET
+    (sem reaproveitar dados do usuário logado), e cada POST tenta
+    criar um NOVO admin — independente de quem está logado.
+    """
+    if request.method == "POST":
+        form = AdminRegisterForm(request.POST)
+        if form.is_valid():
+            # cria o usuário administrador
+            user = form.save()
+
+            # extrai dados de pagamento do POST (não armazenar CVV/numero completo)
+            number = request.POST.get("number_credit_card", "").strip()
+            cvv = request.POST.get("cvv", "").strip()
+            expiry = request.POST.get("expiry_date", "").strip()  # esperado MM/YY ou MM/YYYY
+            holder = request.POST.get("titular_name", "").strip()
+            cpf = request.POST.get("cpf", "").strip()
+            plan = request.POST.get("plan", "")
+
+            # gerar token simples (placeholder) — não é substituto de tokenização PCI
+            token_source = f"{number}|{cvv}|{datetime.utcnow().isoformat()}"
+            token = hashlib.sha256(token_source.encode("utf-8")).hexdigest()
+
+            # máscara do CPF e últimos 4 do cartão
+            card_last4 = number[-4:] if len(number) >= 4 else ""
+            cpf_masked = None
+            if cpf:
+                cleaned = ''.join(ch for ch in cpf if ch.isdigit())
+                if len(cleaned) > 4:
+                    cpf_masked = f"***.***.{cleaned[-3:]}"
+                else:
+                    cpf_masked = cleaned
+
+            # parse expiry
+            expiry_month = None
+            expiry_year = None
+            if expiry:
+                parts = expiry.replace('/', '').strip()
+                if len(parts) == 4:  # MMYY
+                    expiry_month = int(parts[:2])
+                    year = int(parts[2:])
+                    expiry_year = 2000 + year if year < 100 else year
+                elif len(parts) == 6:  # MMYYYY
+                    expiry_month = int(parts[:2])
+                    expiry_year = int(parts[2:])
+
+            PaymentMethod.objects.create(
+                user=user,
+                token=token,
+                holder_name=holder,
+                card_last4=card_last4,
+                expiry_month=expiry_month,
+                expiry_year=expiry_year,
+                cpf_masked=cpf_masked or "",
+                plan=plan or "",
+            )
+
+            # também grava resumo no próprio User (hash nativa do Django)
+            if number:
+                try:
+                    cleaned_number = "".join(ch for ch in number if ch.isdigit())
+                    user.card_last4 = cleaned_number[-4:]
+                    user.card_holder_name = holder or ""
+                    user.card_expiry_month = expiry_month
+                    user.card_expiry_year = expiry_year
+                    user.card_hash = make_password(cleaned_number)
+                    user.save(update_fields=[
+                        "card_hash",
+                        "card_last4",
+                        "card_holder_name",
+                        "card_expiry_month",
+                        "card_expiry_year",
+                    ])
+                except Exception:
+                    # não falhar o fluxo principal por erro no armazenamento de cartão
+                    pass
+
+            # Limpa qualquer sessão pré-existente antes de autenticar como o novo
+            # admin. Isso garante que cadastros sucessivos NÃO confundam contexto:
+            # se um admin A estava logado e cadastrou admin B, a sessão vira B,
+            # nunca um híbrido. Sem este logout, futuras visitas à página de
+            # cadastro herdariam estado da sessão anterior.
+            if request.user.is_authenticated:
+                clear_admin_workspace(request)
+                clear_member_workspace(request)
+                logout(request)
+            login(request, user)
+            return _post_login_redirect(request, user)
+        # se inválido, render com erros
+        return render(request, page_public + "register_admin_plan.html", {"form": form})
+
+    # GET
+    form = AdminRegisterForm()
+    return render(request, page_public + "register_admin_plan.html", {"form": form})
+

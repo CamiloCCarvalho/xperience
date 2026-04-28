@@ -10,9 +10,9 @@
                 <p class="auth-disclaimer">Grava uma nova conta no banco com perfil de administrador. Em seguida, faça login na página inicial.</p>
                 <form class="auth-form" method="post" action="{% url 'public-register' %}">
                     {% csrf_token %}
-                    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
-                    {{ form.username }}
-                    {% if form.username.errors %}<p class="error">{{ form.username.errors|striptags }}</p>{% endif %}
+                    <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                    {{ form.full_name }}
+                    {% if form.full_name.errors %}<p class="error">{{ form.full_name.errors|striptags }}</p>{% endif %}
 
                     <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
                     {{ form.email }}
